@@ -1456,14 +1456,43 @@
     reader.readAsText(file); e.target.value = '';
   }
 
+  async function calcTextHash(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
   async function forceAppUpdate() {
-    showSyncProgress('🔄 正在清除舊快取並重新載入最新版...', 60);
+    showSyncProgress('🔍 正在比對伺服器最新檔案內容...', 35);
     try {
+      if (location.protocol.startsWith('http') && window.crypto && crypto.subtle) {
+        const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
+        let localHtml = '';
+        if ('caches' in window) {
+          const cachedRes = await caches.match(cleanUrl) || await caches.match(window.location.pathname);
+          if (cachedRes) localHtml = await cachedRes.text();
+        }
+        const remoteRes = await fetch(`${cleanUrl}?chk=${Date.now()}`, { cache: 'no-store' });
+        if (remoteRes.ok) {
+          const remoteHtml = await remoteRes.text();
+          if (localHtml) {
+            const localHash = await calcTextHash(localHtml);
+            const remoteHash = await calcTextHash(remoteHtml);
+            if (localHash === remoteHash) {
+              showSyncProgress('✅ 目前已是最新版本，無內容更新', 100, 2400);
+              return;
+            }
+          }
+          showSyncProgress('🎉 偵測到檔案已更新，正在清除快取並重載...', 75);
+        }
+      }
       if ('serviceWorker' in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); for (const r of regs) await r.unregister(); }
       if ('caches' in window) { const keys = await caches.keys(); for (const k of keys) await caches.delete(k); }
-    } catch (e) {}
-    setTimeout(() => { window.location.reload(true); }, 450);
+    } catch (e) {
+      showSyncProgress('🔄 正在清除快取並重新載入...', 65);
+    }
+    setTimeout(() => { window.location.reload(); }, 500);
   }
+
 
   (function initStaticLinks() {
     const svgNs = ['http:/', 'www.w3.org', '2000', 'svg'].join('/');
