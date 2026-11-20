@@ -1339,26 +1339,9 @@
   function mergeRecordsWithConflictResolution(localRecs, incomingRecs) {
     const merged = { ...localRecs };
     Object.entries(incomingRecs).forEach(([dateStr, inList]) => {
-      if (!Array.isArray(inList)) return;
-      if (!Array.isArray(merged[dateStr])) { merged[dateStr] = inList; return; }
-      const resultList = [...merged[dateStr]];
-      inList.forEach(inTask => {
-        const exactIdx = resultList.findIndex(t => String(t.id) === String(inTask.id));
-        const sameNameIdx = exactIdx !== -1 ? exactIdx : resultList.findIndex(t =>
-          (t.projectId || '') === (inTask.projectId || '') &&
-          String(t.text || '').trim() === String(inTask.text || '').trim() &&
-          Boolean(t.isFixed) === Boolean(inTask.isFixed)
-        );
-        if (sameNameIdx === -1) {
-          resultList.push(inTask);
-        } else {
-          const existing = resultList[sameNameIdx];
-          if ((inTask.updatedAt || 0) >= (existing.updatedAt || 0)) {
-            resultList[sameNameIdx] = { ...existing, ...inTask };
-          }
-        }
-      });
-      merged[dateStr] = resultList;
+      if (Array.isArray(inList)) {
+        merged[dateStr] = JSON.parse(JSON.stringify(inList));
+      }
     });
     return merged;
   }
@@ -1366,31 +1349,24 @@
   function applySyncedPayload(d) {
     if (!d || typeof d !== 'object') return false;
     if (d.records) allRecords = mergeRecordsWithConflictResolution(allRecords, d.records);
-    if (Array.isArray(d.weekendSkip)) {
-      weekendSkipItems = [...d.weekendSkip];
-      Object.values(allRecords).forEach(list => {
-        if (Array.isArray(list)) list.forEach(t => {
-          if (t.isFixed) t.skipWeekend = weekendSkipItems.includes(t.text);
-        });
-      });
-    }
+    if (Array.isArray(d.weekendSkip)) weekendSkipItems = [...d.weekendSkip];
     if (d.holidayOverrides && typeof d.holidayOverrides === 'object') {
-      holidayOverrides = { ...holidayOverrides, ...d.holidayOverrides };
+      holidayOverrides = { ...d.holidayOverrides };
     }
     if (Array.isArray(d.customHolidays)) {
-      customHolidays = Array.from(new Set([...d.customHolidays]));
+      customHolidays = [...d.customHolidays];
     }
-    if (Array.isArray(d.template)) fixedTemplate = d.template;
+    if (Array.isArray(d.template)) fixedTemplate = [...d.template];
     if (Array.isArray(d.projects)) {
-      const map = new Map(projects.map(p => [p.id, p]));
-      d.projects.forEach(p => map.set(p.id, p));
-      projects = Array.from(map.values());
+      projects = JSON.parse(JSON.stringify(d.projects));
     }
     if (d.activeProjectId) activeProjectId = d.activeProjectId;
-    if (typeof d.vision === 'string') { visionText = d.vision; localStorage.setItem('cute_journal_vision', visionText); }
+    if (typeof d.vision === 'string') {
+      visionText = d.vision;
+      localStorage.setItem('cute_journal_vision', visionText);
+    }
     saveAll(true); return true;
   }
-
 
   function showSyncProgress(msg, percent, autoHideMs = 0) {
     const toast = document.getElementById('syncToast');
