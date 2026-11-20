@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#fdf8f2">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://w3.org viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23f4a29e%22/><text y=%22.9em%22 font-size=%2275%22 x=%2212%22>🧸</text></svg>">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://w3.org viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧸</text></svg>">
+<link rel="manifest" href="manifest.json">
 <title>我的每日目標小手帳 ✨</title>
 <style>
   :root {
@@ -156,7 +157,19 @@
     <div class="date-hint" id="dateStatusHint">🌙 凌晨 05:00 自動換日</div>
   </header>
   <div class="progress-card">
-    <div class="progress-header"><span id="progressLabel">今日完成度</span><span id="progressText">0% (0/0)</span></div>
+        <div class="progress-header">
+      <span id="progressLabel">今日完成度</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <select id="quoteStyleSelect" onchange="changeQuoteStyle()" style="padding:2px 6px;font-size:0.78rem;border-radius:8px;border:1.5px solid var(--primary-pink);">
+          <option value="warm">🧸 溫暖療癒</option>
+          <option value="cat">🐾 傲嬌貓咪</option>
+          <option value="anime">🔥 熱血動漫</option>
+          <option value="roast">😈 幽默毒舌</option>
+          <option value="zen">🧘 禪意哲學</option>
+        </select>
+        <span id="progressText">0% (0/0)</span>
+      </div>
+    </div>
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
     <div class="encouragement-box">
       <span id="quoteText">🌱 新的一天開始啦，寫下今天想完成的小目標吧！</span>
@@ -201,6 +214,21 @@
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
     </div>
   </div>
+    <div class="footer-tools">
+    <button class="btn btn-outline btn-sm" onclick="openHistoryModal('stats')">📊 專案統計與歷史編輯</button>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+      <button class="btn btn-mint btn-sm" onclick="copySyncLink()" title="只打包近7天進度，網址極短">🔗 同步近期(短網址)</button>
+      <button class="btn btn-mint btn-sm" onclick="copySyncCode()" title="複製完整同步序號">📋 複製代碼</button>
+      <button class="btn btn-outline btn-sm" onclick="pasteSyncCode()" title="貼上序號還原">📥 貼上代碼</button>
+      <button class="btn btn-outline btn-sm" id="btnExport" onclick="exportJson()">📤 匯出</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:14px;font-size:0.72rem;color:#b5a49b;">
+    🐾 圖示素材：<a href="https://zh.pngtree.com/freepng/pink-cute-cat-claw-vector_4491733.html" target="_blank" rel="noopener noreferrer" style="color:#9c8980;text-decoration:underline;">png 圖片來源於 zh.pngtree.com/</a>
+  </div>
+</div>
 </div>
 <div class="modal" id="historyModal">
   <div class="modal-box">
@@ -221,13 +249,44 @@
   </div>
 </div>
 <script>
-  const quotes = {
-    empty: ["🌱 還沒有設定目標喔！點上方綠色區塊從 AI 匯入清單吧～", "✨ 空白的頁面充滿無限可能，準備好規劃新專案了嗎？"],
-    zero: ["🐣 新的一天開始啦，先挑一件最簡單的小目標打卡吧！", "☕ 深呼吸一口氣，跨出第一步就是最棒的開始！"],
-    low: ["🌿 已經啟動囉！保持這個節奏，慢慢往前推進吧～", "🐾 每完成一件事，就離理想的自己更近一點點！"],
-    high: ["🔥 太厲害了，進度已經過半！再加把勁就能大功告成囉！", "🌟 你的專注力閃閃發光，最後幾項也難不倒你的！"],
-    perfect: ["🎉 100% 完美達成！這天的你超級棒，快給自己一個大大的獎勵吧！", "🏆 任務全數制霸！好好休息放鬆，享受滿滿的成就感吧！"]
+    const quotesDB = {
+    warm: {
+      empty: ["🌱 還沒有設定目標喔！點上方綠色區塊從 AI 匯入清單吧～", "✨ 空白的頁面充滿無限可能，準備好規劃新專案了嗎？", "📝 寫下第一個小目標，就是把理想變成現實的魔法開始！", "🧸 今天的手帳正等著你填上可愛的色彩，從一件小事開始吧！", "🌤️ 只要開始規劃，你就已經贏過昨天的自己囉！"],
+      zero: ["🐣 新的一天開始啦，先挑一件最簡單的小目標打卡吧！", "☕ 深呼吸一口氣，跨出第一步就是最棒的開始！", "🚀 萬事起頭難，只要完成 1% 就打破零進度的魔咒囉！", "🐾 慢慢來沒關係，先專注在眼前第一項任務就好，加油！", "🌈 每個大成就都是從第一個勾勾累積起來的，現在就動手吧！"],
+      low: ["🌿 已經啟動囉！保持這個節奏，慢慢往前推進吧～", "🐾 每完成一件事，就離理想的自己更近一點點！", "✨ 順利破蛋啦！你已經成功克服最難的起步階段囉！", "🚲 穩穩踩下踏板，不需要求快，只要持續前進就很棒！", "🍬 給完成前幾項任務的自己一點小肯定，繼續往下邁進吧！"],
+      high: ["🔥 太厲害了，進度已經過半！再加把勁就能大功告成囉！", "🌟 你的專注力閃閃發光，最後幾項也難不倒你的！", "🏃 已經看見終點線啦！衝刺一下，把剩下的勾勾全部集滿吧！", "💎 超過一半的目標都被你征服了，今天的執行力簡直滿分！", "🎯 節奏抓得太好了！只差臨門一腳就能享受完美的收尾囉！"],
+      perfect: ["🎉 100% 完美達成！這天的你超級棒，快給自己一個大大的獎勵吧！", "🏆 任務全數制霸！好好休息放鬆，享受滿滿的成就感吧！", "👑 今天的自律王者就是你！所有目標一個不漏地全部完成啦！", "🥳 撒花慶祝！看著滿滿的勾勾是不是超級療癒又有成就感呢？", "🍰 全部達標！快去吃點喜歡的美食或追集劇，犒賞努力的自己！"]
+    },
+    cat: {
+      empty: ["🐱 喵？紙上空空的，本喵要怎麼監督你啊！快去設定目標！", "🐾 罐罐不會自己掉下來，快點把今天的任務清單寫上去喵！", "🧶 本喵已經準備好肉球幫你蓋章了，清單呢？快匯入喵！", "🐈 發呆也是要有限度的，趕快規劃今天的小目標吧喵～", "🐟 趁本喵心情好，快點寫下今天想完成的事吧！"],
+      zero: ["😾 喂！一個勾勾都還沒打，你是想跟本喵一樣睡一整天嗎？", "🐾 伸個懶腰就快點動起來喵！先挑最簡單的那件做！", "🐈 本喵正盯著你看喔…還不快點完成第一項任務喵！", "🧶 别滑手機了，再不動手本喵就要把你的毛線球踢走囉！", "🐟 完成一項就准你摸本喵一下，快去動工喵！"],
+      low: ["😼 哼，總算開始動了嘛，勉強算你及格邊緣喵～", "🐾 才完成一點點就想偷懶？後面還有好幾項等著你呢喵！", "🐈 節奏還不錯嘛，繼續保持，本喵在旁邊看著你喔！", "🧶 肉球蓋章一個！別停下來，趁現在一口氣多做幾項喵！", "🐟 表現比昨天好一點了，再多勾幾項本喵就賞你一個呼嚕聲～"],
+      high: ["😻 哇喵！居然已經過半了，看來本喵沒看錯人嘛！", "🐾 只剩最後幾項了，拿出狩獵的精神把它們全部解決喵！", "🐈 衝啊！這點小事絕對難不倒本喵的鏟屎官的！", "🧶 尾巴豎高高！就差一點點就全破了，不准在終點前睡著喔喵！", "🐟 厲害厲害，本喵已經準備好最高級的呼嚕聲等你全破了！"],
+      perfect: ["👑 喵嗚～100% 全數制霸！不愧是本喵親自監督的人類！", "😻 太完美了喵！今天准許你把臉埋進本喵肚皮吸個夠！", "🎉 全部完成！本喵宣布今天你是全宇宙最棒的鏟屎官！", "🐟 滿分達成！快去買好吃的犒賞自己（順便分本喵一口）！", "🐾 完美收工！今晚本喵就勉為其難陪你一起睡覺吧喵～"]
+    },
+    anime: {
+      empty: ["⚡ 冒險的卷軸還是一片空白！快寫下你的目標，開啟今天的篇章吧！", "🔥 沒有目標的戰士無法變強！現在就匯入你的修煉清單！", "🌟 命運的齒輪正等著你轉動，立下今天的第一個誓言吧！", "🗡️ 拔出你的決心之劍！在手帳上刻下今天的戰鬥計畫！", "🚀 準備好迎接挑戰了嗎？設定目標，向更高的境界邁進！"],
+      zero: ["🔥 燃燒吧！小宇宙！現在正是踏出第一步的關鍵時刻！", "⚡ 只要還沒放棄，比賽就還沒結束！先拿下第一滴血吧！", "💪 真正的強者，都是從 0% 開始一步步爬上頂峰的！", "🗡️ 猶豫就會敗北！深呼吸，全力斬斷眼前的第一個任務！", "🌟 夥伴們都在看著你呢！跨出這一步，你就能突破極限！"],
+      low: ["⚡ 很好！已經成功發動第一波攻勢，乘勝追擊吧！", "🔥 感覺到體內湧現的力量了嗎？這就是前進的證明！", "🏃 修行之路才剛剛開始，保持呼吸節奏，穩步向前衝刺！", "💥 漂亮的一擊！別讓熱血冷卻，緊接著攻克下一個難關！", "🌟 每一滴汗水都不會背叛你，繼續累積你的經驗值吧！"],
+      high: ["🔥 覺醒吧！你的潛能已經突破 50%，勝利就在眼前了！", "⚡ 最後的決戰時刻到了！使出全力把剩下的任務全部擊破！", "🚀 奧義發動！這股無人能擋的氣勢，一口氣衝向終點吧！", "💎 絕不退縮！只差最後幾步就能創造屬於你的傳說了！", "🌟 全力以赴吧！讓今天的自己成為明天最強大的後盾！"],
+      perfect: ["👑 傳說達成！100% 完全制霸！你已經超越昨天的自己了！", "🎉 勝利的號角響起！這是一場毫無遺憾的完美戰役！", "🔥 太燃了！所有修煉全數完成，你的戰鬥力又提升一個檔次！", "🏆 制霸全場！好好享受這份屬於王者的榮耀與休息吧！", "🌟 奇蹟不是等來的，而是你親手完成的！今天你是最強的主角！"]
+    },
+    roast: {
+      empty: ["🙄 連目標都懶得寫，你今天是打算行光合作用過日子嗎？", "🤡 清單一片空白，這就是傳說中的「只要沒目標就不會失敗」嗎？", "📢 醒醒啊！再不寫下目標，你的人生進度條又要卡在原地了！", "🫠 手帳打開了然後呢？快點把清單貼進來，別測試我的耐心～", "🍿 我就靜靜看著你什麼時候才肯面對現實、寫下今天的任務。"],
+      zero: ["🐢 哇，進度 0%，你是在跟樹懶比賽誰比較不動如山嗎？", "📱 手機滑得很開心齁？任務清單在後面哭泣你聽到了嗎？", "⏰ 拖延症末期警告！再不動手，晚上睡前你又要開始後悔囉！", "🙃 計畫訂得很豐滿，執行力卻很骨感，快去完成第一項啦！", "🚨 警報！今日生產力目前為零，再不啟動就要被昨日的自己嘲笑了！"],
+      low: ["😏 喔～居然動了！我還以為你今天打算直接躺平到明天呢！", "🐌 雖然速度跟蝸牛差不多，但至少方向是對的，繼續爬吧！", "👏 恭喜脫離 0% 俱樂部！不過後面還有一大堆，別高興得太早～", "🤨 才完成這一點點就想休息？你的良心不會痛嗎？快去做下一項！", "🔋 電量才剛充進 20%，別這麼快就進入省電模式啊！"],
+      high: ["😲 太陽打西邊出來了？你今天的執行力居然這麼正常！", "🔥 過半了耶！既然都已經努力到這裡了，半途而廢就太蠢囉～", "🏃 加油好嗎！只剩最後幾項，別在終點線前表演原地跌倒！", "👀 我正拿著放大鏡看你能不能全破，千萬別讓我失望啊！", "⚡ 狀態不錯嘛，看來你離「自律人類」的稱號只差最後幾步了！"],
+      perfect: ["🤯 居然 100% 完成了？！快去買張樂透，今天的你簡直不可思議！", "🏆 算你狠，今天沒有任何藉口讓我吐槽了，給你一個大寫的服字！", "🎉 完美達標！快去躺平耍廢吧，今天你完全有資格理直氣壯地懶惰！", "👑 厲害了我的哥／姐，連這麼難的清單都被你全清了，請收下我的膝蓋！", "🍰 任務全滅！今天允許你大吃一頓，畢竟消耗了這麼多腦細胞嘛～"]
+    },
+    zen: {
+      empty: ["🍵 心如止水，萬物皆空。寫下今日之念，方能定靜安慮得。", "🎋 紙白如雪，靜待落筆。思索今日真正重要之事，不在多而在精。", "🍃 凡事預則立，不預則廢。花一分鐘為今日定下方向吧。", "🪷 一念起，萬水千山。寫下第一個目標，即是修行的起點。", "☁️ 雲淡風輕之日，最適合靜下心來梳理內心真正渴望完成的事務。"],
+      zero: ["🌱 千里之行，始於足下。勿以善小而不為，從第一件小事開始。", "🍵 莫急莫慌，專注當下。放下雜念，先完成眼前這一件便好。", "🌊 水滴石穿，非力使然，恆也。踏出第一步，萬事皆會順流而行。", "🎋 昨日已逝，明日未來，你所能掌握的唯有此刻的行動。", "🪷 靜心呼吸，將注意力收回到當下，一件一件從容完成。"],
+      low: ["🌿 不疾不徐，行穩致遠。每完成一項，內心便多一分踏實。", "🍃 進度如溪水潺潺，雖不汹湧，卻已堅定地流向遠方。", "🍵 放下對完美的執著，欣賞自己已經完成的部分，繼續前行。", "🎋 專注於過程而非結果，心無旁騖地完成下一項任務吧。", "☁️ 步伐雖小，方向正確，終能抵達心之所向。"],
+      high: ["🌕 皓月將滿，功不唐捐。過半的堅持已證明你的定力與決心。", "🔥 持之以恆，水到渠成。保持這份覺知，從容圓滿最後幾步。", "🎋 行百里者半九十，越是接近尾聲，越要保持平常心穩步推進。", "🌊 勢如破竹，心境卻依然平和，這正是自律的最高境界。", "🪷 剩下的任務皆是風景，以愉悅之心一一完成它們吧。"],
+      perfect: ["🌕 圓滿自在，功德圓滿。今日之事已盡力，今晚請安心入眠。", "🍵 身心合一，知行合一。為這充實而無愧於心的一天喝采。", "🪷 萬事皆備，心無掛礙。放下所有待辦，好好享受當下的寧靜。", "🎋 完美的句點，是明日最好的起點。願你擁有平靜喜樂的夜晚。", "✨ 專注與堅持已化作今日的果實，好好滋養並感謝努力的自己。"]
+    }
   };
+  let currentQuoteStyle = localStorage.getItem('cute_journal_quote_style') || 'warm';
   function getLogicalToday(offsetDays = 0) {
     return new Date(Date.now() - 5 * 3600000 - offsetDays * 86400000).toLocaleDateString('en-CA');
   }
@@ -383,13 +442,29 @@
     while (isDayPass(getLogicalToday(offset))) { streak++; offset++; }
     return streak;
   }
+    function changeQuoteStyle() {
+    currentQuoteStyle = document.getElementById('quoteStyleSelect').value;
+    localStorage.setItem('cute_journal_quote_style', currentQuoteStyle);
+    currentQuote = "";
+    updateQuote(true);
+  }
+
   function updateQuote(force) {
+    const sel = document.getElementById('quoteStyleSelect');
+    if (sel) sel.value = currentQuoteStyle;
+    const stylePack = quotesDB[currentQuoteStyle] || quotesDB.warm;
+
     const tasks = getTasks();
     const rate = tasks.length === 0 ? -1 : Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100);
-    let pool = quotes.empty;
-    if (rate === 0) pool = quotes.zero; else if (rate > 0 && rate <= 50) pool = quotes.low;
-    else if (rate > 50 && rate < 100) pool = quotes.high; else if (rate === 100) pool = quotes.perfect;
-    if (force || !currentQuote || !pool.includes(currentQuote)) currentQuote = pool[Math.floor(Math.random() * pool.length)];
+    let pool = stylePack.empty;
+    if (rate === 0) pool = stylePack.zero;
+    else if (rate > 0 && rate <= 50) pool = stylePack.low;
+    else if (rate > 50 && rate < 100) pool = stylePack.high;
+    else if (rate === 100) pool = stylePack.perfect;
+
+    if (force || !currentQuote || !pool.includes(currentQuote)) {
+      currentQuote = pool[Math.floor(Math.random() * pool.length)];
+    }
     document.getElementById('quoteText').textContent = currentQuote;
   }
 
