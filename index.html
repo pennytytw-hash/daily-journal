@@ -131,18 +131,20 @@
   .btn-del { background: none; border: none; color: #cbbab0; font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
   .task-note-row { padding-left: 29px; width: 100%; }
   .task-note-input { width: 100%; border: 1px solid #efe4da; background: #fcf9f6; border-radius: 8px; padding: 5px 10px; font-size: 0.85rem; color: #7a665c; outline: none; }
-  .stamp-badge {
+    .stamp-badge {
     position: absolute; right: 56px; top: 8px; pointer-events: none;
-    border: 2.5px solid #e07a75; color: #e07a75; background: rgba(255, 253, 249, 0.92);
-    font-size: 0.76rem; font-weight: 900; padding: 2px 8px; border-radius: 8px;
-    letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(224, 122, 117, 0.25);
-    animation: stampPop 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    border: 2px solid #e07a75; color: #e07a75; background: rgba(255, 253, 249, 0.92);
+    font-size: 0.72rem; font-weight: 900; padding: 1px 7px; border-radius: 8px;
+    letter-spacing: 0.5px; transform: scale(1) rotate(-12deg); opacity: 0.88;
+  }
+  .stamp-badge.animate {
+    animation: stampPop 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
   @keyframes stampPop {
-    0% { opacity: 0; transform: scale(2.3) rotate(-22deg); }
-    45% { opacity: 1; transform: scale(0.92) rotate(-10deg); }
-    70% { opacity: 1; transform: scale(1.04) rotate(-12deg); }
-    100% { opacity: 0; transform: scale(1) rotate(-12deg); }
+    0% { opacity: 0; transform: scale(2.5) rotate(-25deg); }
+    45% { opacity: 1; transform: scale(0.9) rotate(-9deg); }
+    75% { opacity: 0.95; transform: scale(1.05) rotate(-13deg); }
+    100% { opacity: 0.88; transform: scale(1) rotate(-12deg); }
   }
   .footer-tools { margin-top: 24px; padding-top: 14px; border-top: 2px solid #f2e6dc; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .modal { display: none; position: fixed; inset: 0; background: rgba(92, 75, 67, 0.45); justify-content: center; align-items: center; padding: 14px; z-index: 100; }
@@ -230,7 +232,6 @@
     <div>
       <span class="active-proj-bar">
         <span>🎯 進行中專案：<span id="activeProjName">初始目標專案</span></span>
-        <button class="btn-icon-tiny" onclick="renameActiveProject()" title="修改目前專案名稱">✏️</button>
       </span>
       <span id="streakBadge" class="streak-badge">🔥 連續達標 0 天</span>
     </div>
@@ -344,8 +345,7 @@
     <div class="proj-filter-bar" style="margin-top:10px;">
       <span style="font-size:0.85rem;font-weight:700;">🎯 篩選專案：</span>
       <select id="statsProjSelect" onchange="onStatsProjChange()" style="flex:1;min-width:140px;"></select>
-      <button class="btn btn-outline btn-sm" id="btnRenameSelectedProj" onclick="renameSelectedProject()">✏️ 改名</button>
-    </div>
+      </div>
     <div class="tab-bar">
       <button class="btn btn-sm" id="tabStatsBtn" onclick="switchTab('stats')">📈 週月季年與熱力分析</button>
       <button class="btn btn-outline btn-sm" id="tabLogsBtn" onclick="switchTab('logs')">📅 點擊歷史日期編輯</button>
@@ -478,17 +478,34 @@
     }
   }
 
-  function toggleMit(id) {
+    function toggleMit(id) {
     const tasks = getTasks(), target = tasks.find(x => x.id === id);
     if (!target) return;
-    const willBeMit = !target.isMit;
-    tasks.forEach(x => { x.isMit = (x.id === id) ? willBeMit : false; x.updatedAt = Date.now(); });
+    const now = Date.now(), willBeMit = !target.isMit;
+
+    // 若已有其他焦點任務，先將它放回原本的位置
+    const prevMitIdx = tasks.findIndex(x => x.isMit && x.id !== id);
+    if (prevMitIdx !== -1) {
+      const prevMit = tasks.splice(prevMitIdx, 1)[0];
+      const restorePos = typeof prevMit.origIdx === 'number' ? Math.min(prevMit.origIdx, tasks.length) : prevMitIdx;
+      prevMit.isMit = false; delete prevMit.origIdx; prevMit.updatedAt = now;
+      tasks.splice(restorePos, 0, prevMit);
+    }
+
+    const curIdx = tasks.findIndex(x => x.id === id);
     if (willBeMit) {
-      const idx = tasks.findIndex(x => x.id === id);
-      if (idx > 0) { tasks.splice(idx, 1); tasks.unshift(target); }
+      target.origIdx = curIdx;
+      target.isMit = true; target.updatedAt = now;
+      if (curIdx > 0) { tasks.splice(curIdx, 1); tasks.unshift(target); }
+    } else {
+      const restorePos = typeof target.origIdx === 'number' ? Math.min(target.origIdx, tasks.length - 1) : curIdx;
+      target.isMit = false; delete target.origIdx; target.updatedAt = now;
+      tasks.splice(curIdx, 1);
+      tasks.splice(restorePos, 0, target);
     }
     saveAll();
   }
+
 
   function moveTask(index, dir) {
     const tasks = getTasks(), target = index + dir;
@@ -746,7 +763,7 @@
       tasks.forEach((t, idx) => {
         const li = document.createElement('li');
         li.className = `task-item ${t.completed ? 'completed' : ''} ${t.isMit ? 'is-mit' : ''}`;
-        const stampHtml = (justStampedId === t.id && t.completed) ? `<span class="stamp-badge">DONE! 🐾</span>` : '';
+                const stampHtml = t.completed ? `<span class="stamp-badge ${justStampedId === t.id ? 'animate' : ''}">DONE! 🐾</span>` : '';
         li.innerHTML = `${stampHtml}
           <div class="task-main-row">
             <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id})">
@@ -1005,13 +1022,12 @@
     const sel = document.getElementById('statsProjSelect');
     sel.innerHTML = `<option value="ALL">🌐 全部目標專案總覽 (${projects.length}個)</option>` +
       projects.map(p => `<option value="${p.id}" ${p.id === selectedStatsProj ? 'selected' : ''}>🎯 ${p.name.replace(/</g,'&lt;')}</option>`).join('');
-    document.getElementById('btnRenameSelectedProj').style.display = selectedStatsProj === 'ALL' ? 'none' : 'inline-block';
   }
   function onStatsProjChange() {
     selectedStatsProj = document.getElementById('statsProjSelect').value;
-    document.getElementById('btnRenameSelectedProj').style.display = selectedStatsProj === 'ALL' ? 'none' : 'inline-block';
     renderStatsDashboard(); renderHistoryLogs();
   }
+
   function renameSelectedProject() {
     const proj = projects.find(p => p.id === selectedStatsProj);
     if (!proj) return;
