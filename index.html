@@ -1341,13 +1341,24 @@
     Object.entries(incomingRecs).forEach(([dateStr, inList]) => {
       if (!Array.isArray(inList)) return;
       if (!Array.isArray(merged[dateStr])) { merged[dateStr] = inList; return; }
-      const taskMap = new Map();
-      merged[dateStr].forEach(t => taskMap.set(String(t.id), t));
+      const resultList = [...merged[dateStr]];
       inList.forEach(inTask => {
-        const key = String(inTask.id), existing = taskMap.get(key);
-        if (!existing || (inTask.updatedAt || 0) >= (existing.updatedAt || 0)) taskMap.set(key, inTask);
+        const exactIdx = resultList.findIndex(t => String(t.id) === String(inTask.id));
+        const sameNameIdx = exactIdx !== -1 ? exactIdx : resultList.findIndex(t =>
+          (t.projectId || '') === (inTask.projectId || '') &&
+          String(t.text || '').trim() === String(inTask.text || '').trim() &&
+          Boolean(t.isFixed) === Boolean(inTask.isFixed)
+        );
+        if (sameNameIdx === -1) {
+          resultList.push(inTask);
+        } else {
+          const existing = resultList[sameNameIdx];
+          if ((inTask.updatedAt || 0) >= (existing.updatedAt || 0)) {
+            resultList[sameNameIdx] = { ...existing, ...inTask };
+          }
+        }
       });
-      merged[dateStr] = Array.from(taskMap.values());
+      merged[dateStr] = resultList;
     });
     return merged;
   }
@@ -1355,9 +1366,20 @@
   function applySyncedPayload(d) {
     if (!d || typeof d !== 'object') return false;
     if (d.records) allRecords = mergeRecordsWithConflictResolution(allRecords, d.records);
-    if (Array.isArray(d.weekendSkip)) weekendSkipItems = d.weekendSkip;
-    if (d.holidayOverrides && typeof d.holidayOverrides === 'object') holidayOverrides = { ...holidayOverrides, ...d.holidayOverrides };
-    if (Array.isArray(d.customHolidays)) customHolidays = Array.from(new Set([...customHolidays, ...d.customHolidays]));
+    if (Array.isArray(d.weekendSkip)) {
+      weekendSkipItems = [...d.weekendSkip];
+      Object.values(allRecords).forEach(list => {
+        if (Array.isArray(list)) list.forEach(t => {
+          if (t.isFixed) t.skipWeekend = weekendSkipItems.includes(t.text);
+        });
+      });
+    }
+    if (d.holidayOverrides && typeof d.holidayOverrides === 'object') {
+      holidayOverrides = { ...holidayOverrides, ...d.holidayOverrides };
+    }
+    if (Array.isArray(d.customHolidays)) {
+      customHolidays = Array.from(new Set([...d.customHolidays]));
+    }
     if (Array.isArray(d.template)) fixedTemplate = d.template;
     if (Array.isArray(d.projects)) {
       const map = new Map(projects.map(p => [p.id, p]));
@@ -1365,9 +1387,10 @@
       projects = Array.from(map.values());
     }
     if (d.activeProjectId) activeProjectId = d.activeProjectId;
-    if (typeof d.vision === 'string' && d.vision) { visionText = d.vision; localStorage.setItem('cute_journal_vision', visionText); }
+    if (typeof d.vision === 'string') { visionText = d.vision; localStorage.setItem('cute_journal_vision', visionText); }
     saveAll(true); return true;
   }
+
 
   function showSyncProgress(msg, percent, autoHideMs = 0) {
     const toast = document.getElementById('syncToast');
@@ -1461,27 +1484,33 @@
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
+  async function recordCurrentPageHash() {
+    try {
+      if (!location.protocol.startsWith('http') || !window.crypto || !crypto.subtle) return;
+      const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
+      const res = await fetch(`${cleanUrl}?init=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const hash = await calcTextHash(await res.text());
+        localStorage.setItem('cute_journal_app_hash', hash);
+      }
+    } catch (e) {}
+  }
+
   async function forceAppUpdate() {
     showSyncProgress('🔍 正在比對伺服器最新檔案內容...', 35);
     try {
       if (location.protocol.startsWith('http') && window.crypto && crypto.subtle) {
         const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
-        let localHtml = '';
-        if ('caches' in window) {
-          const cachedRes = await caches.match(cleanUrl) || await caches.match(window.location.pathname);
-          if (cachedRes) localHtml = await cachedRes.text();
-        }
+        const localHash = localStorage.getItem('cute_journal_app_hash') || '';
         const remoteRes = await fetch(`${cleanUrl}?chk=${Date.now()}`, { cache: 'no-store' });
         if (remoteRes.ok) {
           const remoteHtml = await remoteRes.text();
-          if (localHtml) {
-            const localHash = await calcTextHash(localHtml);
-            const remoteHash = await calcTextHash(remoteHtml);
-            if (localHash === remoteHash) {
-              showSyncProgress('✅ 目前已是最新版本，無內容更新', 100, 2400);
-              return;
-            }
+          const remoteHash = await calcTextHash(remoteHtml);
+          if (localHash && localHash === remoteHash) {
+            showSyncProgress('✅ 目前已是最新版本，無內容更新', 100, 2400);
+            return;
           }
+          localStorage.setItem('cute_journal_app_hash', remoteHash);
           showSyncProgress('🎉 偵測到檔案已更新，正在清除快取並重載...', 75);
         }
       }
@@ -1492,7 +1521,6 @@
     }
     setTimeout(() => { window.location.reload(); }, 500);
   }
-
 
   (function initStaticLinks() {
     const svgNs = ['http:/', 'www.w3.org', '2000', 'svg'].join('/');
@@ -1509,6 +1537,7 @@
   checkUrlSync();
   render();
   syncGovCalendar(false);
+  recordCurrentPageHash();
 
 </script>
 </body>
