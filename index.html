@@ -203,18 +203,7 @@
   </div>
   <ul class="task-list" id="taskList"></ul>
   <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">✏️ 點擊文字可編輯｜▲▼ 可調整順序｜📝 下方小框記錄執行狀況</p>
-    <div class="footer-tools">
-    <button class="btn btn-outline btn-sm" onclick="openHistoryModal('stats')">📊 專案統計與歷史編輯</button>
-    <div style="display:flex;gap:5px;flex-wrap:wrap;">
-      <button class="btn btn-mint btn-sm" onclick="copySyncLink()" title="只打包近7天進度，網址極短">🔗 同步近期(短網址)</button>
-      <button class="btn btn-mint btn-sm" onclick="copySyncCode()" title="複製完整同步序號">📋 複製代碼</button>
-      <button class="btn btn-outline btn-sm" onclick="pasteSyncCode()" title="貼上序號還原">📥 貼上代碼</button>
-      <button class="btn btn-outline btn-sm" id="btnExport" onclick="exportJson()">📤 匯出</button>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
-      <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
-    </div>
-  </div>
-    <div class="footer-tools">
+        <div class="footer-tools">
     <button class="btn btn-outline btn-sm" onclick="openHistoryModal('stats')">📊 專案統計與歷史編輯</button>
     <div style="display:flex;gap:5px;flex-wrap:wrap;">
       <button class="btn btn-mint btn-sm" onclick="copySyncLink()" title="只打包近7天進度，網址極短">🔗 同步近期(短網址)</button>
