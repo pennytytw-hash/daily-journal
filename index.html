@@ -2,9 +2,14 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="目標小手帳">
+<meta name="theme-color" content="#fdf8f2">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://w3.org viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23f4a29e%22/><text y=%22.9em%22 font-size=%2275%22 x=%2212%22>🧸</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://w3.org viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧸</text></svg>">
 <title>我的每日目標小手帳 ✨</title>
-<link href="https://googleapis.com" rel="stylesheet">
 <style>
   :root {
     --bg-cream: #fdf8f2; --paper-white: #fffdf9;
@@ -12,7 +17,7 @@
     --accent-mint: #a8d5ba; --accent-yellow: #fce181;
     --text-brown: #5c4b43; --text-light: #9c8980; --border-dashed: #e3d5ca;
   }
-  * { box-sizing: border-box; font-family: 'Zen Maru Gothic', sans-serif; }
+  * { box-sizing: border-box; font-family: 'Yuanti TC', '華康圓體', 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
   body {
     background-color: var(--bg-cream);
     background-image: radial-gradient(#e6d7c8 1.2px, transparent 1.2px);
@@ -30,8 +35,9 @@
     position: absolute; top: -14px; left: 50%; transform: translateX(-50%) rotate(-2deg);
     border-left: 2px dashed rgba(255,255,255,0.7); border-right: 2px dashed rgba(255,255,255,0.7);
   }
-  header { text-align: center; margin-bottom: 18px; }
-  h1 { font-size: 1.55rem; margin: 6px 0 10px; }
+  header { text-align: center; margin-bottom: 16px; }
+  h1 { font-size: 1.55rem; margin: 6px 0 8px; }
+  .date-hint { font-size: 0.78rem; color: var(--text-light); margin-top: 4px; }
   input[type="date"] {
     border: 2px dashed var(--primary-pink); background: #fff9f8;
     color: var(--text-brown); padding: 6px 14px; border-radius: 12px;
@@ -53,7 +59,7 @@
     border-left: 5px solid var(--accent-mint); font-size: 0.95rem;
     display: flex; justify-content: space-between; align-items: center; gap: 8px;
   }
-  .summary-bar { margin-top: 10px; display: flex; justify-content: flex-end; }
+  .summary-bar { margin-top: 10px; display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
   .ai-section {
     background: #f9fbf9; border: 2px dashed var(--accent-mint);
     border-radius: 16px; padding: 13px; margin-bottom: 18px;
@@ -128,7 +134,7 @@
   .stat-card { background: #fff8f1; border: 1.5px solid #f3dfd0; border-radius: 14px; padding: 12px; text-align: center; }
   .stat-card h4 { margin: 0 0 6px; font-size: 0.9rem; color: var(--text-light); }
   .stat-rate { font-size: 1.45rem; font-weight: 700; color: var(--primary-pink-dark); }
-  .stat-sub { font-size: 0.78rem; color: var(--text-brown); margin-top: 4px; }
+  .stat-sub { font-size: 0.78rem; color: var(--text-brown); margin: 4px 0 8px; }
   .history-card { padding: 10px; border-bottom: 1px dashed var(--border-dashed); cursor: pointer; border-radius: 10px; }
   .history-card:hover { background: #fdf5ee; }
   .history-notes-preview { font-size: 0.8rem; color: #7a665c; margin-top: 5px; padding-left: 8px; border-left: 2px solid var(--accent-mint); }
@@ -137,21 +143,27 @@
 <body>
 <div class="journal-container">
   <div class="washi-tape"></div>
-  <header><h1>🧸 每日目標小手帳</h1><input type="date" id="datePicker"></header>
+  <header>
+    <h1>🧸 每日目標小手帳</h1>
+    <input type="date" id="datePicker">
+    <div class="date-hint" id="dateStatusHint">🌙 凌晨 05:00 自動換日（可隨時切換日曆編輯歷史紀錄）</div>
+  </header>
   <div class="progress-card">
-    <div class="progress-header"><span>今日完成度</span><span id="progressText">0% (0/0)</span></div>
+    <div class="progress-header"><span id="progressLabel">當日完成度</span><span id="progressText">0% (0/0)</span></div>
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
     <div class="encouragement-box">
       <span id="quoteText">🌱 新的一天開始啦，寫下今天想完成的小目標吧！</span>
       <button style="background:none;border:none;cursor:pointer;font-size:1.1rem;" onclick="updateQuote(true)" title="換一句">🔄</button>
     </div>
-    <div class="summary-bar"><button class="btn btn-yellow btn-sm" onclick="copyDailySummary()">📋 複製今日總結向 AI 覆盤</button></div>
+    <div class="summary-bar">
+      <button class="btn btn-yellow btn-sm" onclick="copyDailySummary()">📋 複製當日總結給 AI</button>
+    </div>
   </div>
   <div class="ai-section">
     <div class="ai-header" onclick="toggleAi()"><span>⭐ 設定每日固定清單（由 AI 匯入並覆蓋舊清單）</span><span id="aiIcon">▼ 展開</span></div>
     <div class="ai-body" id="aiBody">
       <div class="prompt-guide">
-        💡 <b>向 AI 索取固定清單的指令：</b>討論完目標後複製下方指令貼給 AI。匯入後會<b>自動覆蓋</b>舊的固定清單，並每天自動帶入！
+        💡 <b>向 AI 索取固定清單的指令：</b>討論完目標後複製下方指令貼給 AI。匯入後會<b>自動覆蓋</b>舊的固定清單，並每天凌晨 5 點後自動帶入新的一天！
         <div class="prompt-box">
           <span id="promptCmd">請將我們剛剛討論的目標整理成純文字清單，每行一項任務，不要加任何編號、符號、標題或額外說明文字。</span>
           <button class="btn btn-mint btn-sm" onclick="copyPrompt()">複製指令</button>
@@ -165,11 +177,11 @@
     </div>
   </div>
   <div class="add-row">
-    <input type="text" id="newTaskInput" placeholder="新增今日臨時小目標... (按 Enter 新增)" onkeypress="if(event.key==='Enter') addTask()">
+    <input type="text" id="newTaskInput" placeholder="新增當日臨時小目標... (按 Enter 新增)" onkeypress="if(event.key==='Enter') addTask()">
     <button class="btn" onclick="addTask()">＋ 新增</button>
   </div>
   <ul class="task-list" id="taskList"></ul>
-  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">✏️ 點擊標題可微調文字｜📝 下方小框可記錄執行狀況（自動存進歷史）</p>
+  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">✏️ 點擊任務文字或筆記欄皆可直接編輯（歷史日期亦同）</p>
   <div class="footer-tools">
     <button class="btn btn-outline btn-sm" onclick="openHistoryModal('stats')">📊 歷史與週月季年統計</button>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -183,12 +195,12 @@
 <div class="modal" id="historyModal">
   <div class="modal-box">
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <h3 style="margin:0;">📊 歷史回顧與統計分析</h3>
+      <h3 style="margin:0;">📊 歷史編輯與統計總結</h3>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('historyModal').classList.remove('active')">關閉</button>
     </div>
     <div class="tab-bar">
-      <button class="btn btn-sm" id="tabStatsBtn" onclick="switchTab('stats')">📈 週/月/季/年統計</button>
-      <button class="btn btn-outline btn-sm" id="tabLogsBtn" onclick="switchTab('logs')">📅 每日紀錄與筆記</button>
+      <button class="btn btn-sm" id="tabStatsBtn" onclick="switchTab('stats')">📈 週/月/季/年統計與複製</button>
+      <button class="btn btn-outline btn-sm" id="tabLogsBtn" onclick="switchTab('logs')">📅 點擊歷史日期編輯</button>
     </div>
     <div id="statsView"></div><div id="logsView" style="display:none;"></div>
   </div>
@@ -199,12 +211,19 @@
     zero: ["🐣 新的一天開始啦，先挑一件最簡單的小目標打卡吧！", "☕ 深呼吸一口氣，跨出第一步就是最棒的開始！"],
     low: ["🌿 已經啟動囉！保持這個節奏，慢慢往前推進吧～", "🐾 每完成一件事，就離理想的自己更近一點點！"],
     high: ["🔥 太厲害了，進度已經過半！再加把勁就能大功告成囉！", "🌟 你的專注力閃閃發光，最後幾項也難不倒你的！"],
-    perfect: ["🎉 100% 完美達成！今天的你超級棒，快給自己一個大大的獎勵吧！", "🏆 任務全數制霸！好好休息放鬆，享受滿滿的成就感吧！"]
+    perfect: ["🎉 100% 完美達成！這天的你超級棒，快給自己一個大大的獎勵吧！", "🏆 任務全數制霸！好好休息放鬆，享受滿滿的成就感吧！"]
   };
 
-  let allRecords = JSON.parse(localStorage.getItem('cute_journal_v3_records') || '{}');
+  // 凌晨 05:00 換日計算（將當前時間減去 5 小時作為邏輯日期）
+  function getLogicalToday() {
+    const shifted = new Date(Date.now() - 5 * 60 * 60 * 1000);
+    return shifted.toLocaleDateString('en-CA');
+  }
+
+  // 自動相容舊版 v2 資料
+  let allRecords = JSON.parse(localStorage.getItem('cute_journal_v3_records') || localStorage.getItem('cute_journal_v2') || '{}');
   let fixedTemplate = JSON.parse(localStorage.getItem('cute_journal_v3_template') || '[]');
-  let currentDate = new Date().toLocaleDateString('en-CA');
+  let currentDate = getLogicalToday();
   let currentQuote = "";
 
   const datePicker = document.getElementById('datePicker');
@@ -297,25 +316,25 @@
 
     fixedTemplate = newItems;
     const manualTasks = (allRecords[currentDate] || []).filter(t => !t.isFixed);
-    const newFixedTasks = fixedTemplate.map((text, idx) => ({
-      id: Date.now() + idx + Math.random(), text, note: '', completed: false, isFixed: true
-    }));
-    allRecords[currentDate] = [...newFixedTasks, ...manualTasks];
+    allRecords[currentDate] = [
+      ...fixedTemplate.map((text, idx) => ({ id: Date.now() + idx + Math.random(), text, note: '', completed: false, isFixed: true })),
+      ...manualTasks
+    ];
     area.value = ''; currentQuote = ""; saveAll();
-    alert(`✅ 已成功更新每日固定清單（共 ${newItems.length} 項），以後每天都會自動帶入！`);
+    alert(`✅ 已成功更新每日固定清單（共 ${newItems.length} 項），每天凌晨 5 點換日都會自動帶入！`);
   }
 
   function copyDailySummary() {
     const tasks = getTasks();
-    if (tasks.length === 0) { alert('今天還沒有任務可以總結喔！'); return; }
+    if (tasks.length === 0) { alert('該日期沒有任務可以總結喔！'); return; }
     const done = tasks.filter(t => t.completed).length;
     const pct = Math.round((done / tasks.length) * 100);
-    let text = `📅 日期：${currentDate}\n📊 今日總達成率：${pct}% (${done}/${tasks.length})\n\n【目標執行狀況與筆記】\n`;
+    let text = `📅 日期：${currentDate}\n📊 當日總達成率：${pct}% (${done}/${tasks.length})\n\n【目標執行狀況與筆記】\n`;
     tasks.forEach(t => {
-      text += `- [${t.completed ? '✅ 已完成' : '⬜ 未完成'}] ${t.text} ${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`;
+      text += `- [${t.completed ? '✅ 已完成' : '⬜ 未完成'}] ${t.text}${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`;
     });
-    text += `\n請根據我今天的完成狀況與筆記紀錄，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供明天可執行的具體小建議！`;
-    navigator.clipboard.writeText(text).then(() => alert('📋 今日總結已複製！\n直接貼上到 AI 對話框，就能獲得專屬鼓勵與覆盤建議囉！'));
+    text += `\n請根據我這天的完成狀況與筆記紀錄，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供具體小建議！`;
+    navigator.clipboard.writeText(text).then(() => alert(`📋 ${currentDate} 總結已複製！直接貼上給 AI 即可取得覆盤回饋！`));
   }
 
   function updateQuote(force) {
@@ -332,6 +351,12 @@
 
   function render() {
     document.getElementById('templateCountText').textContent = `目前固定清單：${fixedTemplate.length} 項`;
+    const isToday = currentDate === getLogicalToday();
+    document.getElementById('progressLabel').textContent = isToday ? '今日完成度' : `${currentDate} 歷史完成度`;
+    document.getElementById('dateStatusHint').textContent = isToday
+      ? '🌙 凌晨 05:00 自動換日（目前為今日進度）'
+      : '✏️ 目前正在檢視／編輯歷史日期（修改會自動保存）';
+
     const tasks = getTasks();
     const listEl = document.getElementById('taskList');
     listEl.innerHTML = '';
@@ -359,28 +384,52 @@
     updateQuote(false);
   }
 
+  let periodReportCache = {};
   function calcPeriodStats() {
     const base = new Date(currentDate + 'T00:00:00');
     const year = base.getFullYear(), month = base.getMonth(), quarter = Math.floor(month / 3);
     const dayOfWeek = base.getDay() === 0 ? 7 : base.getDay();
     const weekStart = new Date(base); weekStart.setDate(base.getDate() - dayOfWeek + 1);
     const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+
     const periods = {
-      week: { label: '本週統計 (週一~週日)', total: 0, done: 0, days: 0 },
-      month: { label: `${year}年 ${month + 1}月 統計`, total: 0, done: 0, days: 0 },
-      quarter: { label: `${year}年 第${quarter + 1}季 (Q${quarter + 1})`, total: 0, done: 0, days: 0 },
-      year: { label: `${year}年 年度總統計`, total: 0, done: 0, days: 0 }
+      week: { label: '本週統計 (週一~週日)', total: 0, done: 0, days: 0, logs: [] },
+      month: { label: `${year}年 ${month + 1}月 統計`, total: 0, done: 0, days: 0, logs: [] },
+      quarter: { label: `${year}年 第${quarter + 1}季 (Q${quarter + 1})`, total: 0, done: 0, days: 0, logs: [] },
+      year: { label: `${year}年 年度總統計`, total: 0, done: 0, days: 0, logs: [] }
     };
-    Object.entries(allRecords).forEach(([dateStr, list]) => {
+
+    Object.keys(allRecords).sort().forEach(dateStr => {
+      const list = allRecords[dateStr];
       if (!list || list.length === 0) return;
       const d = new Date(dateStr + 'T00:00:00'), doneCnt = list.filter(t => t.completed).length;
-      if (d >= weekStart && d <= weekEnd) { periods.week.total += list.length; periods.week.done += doneCnt; periods.week.days++; }
-      if (d.getFullYear() === year && d.getMonth() === month) { periods.month.total += list.length; periods.month.done += doneCnt; periods.month.days++; }
-      if (d.getFullYear() === year && Math.floor(d.getMonth() / 3) === quarter) { periods.quarter.total += list.length; periods.quarter.done += doneCnt; periods.quarter.days++; }
-      if (d.getFullYear() === year) { periods.year.total += list.length; periods.year.done += doneCnt; periods.year.days++; }
+      const pushLog = (p) => { p.total += list.length; p.done += doneCnt; p.days++; p.logs.push({ dateStr, list, doneCnt }); };
+      if (d >= weekStart && d <= weekEnd) pushLog(periods.week);
+      if (d.getFullYear() === year && d.getMonth() === month) pushLog(periods.month);
+      if (d.getFullYear() === year && Math.floor(d.getMonth() / 3) === quarter) pushLog(periods.quarter);
+      if (d.getFullYear() === year) pushLog(periods.year);
     });
-    document.getElementById('statsView').innerHTML = `<p style="font-size:0.82rem;color:#8c7a70;margin:0 0 8px;">📌 基準日期：<b>${currentDate}</b>（切換上方日曆可查看不同週/月/季/年）</p><div class="stat-grid">` +
-      Object.values(periods).map(p => `<div class="stat-card"><h4>${p.label}</h4><div class="stat-rate">${p.total === 0 ? 0 : Math.round((p.done / p.total) * 100)}%</div><div class="stat-sub">完成 ${p.done} / ${p.total} 項<br>共記錄 ${p.days} 天</div></div>`).join('') + `</div>`;
+
+    periodReportCache = periods;
+    document.getElementById('statsView').innerHTML = `<p style="font-size:0.82rem;color:#8c7a70;margin:0 0 8px;">📌 基準日期：<b>${currentDate}</b>（切換主畫面日曆可查詢並複製任意週/月/季/年總結）</p><div class="stat-grid">` +
+      Object.entries(periods).map(([key, p]) => {
+        const rate = p.total === 0 ? 0 : Math.round((p.done / p.total) * 100);
+        return `<div class="stat-card"><h4>${p.label}</h4><div class="stat-rate">${rate}%</div><div class="stat-sub">完成 ${p.done} / ${p.total} 項｜記錄 ${p.days} 天</div><button class="btn btn-yellow btn-sm" onclick="copyPeriodSummary('${key}')">📋 複製總結給 AI</button></div>`;
+      }).join('') + `</div>`;
+  }
+
+  function copyPeriodSummary(key) {
+    const p = periodReportCache[key];
+    if (!p || p.days === 0) { alert('該區間目前沒有任何紀錄喔！'); return; }
+    const rate = Math.round((p.done / p.total) * 100);
+    let text = `📊 【${p.label}】階段性目標覆盤報告\n• 累計執行天數：${p.days} 天\n• 總體達成率：${rate}% (完成 ${p.done} / 總計 ${p.total} 項)\n\n【期間每日執行摘要與筆記】\n`;
+    p.logs.forEach(item => {
+      const dayPct = Math.round((item.doneCnt / item.list.length) * 100);
+      const notes = item.list.filter(t => t.note).map(t => `${t.text}(${t.note})`).join('；');
+      text += `- ${item.dateStr}：達成 ${dayPct}% (${item.doneCnt}/${item.list.length})${notes ? `｜筆記：${notes}` : ''}\n`;
+    });
+    text += `\n請根據我這段期間的整體表現、波動趨勢與筆記內容，為我做一份深度階段性覆盤、亮點肯定與下一階段的優化建議！`;
+    navigator.clipboard.writeText(text).then(() => alert(`📋 已複製「${p.label}」完整報告！直接貼給 AI 即可進行階段覆盤！`));
   }
 
   function renderHistoryLogs() {
@@ -392,7 +441,7 @@
       const done = list.filter(t => t.completed).length;
       const notesHtml = list.filter(t => t.note).map(t => `<div>• <b>${t.text.replace(/</g,'&lt;')}</b>：${t.note.replace(/</g,'&lt;')}</div>`).join('');
       const card = document.createElement('div'); card.className = 'history-card';
-      card.innerHTML = `<div style="display:flex;justify-content:space-between;"><span><b>${d}</b></span><span>完成 ${done}/${list.length} (${Math.round(done/list.length*100)}%) 👉</span></div>${notesHtml ? `<div class="history-notes-preview">${notesHtml}</div>` : ''}`;
+      card.innerHTML = `<div style="display:flex;justify-content:space-between;"><span><b>${d}</b></span><span>完成 ${done}/${list.length} (${Math.round(done/list.length*100)}%) ✏️點擊編輯</span></div>${notesHtml ? `<div class="history-notes-preview">${notesHtml}</div>` : ''}`;
       card.onclick = () => { currentDate = d; datePicker.value = d; currentQuote = ""; document.getElementById('historyModal').classList.remove('active'); render(); };
       box.appendChild(card);
     });
