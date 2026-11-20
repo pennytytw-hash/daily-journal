@@ -77,11 +77,7 @@
     border-radius: 10px; margin-bottom: 4px;
   }
   .summary-bar { margin-top: 10px; display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
-  .ai-section { background: #f9fbf9; border: 2px dashed var(--accent-mint); border-radius: 16px; padding: 13px; margin-bottom: 18px; }
-  .ai-header { display: flex; justify-content: space-between; cursor: pointer; font-weight: 700; color: #4a7c5f; }
-  .ai-body { margin-top: 12px; display: none; }
-  .ai-body.open { display: block; }
-  .prompt-guide { background: #eef7f1; padding: 10px; border-radius: 10px; font-size: 0.85rem; margin-bottom: 10px; line-height: 1.5; }
+  .prompt-guide { background: #eef7f1; padding: 10px; border-radius: 10px; font-size: 0.82rem; margin-bottom: 10px; line-height: 1.5; }
   .prompt-box {
     background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #cce3d4;
     font-weight: 700; color: #3b664d; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
@@ -94,10 +90,10 @@
     width: 100%; height: 78px; border: 1.5px solid #d5e6dc; border-radius: 12px;
     padding: 10px; font-size: 0.95rem; resize: vertical; outline: none; color: var(--text-brown);
   }
-  .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .add-row { display: flex; gap: 8px; }
   .add-row input {
-    flex: 1; padding: 10px 14px; border: 2px solid #eedfd3; border-radius: 14px;
-    font-size: 1rem; outline: none; color: var(--text-brown);
+    flex: 1; padding: 9px 12px; border: 2px solid #eedfd3; border-radius: 12px;
+    font-size: 0.95rem; outline: none; color: var(--text-brown); background: #fff;
   }
   .add-row input:focus { border-color: var(--primary-pink); }
   .btn { background: var(--primary-pink); color: #fff; border: none; padding: 9px 15px; border-radius: 13px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
@@ -106,6 +102,8 @@
   .btn-mint:hover { background: #589c74; }
   .btn-yellow { background: #eab84d; color: #4e3b18; }
   .btn-yellow:hover { background: #d9a63b; }
+  .btn-danger { background: #e87a75; color: #fff; }
+  .btn-danger:hover { background: #cf5c57; }
   .btn-sm { padding: 6px 10px; font-size: 0.8rem; border-radius: 10px; }
   .btn-outline { background: #fff; color: var(--text-brown); border: 1.5px solid #dfd0c5; }
   .btn-outline:hover { background: #f7efe8; }
@@ -114,6 +112,7 @@
   .task-item {
     display: flex; flex-direction: column; gap: 6px; padding: 12px 8px;
     border-bottom: 1.5px dashed var(--border-dashed); border-radius: 14px; transition: background 0.25s;
+    position: relative;
   }
   .task-item.is-mit {
     background: #fffbeb; border: 2px solid #f7d47c; margin-bottom: 8px;
@@ -127,6 +126,18 @@
   .task-text { flex: 1; font-size: 1.02rem; padding: 2px 6px; border-radius: 6px; outline: none; word-break: break-word; }
   .task-text:focus { background: #fff; box-shadow: 0 0 0 2px var(--accent-yellow); }
   .task-item.completed .task-text { text-decoration: line-through; color: var(--text-light); }
+  .done-stamp {
+    font-size: 0.72rem; font-weight: 800; color: #d9645f;
+    border: 2px solid #e88a85; background: rgba(255, 240, 239, 0.9);
+    padding: 1px 6px; border-radius: 8px; letter-spacing: 0.5px;
+    transform: rotate(-6deg); flex-shrink: 0; user-select: none;
+  }
+  .done-stamp.pop { animation: stampPop 0.38s cubic-bezier(0.22, 1.4, 0.36, 1); }
+  @keyframes stampPop {
+    0% { transform: scale(2.3) rotate(-18deg); opacity: 0; }
+    65% { transform: scale(0.9) rotate(-4deg); opacity: 1; }
+    100% { transform: scale(1) rotate(-6deg); opacity: 1; }
+  }
   .badge-fixed { font-size: 0.72rem; background: #eef7f1; color: #4a7c5f; padding: 2px 6px; border-radius: 8px; border: 1px solid #cce3d4; flex-shrink: 0; }
   .sort-btns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
   .btn-sort { background: #f5ede6; border: none; color: #8c7a70; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; cursor: pointer; line-height: 1; }
@@ -140,6 +151,10 @@
   .setting-section { background: #fcf8f4; border: 1.5px solid #eddcd0; border-radius: 14px; padding: 12px; margin-top: 12px; }
   .setting-section h4 { margin: 0 0 8px; font-size: 0.92rem; color: var(--text-brown); }
   .setting-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .proj-manage-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 7px 10px; background: #fff; border: 1px solid #e8d9ce; border-radius: 10px; margin-bottom: 6px; font-size: 0.84rem;
+  }
   .proj-filter-bar { background: #fdf6ef; padding: 10px; border-radius: 12px; border: 1.5px solid #f0dfd1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
   .tab-bar { display: flex; gap: 8px; margin: 10px 0; border-bottom: 2px solid #f2e6dc; padding-bottom: 8px; }
   .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
@@ -189,10 +204,7 @@
   }
   .undo-snackbar.active { display: flex; animation: fadeInUp 0.22s ease; }
   .confetti-layer { position: fixed; inset: 0; pointer-events: none; z-index: 250; overflow: hidden; }
-  .confetti-piece {
-    position: absolute; top: -24px; font-size: 1.2rem;
-    animation: confettiFall linear forwards;
-  }
+  .confetti-piece { position: absolute; top: -24px; font-size: 1.2rem; animation: confettiFall linear forwards; }
   @keyframes confettiFall {
     0% { transform: translateY(0) rotate(0deg) scale(0.9); opacity: 1; }
     100% { transform: translateY(105vh) rotate(540deg) scale(1.1); opacity: 0; }
@@ -255,14 +267,36 @@
       <button class="btn btn-yellow btn-sm" onclick="copyDailySummary()">📋 複製當日總結給 AI</button>
     </div>
   </div>
-  <div class="ai-section">
-    <div class="ai-header" onclick="toggleAi()"><span>⭐ 建立新目標專案（由 AI 匯入並覆蓋舊清單）</span><span id="aiIcon">▼ 展開</span></div>
-    <div class="ai-body" id="aiBody">
+  <ul class="task-list" id="taskList"></ul>
+  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">☆ 設為焦點置頂｜✏️ 點擊文字編輯｜⚙️ 新增任務與專案請點右下角設定</p>
+  <div class="footer-tools">
+    <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openHistoryModal('stats')">📊 專案統計與歷史編輯</button>
+    <button class="btn btn-mint btn-sm" id="btnOpenSettings" onclick="openSettingsModal()">⚙️ 新增任務／專案與設定</button>
+  </div>
+  <div style="text-align:center;margin-top:14px;font-size:0.72rem;color:#b5a49b;">
+    🐾 圖示素材：<a href="https://pngtree.com" target="_blank" rel="noopener noreferrer" style="color:#9c8980;text-decoration:underline;">png 圖片來源於 ://pngtree.com</a>
+  </div>
+</div>
+<div class="modal" id="settingsModal" onclick="if(event.target===this) this.classList.remove('active')">
+  <div class="modal-box">
+    <div class="modal-header-sticky">
+      <h3 style="margin:0;">⚙️ 任務新增、專案與系統設定</h3>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('settingsModal').classList.remove('active')">✕ 關閉</button>
+    </div>
+    <div class="setting-section">
+      <h4>➕ 新增當日臨時小目標</h4>
+      <div class="add-row">
+        <input type="text" id="newTaskInput" placeholder="輸入臨時任務... (按 Enter 新增)" onkeypress="if(event.key==='Enter') addTask()">
+        <button class="btn btn-sm" onclick="addTask()">＋ 新增</button>
+      </div>
+    </div>
+    <div class="setting-section" style="background:#f9fbf9;border-color:#cce3d4;">
+      <h4>⭐ 建立新目標專案（由 AI 匯入並覆蓋舊清單）</h4>
       <div class="prompt-guide">
-        💡 <b>向 AI 索取清單指令：</b>匯入後將自動建立為<b>新的目標專案</b>（舊專案紀錄會完整歸檔保留），並取代今日與未來的固定清單：
+        💡 <b>向 AI 索取清單指令：</b>匯入後自動建立為<b>新專案</b>（舊紀錄歸檔保留），並取代今日與未來的固定清單：
         <div class="prompt-box">
           <span id="promptCmd">請將我們剛剛討論的目標整理成純文字清單，每行一項任務，不要加任何編號、符號、標題或額外說明文字。</span>
-          <button class="btn btn-mint btn-sm" onclick="copyPrompt()">複製指令</button>
+          <button class="btn btn-mint btn-sm" onclick="copyPrompt()">複製</button>
         </div>
       </div>
       <input type="text" id="newProjNameInput" class="proj-name-input" placeholder="輸入新目標專案名稱（選填，例如：多益衝刺計畫）">
@@ -272,58 +306,35 @@
         <button class="btn btn-mint btn-sm" onclick="importAiList()">🚀 建立新專案並套用</button>
       </div>
     </div>
-  </div>
-  <div class="add-row">
-    <input type="text" id="newTaskInput" placeholder="新增當日臨時小目標... (按 Enter 新增)" onkeypress="if(event.key==='Enter') addTask()">
-    <button class="btn" onclick="addTask()">＋ 新增</button>
-  </div>
-  <ul class="task-list" id="taskList"></ul>
-  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">☆ 設為今日焦點置頂｜✏️ 點擊文字編輯｜▲▼ 調整順序</p>
-  <div class="footer-tools">
-    <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openHistoryModal('stats')">📊 專案統計與歷史編輯</button>
-    <button class="btn btn-outline btn-sm" id="btnOpenSettings" onclick="openSettingsModal()">⚙️ 設定與同步備份</button>
-  </div>
-  <div style="text-align:center;margin-top:14px;font-size:0.72rem;color:#b5a49b;">
-    🐾 圖示素材：<a href="https://pngtree.com" target="_blank" rel="noopener noreferrer" style="color:#9c8980;text-decoration:underline;">png 圖片來源於 ://pngtree.com</a>
-  </div>
-</div>
-<div class="modal" id="settingsModal" onclick="if(event.target===this) this.classList.remove('active')">
-  <div class="modal-box">
-    <div class="modal-header-sticky">
-      <h3 style="margin:0;">⚙️ 設定、願景板與資料同步</h3>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('settingsModal').classList.remove('active')">✕ 關閉</button>
+    <div class="setting-section">
+      <h4>🗂️ 專案管理（切換／刪除）</h4>
+      <div id="projectManageList"></div>
     </div>
     <div class="setting-section">
       <h4>✨ 目標視覺化願景板（Vision Banner）</h4>
-      <p style="font-size:0.8rem;color:var(--text-light);margin:0 0 8px;">寫下一句你想達成此目標的初心或畫面（留白則首頁隱藏不顯示）：</p>
+      <p style="font-size:0.78rem;color:var(--text-light);margin:0 0 8px;">寫下一句你想達成此目標的初心（留白則首頁隱藏不顯示）：</p>
       <div style="display:flex;gap:6px;">
         <input type="text" id="visionInput" class="proj-name-input" style="margin:0;" placeholder="例如：今年底順利通過多益 850 分！">
         <button class="btn btn-mint btn-sm" style="flex-shrink:0;" onclick="saveVisionBanner()">儲存</button>
       </div>
     </div>
     <div class="setting-section">
-      <h4>🔗 跨裝置同步（自動衝突比對保留最新進度）</h4>
+      <h4>🔗 跨裝置同步與本機 JSON 備份</h4>
       <div class="setting-btn-grid">
         <button class="btn btn-mint btn-sm" onclick="copySyncLink()">🔗 同步近期(短網址)</button>
         <button class="btn btn-mint btn-sm" onclick="copySyncCode()">📋 複製完整代碼</button>
         <button class="btn btn-outline btn-sm" style="grid-column:span 2;" onclick="pasteSyncCode()">📥 貼上完整同步代碼</button>
-      </div>
-    </div>
-    <div class="setting-section">
-      <h4>💾 本機 JSON 檔案備份</h4>
-      <div class="setting-btn-grid">
         <button class="btn btn-outline btn-sm" id="btnExport" onclick="exportJson()">📤 匯出備份檔</button>
         <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput').click()">📥 匯入備份檔</button>
       </div>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
     </div>
     <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--text-light);">
-      <span>版本：v4.2（Android 最佳化版）</span>
+      <span>版本：v4.3（Android 最佳化版）</span>
       <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
     </div>
   </div>
 </div>
-
 <div class="modal" id="historyModal" onclick="if(event.target===this) this.classList.remove('active')">
   <div class="modal-box">
     <div class="modal-header-sticky">
@@ -346,7 +357,7 @@
 <script>
   const quotesDB = {
     warm: {
-      empty: ["🌱 還沒有設定目標喔！點上方綠色區塊從 AI 匯入清單吧～", "✨ 空白的頁面充滿無限可能，準備好規劃新專案了嗎？", "📝 寫下第一個小目標，就是把理想變成現實的魔法開始！", "🧸 今天的手帳正等著你填上可愛的色彩，從一件小事開始吧！", "🌤️ 只要開始規劃，你就已經贏過昨天的自己囉！"],
+      empty: ["🌱 還沒有設定目標喔！點右下角設定從 AI 匯入清單吧～", "✨ 空白的頁面充滿無限可能，準備好規劃新專案了嗎？", "📝 寫下第一個小目標，就是把理想變成現實的魔法開始！", "🧸 今天的手帳正等著你填上可愛的色彩，從一件小事開始吧！", "🌤️ 只要開始規劃，你就已經贏過昨天的自己囉！"],
       zero: ["🐣 新的一天開始啦，先挑一件最簡單的小目標打卡吧！", "☕ 深呼吸一口氣，跨出第一步就是最棒的開始！", "🚀 萬事起頭難，只要完成 1% 就打破零進度的魔咒囉！", "🐾 慢慢來沒關係，先專注在眼前第一項任務就好，加油！", "🌈 每個大成就都是從第一個勾勾累積起來的，現在就動手吧！"],
       low: ["🌿 已經啟動囉！保持這個節奏，慢慢往前推進吧～", "🐾 每完成一件事，就離理想的自己更近一點點！", "✨ 順利破蛋啦！你已經成功克服最難的起步階段囉！", "🚲 穩穩踩下踏板，不需要求快，只要持續前進就很棒！", "🍬 給完成前幾項任務的自己一點小肯定，繼續往下邁進吧！"],
       high: ["🔥 太厲害了，進度已經過半！再加把勁就能大功告成囉！", "🌟 你的專注力閃閃發光，最後幾項也難不倒你的！", "🏃 已經看見終點線啦！衝刺一下，把剩下的勾勾全部集滿吧！", "💎 超過一半的目標都被你征服了，今天的執行力簡直滿分！", "🎯 節奏抓得太好了！只差臨門一腳就能享受完美的收尾囉！"],
@@ -396,7 +407,7 @@
   let activeProjectId = localStorage.getItem('cute_journal_v4_active_proj') || '';
   let lastBackupTime = Number(localStorage.getItem('cute_journal_last_backup') || 0);
   let visionText = localStorage.getItem('cute_journal_vision') || '';
-  let currentDate = getLogicalToday(), currentQuote = "", undoSnapshot = null, undoTimer = null;
+  let currentDate = getLogicalToday(), currentQuote = "", undoSnapshot = null, undoTimer = null, justStampedId = null;
 
   (function initProjectsAndClean() {
     const todayStr = getLogicalToday();
@@ -451,17 +462,23 @@
     const input = document.getElementById('newTaskInput'), text = input.value.trim();
     if (!text) return;
     getTasks().push({ id: Date.now() + Math.random(), text, note: '', completed: false, isFixed: false, isMit: false, projectId: activeProjectId, updatedAt: Date.now() });
-    input.value = ''; saveAll();
+    input.value = '';
+    document.getElementById('settingsModal').classList.remove('active');
+    saveAll();
+    showSyncProgress(`✅ 已新增臨時目標「${text.slice(0, 10)}${text.length > 10 ? '...' : ''}」`, 100, 1600);
   }
-
   function toggleTask(id) {
     const tasks = getTasks(), t = tasks.find(x => x.id === id);
     if (t) {
       const wasAllDone = tasks.length > 0 && tasks.every(x => x.completed);
-      t.completed = !t.completed; t.updatedAt = Date.now(); currentQuote = ""; saveAll();
+      t.completed = !t.completed; t.updatedAt = Date.now(); currentQuote = "";
+      justStampedId = t.completed ? id : null;
+      saveAll();
+      justStampedId = null;
       if (!wasAllDone && tasks.length > 0 && tasks.every(x => x.completed)) triggerCelebration();
     }
   }
+
   function toggleMit(id) {
     const tasks = getTasks(), target = tasks.find(x => x.id === id);
     if (!target) return;
@@ -524,7 +541,6 @@
     saveAll();
     showUndoSnackbar(`🗑️ 已刪除「${target.text.slice(0, 12)}${target.text.length > 12 ? '...' : ''}」`);
   }
-
   function showUndoSnackbar(msg) {
     const bar = document.getElementById('undoSnackbar');
     document.getElementById('undoMsg').textContent = msg;
@@ -540,6 +556,7 @@
     document.getElementById('undoSnackbar').classList.remove('active');
     saveAll();
   }
+
   function triggerCelebration() {
     const layer = document.getElementById('confettiLayer');
     layer.innerHTML = '';
@@ -556,10 +573,6 @@
     setTimeout(() => { layer.innerHTML = ''; }, 3400);
   }
 
-  function toggleAi() {
-    const body = document.getElementById('aiBody'); body.classList.toggle('open');
-    document.getElementById('aiIcon').textContent = body.classList.contains('open') ? '▲ 收合' : '▼ 展開';
-  }
   function copyPrompt() {
     navigator.clipboard.writeText(document.getElementById('promptCmd').textContent)
       .then(() => alert('已複製指令！直接貼到 AI 對話框即可。'));
@@ -585,151 +598,10 @@
     ];
     Object.keys(allRecords).forEach(d => { if (d > todayStr) delete allRecords[d]; });
     currentDate = todayStr; datePicker.value = todayStr;
-    area.value = ''; nameInput.value = ''; currentQuote = ""; saveAll();
+    area.value = ''; nameInput.value = ''; currentQuote = "";
+    document.getElementById('settingsModal').classList.remove('active');
+    saveAll();
     alert(`🚀 已建立新專案「${projName}」（共 ${newItems.length} 項）並套用至今日！舊專案紀錄已完整歸檔保留。`);
-  }
-
-  function calcStreak() {
-    let streak = 0;
-    const isDayPass = (dStr) => {
-      const list = allRecords[dStr];
-      return list && list.length > 0 && (list.filter(t => t.completed).length / list.length) >= 0.8;
-    };
-    if (isDayPass(getLogicalToday(0))) streak++;
-    let offset = 1;
-    while (isDayPass(getLogicalToday(offset))) { streak++; offset++; }
-    return streak;
-  }
-
-  function changeQuoteStyle() {
-    currentQuoteStyle = document.getElementById('quoteStyleSelect').value;
-    localStorage.setItem('cute_journal_quote_style', currentQuoteStyle);
-    currentQuote = ""; updateQuote(true);
-  }
-  function updateQuote(force) {
-    const sel = document.getElementById('quoteStyleSelect');
-    if (sel) sel.value = currentQuoteStyle;
-    const stylePack = quotesDB[currentQuoteStyle] || quotesDB.warm;
-    const streak = calcStreak(), tasks = getTasks();
-    const rate = tasks.length === 0 ? -1 : Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100);
-    let pool = stylePack.empty;
-    if (rate === 0) pool = stylePack.zero;
-    else if (rate > 0 && rate <= 50) pool = stylePack.low;
-    else if (rate > 50 && rate < 100) pool = stylePack.high;
-    else if (rate === 100) pool = stylePack.perfect;
-
-    const boxTier = streakBlindBoxes.find(b => streak >= b.min);
-    const tagEl = document.getElementById('blindboxTag');
-    let activePool = [...pool];
-    if (boxTier && rate >= 80) {
-      tagEl.style.display = 'inline-block'; tagEl.textContent = boxTier.tag;
-      activePool = [...boxTier.quotes, ...pool];
-    } else { tagEl.style.display = 'none'; }
-
-    if (force || !currentQuote || !activePool.includes(currentQuote)) {
-      currentQuote = activePool[Math.floor(Math.random() * activePool.length)];
-    }
-    document.getElementById('quoteText').textContent = currentQuote;
-  }
-
-  function openSettingsModal() {
-    document.getElementById('visionInput').value = visionText;
-    document.getElementById('settingsModal').classList.add('active');
-  }
-
-  function saveVisionBanner() {
-    visionText = document.getElementById('visionInput').value.trim();
-    localStorage.setItem('cute_journal_vision', visionText);
-    render();
-    showSyncProgress(visionText ? '✨ 目標願景板已更新顯示！' : '🫧 已清空並隱藏願景板', 100, 1800);
-  }
-
-  function render() {
-    document.getElementById('activeProjName').textContent = getActiveProject().name;
-    document.getElementById('templateCountText').textContent = `目前專案固定清單：${fixedTemplate.length} 項`;
-    document.getElementById('streakBadge').textContent = `🔥 連續達標 (≥80%)：${calcStreak()} 天`;
-
-    const visionEl = document.getElementById('visionBannerDisplay');
-    if (visionText) { visionEl.style.display = 'block'; visionEl.textContent = `🌈 願景初心：${visionText}`; }
-    else { visionEl.style.display = 'none'; }
-
-    const btnExport = document.getElementById('btnExport'), btnSettings = document.getElementById('btnOpenSettings');
-    const daysSinceBackup = (Date.now() - lastBackupTime) / 86400000;
-    const needBackup = Object.keys(allRecords).length > 0 && (!lastBackupTime || daysSinceBackup > 7);
-    if (needBackup) {
-      if (btnExport) { btnExport.classList.add('btn-warn'); btnExport.textContent = '⚠️ 建議匯出備份'; }
-      btnSettings.classList.add('btn-warn'); btnSettings.textContent = '⚙️ 設定與備份 ⚠️';
-    } else {
-      if (btnExport) { btnExport.classList.remove('btn-warn'); btnExport.textContent = '📤 匯出備份檔'; }
-      btnSettings.classList.remove('btn-warn'); btnSettings.textContent = '⚙️ 設定與同步備份';
-    }
-
-    const todayStr = getLogicalToday(), isToday = currentDate === todayStr, isFuture = currentDate > todayStr;
-    document.getElementById('btnBackToday').style.display = isToday ? 'none' : 'inline-block';
-    document.getElementById('progressLabel').textContent = isToday ? '今日完成度' : (isFuture ? `${currentDate} (未來日期)` : `${currentDate} 歷史完成度`);
-    document.getElementById('dateStatusHint').textContent = isToday ? '🌙 凌晨 05:00 自動換日（目前為今日進度）' : (isFuture ? '⏳ 尚未到達該日期（將於換日後自動產生任務）' : '✏️ 目前正在檢視／編輯歷史日期');
-    const tasks = getTasks(), listEl = document.getElementById('taskList'); listEl.innerHTML = '';
-    if (isFuture && tasks.length === 0) {
-      listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.95rem;">⏳ <b>${currentDate}</b> 尚未到來喔！<br>等該日凌晨 05:00 換日後，系統會自動帶入目前專案的每日固定清單。</li>`;
-    } else {
-      tasks.forEach((t, idx) => {
-        const li = document.createElement('li');
-        li.className = `task-item ${t.completed ? 'completed' : ''} ${t.isMit ? 'is-mit' : ''}`;
-        li.innerHTML = `
-          <div class="task-main-row">
-            <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id})">
-            <button class="btn-mit ${t.isMit ? 'active' : ''}" onclick="toggleMit(${t.id})" title="設為今日焦點置頂">${t.isMit ? '⭐' : '☆'}</button>
-            ${t.isMit ? '<span class="badge-mit">焦點</span>' : ''}
-            <div class="task-text" contenteditable="true" onblur="editTask(${t.id}, this.innerText)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</div>
-            ${t.isFixed ? '<span class="badge-fixed">固定</span>' : ''}
-            <div class="sort-btns"><button class="btn-sort" onclick="moveTask(${idx}, -1)">▲</button><button class="btn-sort" onclick="moveTask(${idx}, 1)">▼</button></div>
-            <button class="btn-del" onclick="delTask(${t.id})">✕</button>
-          </div>
-          <div class="task-note-row"><input type="text" class="task-note-input" value="${(t.note || '').replace(/"/g, '&quot;')}" placeholder="📝 記錄執行狀況或心得..." oninput="editNote(${t.id}, this.value)"></div>`;
-        listEl.appendChild(li);
-      });
-    }
-    const done = tasks.filter(t => t.completed).length, pct = tasks.length === 0 ? 0 : Math.round((done / tasks.length) * 100);
-    document.getElementById('progressText').textContent = `${pct}% (${done}/${tasks.length})`;
-    document.getElementById('progressBar').style.width = `${pct}%`;
-    updateQuote(false);
-  }
-
-  function copyDailySummary() {
-    const tasks = getTasks();
-    if (tasks.length === 0) { alert('該日期沒有任務可以總結喔！'); return; }
-    const done = tasks.filter(t => t.completed).length, pct = Math.round((done / tasks.length) * 100);
-    let text = `📅 日期：${currentDate}（專案：${getActiveProject().name}）\n📊 當日總達成率：${pct}% (${done}/${tasks.length})\n\n【目標執行狀況與筆記】\n`;
-    tasks.forEach(t => { text += `- [${t.completed ? '✅ 已完成' : '⬜ 未完成'}] ${t.isMit ? '⭐[今日焦點] ' : ''}${t.text}${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`; });
-    text += `\n請根據我這天的完成狀況與筆記紀錄，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供具體小建議！`;
-    navigator.clipboard.writeText(text).then(() => alert(`📋 ${currentDate} 總結已複製！直接貼上給 AI 即可取得覆盤回饋！`));
-  }
-
-  let selectedStatsProj = 'ALL', selectedCurveDim = 'week', periodReportCache = {}, calViewYear = 0, calViewMonth = 0;
-  function getFilteredRecords() {
-    const res = {};
-    Object.entries(allRecords).forEach(([d, list]) => {
-      if (!Array.isArray(list)) return;
-      const filtered = selectedStatsProj === 'ALL' ? list : list.filter(t => t.projectId === selectedStatsProj);
-      if (filtered.length > 0) res[d] = filtered;
-    });
-    return res;
-  }
-
-  function calcBestStreak(records) {
-    const dates = Object.keys(records).sort();
-    let best = 0, cur = 0, prevTime = null;
-    dates.forEach(dStr => {
-      const list = records[dStr];
-      const pass = list.length > 0 && (list.filter(t => t.completed).length / list.length) >= 0.8;
-      const t = new Date(dStr + 'T00:00:00').getTime();
-      if (pass) {
-        cur = (prevTime !== null && Math.round((t - prevTime) / 86400000) === 1) ? cur + 1 : 1;
-        if (cur > best) best = cur;
-      } else { cur = 0; }
-      prevTime = t;
-    });
-    return best;
   }
   function getWeekKey(d) {
     const tmp = new Date(d.getTime());
@@ -829,7 +701,6 @@
       });
     });
     periodReportCache = periods;
-
     const bestStreak = calcBestStreak(records), dowNames = ['一', '二', '三', '四', '五', '六', '日'];
     let insightMsg = "🌱 持續累積打卡幾天後，這裡會自動為你診斷執行節奏與盲點喔！";
     const validDows = dowStats.map((s, i) => ({ name: '週' + dowNames[i], rate: s.total > 0 ? Math.round((s.done / s.total) * 100) : -1, total: s.total })).filter(x => x.total > 0);
@@ -901,7 +772,6 @@
   }
 
   function jumpToDate(dStr) { currentDate = dStr; datePicker.value = dStr; currentQuote = ""; document.getElementById('historyModal').classList.remove('active'); render(); }
-
   function copyPeriodSummary(key) {
     const p = periodReportCache[key];
     if (!p || p.days === 0) { alert('該區間目前沒有紀錄喔！'); return; }
@@ -930,6 +800,7 @@
       box.appendChild(card);
     });
   }
+
   function refreshProjSelect() {
     const sel = document.getElementById('statsProjSelect');
     sel.innerHTML = `<option value="ALL">🌐 全部目標專案總覽 (${projects.length}個)</option>` +
@@ -998,7 +869,6 @@
     toast.classList.add('active');
     if (autoHideMs > 0) setTimeout(() => { toast.classList.remove('active'); }, autoHideMs);
   }
-
   function checkUrlSync() {
     if (window.location.hash.startsWith('#sync=')) {
       showSyncProgress('🔄 正在解析跨裝置同步網址...', 40);
