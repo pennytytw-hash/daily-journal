@@ -37,11 +37,17 @@
   }
   header { text-align: center; margin-bottom: 16px; }
   h1 { font-size: 1.55rem; margin: 6px 0 8px; }
-  .date-hint { font-size: 0.78rem; color: var(--text-light); margin-top: 4px; }
+  .date-controls { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .date-hint { font-size: 0.78rem; color: var(--text-light); margin-top: 5px; }
   input[type="date"] {
     border: 2px dashed var(--primary-pink); background: #fff9f8;
     color: var(--text-brown); padding: 6px 14px; border-radius: 12px;
     font-size: 1rem; font-weight: 700; outline: none;
+  }
+  .streak-badge {
+    display: inline-block; background: #fff0e6; border: 1.5px solid #f7c59f;
+    color: #d96b27; font-size: 0.82rem; font-weight: 700; padding: 3px 10px;
+    border-radius: 20px; margin-bottom: 8px;
   }
   .progress-card {
     background: #fff6ee; border-radius: 18px; padding: 15px;
@@ -60,18 +66,14 @@
     display: flex; justify-content: space-between; align-items: center; gap: 8px;
   }
   .summary-bar { margin-top: 10px; display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
-  .ai-section {
-    background: #f9fbf9; border: 2px dashed var(--accent-mint);
-    border-radius: 16px; padding: 13px; margin-bottom: 18px;
-  }
+  .ai-section { background: #f9fbf9; border: 2px dashed var(--accent-mint); border-radius: 16px; padding: 13px; margin-bottom: 18px; }
   .ai-header { display: flex; justify-content: space-between; cursor: pointer; font-weight: 700; color: #4a7c5f; }
   .ai-body { margin-top: 12px; display: none; }
   .ai-body.open { display: block; }
   .prompt-guide { background: #eef7f1; padding: 10px; border-radius: 10px; font-size: 0.85rem; margin-bottom: 10px; line-height: 1.5; }
   .prompt-box {
     background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #cce3d4;
-    font-weight: 700; color: #3b664d; margin-top: 6px;
-    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    font-weight: 700; color: #3b664d; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
   }
   textarea {
     width: 100%; height: 80px; border: 1.5px solid #d5e6dc; border-radius: 12px;
@@ -95,46 +97,36 @@
   .btn-sm { padding: 6px 10px; font-size: 0.8rem; border-radius: 10px; }
   .btn-outline { background: #fff; color: var(--text-brown); border: 1.5px solid #dfd0c5; }
   .btn-outline:hover { background: #f7efe8; }
+  .btn-warn { background: #fff4d4; border-color: #eab84d; color: #8a6214; }
   .task-list { list-style: none; padding: 0; margin: 0; }
-  .task-item {
-    display: flex; flex-direction: column; gap: 6px; padding: 12px 8px;
-    border-bottom: 1.5px dashed var(--border-dashed);
-  }
-  .task-main-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+  .task-item { display: flex; flex-direction: column; gap: 6px; padding: 12px 6px; border-bottom: 1.5px dashed var(--border-dashed); }
+  .task-main-row { display: flex; align-items: center; gap: 8px; width: 100%; }
   .task-checkbox { width: 21px; height: 21px; accent-color: var(--primary-pink); cursor: pointer; flex-shrink: 0; }
   .task-text { flex: 1; font-size: 1.02rem; padding: 2px 6px; border-radius: 6px; outline: none; word-break: break-word; }
   .task-text:focus { background: #fff; box-shadow: 0 0 0 2px var(--accent-yellow); }
   .task-item.completed .task-text { text-decoration: line-through; color: var(--text-light); }
-  .badge-fixed {
-    font-size: 0.72rem; background: #eef7f1; color: #4a7c5f;
-    padding: 2px 7px; border-radius: 8px; border: 1px solid #cce3d4; flex-shrink: 0;
-  }
-  .btn-del { background: none; border: none; color: #cbbab0; font-size: 1.1rem; cursor: pointer; }
-  .task-note-row { padding-left: 31px; width: 100%; }
+  .badge-fixed { font-size: 0.72rem; background: #eef7f1; color: #4a7c5f; padding: 2px 6px; border-radius: 8px; border: 1px solid #cce3d4; flex-shrink: 0; }
+  .sort-btns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .btn-sort { background: #f5ede6; border: none; color: #8c7a70; font-size: 0.65rem; padding: 2px 5px; border-radius: 4px; cursor: pointer; line-height: 1; }
+  .btn-sort:hover { background: var(--primary-pink); color: #fff; }
+  .btn-del { background: none; border: none; color: #cbbab0; font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
+  .task-note-row { padding-left: 29px; width: 100%; }
   .task-note-input {
     width: 100%; border: 1px solid #efe4da; background: #fcf9f6; border-radius: 8px;
-    padding: 5px 10px; font-size: 0.85rem; color: #7a665c; outline: none; transition: 0.2s;
+    padding: 5px 10px; font-size: 0.85rem; color: #7a665c; outline: none;
   }
   .task-note-input:focus { border-color: var(--accent-mint); background: #fff; }
-  .footer-tools {
-    margin-top: 24px; padding-top: 14px; border-top: 2px solid #f2e6dc;
-    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
-  }
-  .modal {
-    display: none; position: fixed; inset: 0; background: rgba(92, 75, 67, 0.45);
-    justify-content: center; align-items: center; padding: 16px; z-index: 100;
-  }
+  .footer-tools { margin-top: 24px; padding-top: 14px; border-top: 2px solid #f2e6dc; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+  .modal { display: none; position: fixed; inset: 0; background: rgba(92, 75, 67, 0.45); justify-content: center; align-items: center; padding: 16px; z-index: 100; }
   .modal.active { display: flex; }
-  .modal-box {
-    background: var(--paper-white); border-radius: 20px; padding: 20px;
-    width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto; border: 3px solid #f2e6dc;
-  }
+  .modal-box { background: var(--paper-white); border-radius: 20px; padding: 20px; width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto; border: 3px solid #f2e6dc; }
   .tab-bar { display: flex; gap: 8px; margin: 12px 0; border-bottom: 2px solid #f2e6dc; padding-bottom: 8px; }
   .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
   .stat-card { background: #fff8f1; border: 1.5px solid #f3dfd0; border-radius: 14px; padding: 12px; text-align: center; }
   .stat-card h4 { margin: 0 0 6px; font-size: 0.9rem; color: var(--text-light); }
   .stat-rate { font-size: 1.45rem; font-weight: 700; color: var(--primary-pink-dark); }
   .stat-sub { font-size: 0.78rem; color: var(--text-brown); margin: 4px 0 8px; }
+  .habit-rank-box { margin-top: 14px; background: #f8fbf9; border: 1.5px solid #d5e6dc; border-radius: 14px; padding: 12px; font-size: 0.85rem; }
   .history-card { padding: 10px; border-bottom: 1px dashed var(--border-dashed); cursor: pointer; border-radius: 10px; }
   .history-card:hover { background: #fdf5ee; }
   .history-notes-preview { font-size: 0.8rem; color: #7a665c; margin-top: 5px; padding-left: 8px; border-left: 2px solid var(--accent-mint); }
@@ -145,11 +137,15 @@
   <div class="washi-tape"></div>
   <header>
     <h1>🧸 每日目標小手帳</h1>
-    <input type="date" id="datePicker">
-    <div class="date-hint" id="dateStatusHint">🌙 凌晨 05:00 自動換日（可隨時切換日曆編輯歷史紀錄）</div>
+    <div id="streakBadge" class="streak-badge">🔥 連續達標 0 天</div>
+    <div class="date-controls">
+      <input type="date" id="datePicker">
+      <button class="btn btn-mint btn-sm" id="btnBackToday" style="display:none;" onclick="goToday()">↩️ 回到今日</button>
+    </div>
+    <div class="date-hint" id="dateStatusHint">🌙 凌晨 05:00 自動換日</div>
   </header>
   <div class="progress-card">
-    <div class="progress-header"><span id="progressLabel">當日完成度</span><span id="progressText">0% (0/0)</span></div>
+    <div class="progress-header"><span id="progressLabel">今日完成度</span><span id="progressText">0% (0/0)</span></div>
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
     <div class="encouragement-box">
       <span id="quoteText">🌱 新的一天開始啦，寫下今天想完成的小目標吧！</span>
@@ -163,7 +159,7 @@
     <div class="ai-header" onclick="toggleAi()"><span>⭐ 設定每日固定清單（由 AI 匯入並覆蓋舊清單）</span><span id="aiIcon">▼ 展開</span></div>
     <div class="ai-body" id="aiBody">
       <div class="prompt-guide">
-        💡 <b>向 AI 索取固定清單的指令：</b>討論完目標後複製下方指令貼給 AI。匯入後會<b>自動覆蓋</b>舊的固定清單，並每天凌晨 5 點後自動帶入新的一天！
+        💡 <b>向 AI 索取固定清單的指令：</b>討論完目標後複製下方指令貼給 AI。匯入後會<b>自動覆蓋</b>舊的固定清單，並每天凌晨 5 點後自動帶入！
         <div class="prompt-box">
           <span id="promptCmd">請將我們剛剛討論的目標整理成純文字清單，每行一項任務，不要加任何編號、符號、標題或額外說明文字。</span>
           <button class="btn btn-mint btn-sm" onclick="copyPrompt()">複製指令</button>
@@ -181,12 +177,12 @@
     <button class="btn" onclick="addTask()">＋ 新增</button>
   </div>
   <ul class="task-list" id="taskList"></ul>
-  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">✏️ 點擊任務文字或筆記欄皆可直接編輯（歷史日期亦同）</p>
+  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">✏️ 點擊文字可編輯｜▲▼ 可調整順序｜📝 下方小框記錄執行狀況</p>
   <div class="footer-tools">
     <button class="btn btn-outline btn-sm" onclick="openHistoryModal('stats')">📊 歷史與週月季年統計</button>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
       <button class="btn btn-mint btn-sm" onclick="copySyncLink()">🔗 跨裝置同步</button>
-      <button class="btn btn-outline btn-sm" onclick="exportJson()">📤 匯出</button>
+      <button class="btn btn-outline btn-sm" id="btnExport" onclick="exportJson()">📤 匯出</button>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
     </div>
@@ -195,11 +191,11 @@
 <div class="modal" id="historyModal">
   <div class="modal-box">
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <h3 style="margin:0;">📊 歷史編輯與統計總結</h3>
+      <h3 style="margin:0;">📊 歷史編輯與統計分析</h3>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('historyModal').classList.remove('active')">關閉</button>
     </div>
     <div class="tab-bar">
-      <button class="btn btn-sm" id="tabStatsBtn" onclick="switchTab('stats')">📈 週/月/季/年統計與複製</button>
+      <button class="btn btn-sm" id="tabStatsBtn" onclick="switchTab('stats')">📈 週/月/季/年與習慣排行</button>
       <button class="btn btn-outline btn-sm" id="tabLogsBtn" onclick="switchTab('logs')">📅 點擊歷史日期編輯</button>
     </div>
     <div id="statsView"></div><div id="logsView" style="display:none;"></div>
@@ -213,16 +209,12 @@
     high: ["🔥 太厲害了，進度已經過半！再加把勁就能大功告成囉！", "🌟 你的專注力閃閃發光，最後幾項也難不倒你的！"],
     perfect: ["🎉 100% 完美達成！這天的你超級棒，快給自己一個大大的獎勵吧！", "🏆 任務全數制霸！好好休息放鬆，享受滿滿的成就感吧！"]
   };
-
-  // 凌晨 05:00 換日計算（將當前時間減去 5 小時作為邏輯日期）
-  function getLogicalToday() {
-    const shifted = new Date(Date.now() - 5 * 60 * 60 * 1000);
-    return shifted.toLocaleDateString('en-CA');
+  function getLogicalToday(offsetDays = 0) {
+    return new Date(Date.now() - 5 * 3600000 - offsetDays * 86400000).toLocaleDateString('en-CA');
   }
-
-  // 自動相容舊版 v2 資料
   let allRecords = JSON.parse(localStorage.getItem('cute_journal_v3_records') || localStorage.getItem('cute_journal_v2') || '{}');
   let fixedTemplate = JSON.parse(localStorage.getItem('cute_journal_v3_template') || '[]');
+  let lastBackupTime = Number(localStorage.getItem('cute_journal_last_backup') || 0);
   let currentDate = getLogicalToday();
   let currentQuote = "";
 
@@ -230,16 +222,22 @@
   datePicker.value = currentDate;
   datePicker.addEventListener('change', (e) => { currentDate = e.target.value; currentQuote = ""; render(); });
 
+  function goToday() { currentDate = getLogicalToday(); datePicker.value = currentDate; currentQuote = ""; render(); }
+
+  function encodeSyncData(obj) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function decodeSyncData(str) {
+    return JSON.parse(decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/')))));
+  }
   function checkUrlSync() {
-    const hash = window.location.hash;
-    if (hash.startsWith('#sync=')) {
+    if (window.location.hash.startsWith('#sync=')) {
       try {
-        const decoded = JSON.parse(decodeURIComponent(escape(atob(hash.slice(6)))));
+        const decoded = decodeSyncData(window.location.hash.slice(6));
         if (decoded && typeof decoded === 'object') {
           if (decoded.records) allRecords = { ...allRecords, ...decoded.records };
           if (Array.isArray(decoded.template)) fixedTemplate = decoded.template;
-          saveAll(false);
-          history.replaceState(null, null, ' ');
+          saveAll(false); history.replaceState(null, null, ' ');
           alert('✨ 跨裝置紀錄與筆記同步成功！');
         }
       } catch (e) { console.error('同步解析失敗', e); }
@@ -255,27 +253,28 @@
     }
     return allRecords[currentDate];
   }
-
   function saveAll(shouldRender = true) {
     localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
     localStorage.setItem('cute_journal_v3_template', JSON.stringify(fixedTemplate));
     if (shouldRender) render();
   }
-
   function addTask() {
     const input = document.getElementById('newTaskInput');
     const text = input.value.trim();
     if (!text) return;
     getTasks().push({ id: Date.now() + Math.random(), text, note: '', completed: false, isFixed: false });
-    input.value = '';
-    saveAll();
+    input.value = ''; saveAll();
   }
-
   function toggleTask(id) {
     const t = getTasks().find(x => x.id === id);
     if (t) { t.completed = !t.completed; currentQuote = ""; saveAll(); }
   }
-
+  function moveTask(index, dir) {
+    const tasks = getTasks(), target = index + dir;
+    if (target < 0 || target >= tasks.length) return;
+    [tasks[index], tasks[target]] = [tasks[target], tasks[index]];
+    saveAll();
+  }
   function editTask(id, newText) {
     const t = getTasks().find(x => x.id === id);
     const trimmed = newText.trim();
@@ -284,16 +283,13 @@
         const tplIdx = fixedTemplate.indexOf(t.text);
         if (tplIdx !== -1) fixedTemplate[tplIdx] = trimmed;
       }
-      t.text = trimmed;
-      saveAll();
+      t.text = trimmed; saveAll();
     } else render();
   }
-
   function editNote(id, newNote) {
     const t = getTasks().find(x => x.id === id);
     if (t && (t.note || '') !== newNote.trim()) { t.note = newNote.trim(); saveAll(false); }
   }
-
   function delTask(id) { allRecords[currentDate] = getTasks().filter(x => x.id !== id); saveAll(); }
   function toggleAi() {
     const body = document.getElementById('aiBody');
@@ -304,6 +300,7 @@
     navigator.clipboard.writeText(document.getElementById('promptCmd').textContent)
       .then(() => alert('已複製指令！直接貼到 AI 對話框即可。'));
   }
+
   function importAiList() {
     const area = document.getElementById('aiPasteArea');
     const newItems = [];
@@ -324,17 +321,16 @@
     alert(`✅ 已成功更新每日固定清單（共 ${newItems.length} 項），每天凌晨 5 點換日都會自動帶入！`);
   }
 
-  function copyDailySummary() {
-    const tasks = getTasks();
-    if (tasks.length === 0) { alert('該日期沒有任務可以總結喔！'); return; }
-    const done = tasks.filter(t => t.completed).length;
-    const pct = Math.round((done / tasks.length) * 100);
-    let text = `📅 日期：${currentDate}\n📊 當日總達成率：${pct}% (${done}/${tasks.length})\n\n【目標執行狀況與筆記】\n`;
-    tasks.forEach(t => {
-      text += `- [${t.completed ? '✅ 已完成' : '⬜ 未完成'}] ${t.text}${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`;
-    });
-    text += `\n請根據我這天的完成狀況與筆記紀錄，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供具體小建議！`;
-    navigator.clipboard.writeText(text).then(() => alert(`📋 ${currentDate} 總結已複製！直接貼上給 AI 即可取得覆盤回饋！`));
+  function calcStreak() {
+    let streak = 0;
+    const isDayPass = (dStr) => {
+      const list = allRecords[dStr];
+      return list && list.length > 0 && (list.filter(t => t.completed).length / list.length) >= 0.8;
+    };
+    if (isDayPass(getLogicalToday(0))) streak++;
+    let offset = 1;
+    while (isDayPass(getLogicalToday(offset))) { streak++; offset++; }
+    return streak;
   }
 
   function updateQuote(force) {
@@ -351,16 +347,26 @@
 
   function render() {
     document.getElementById('templateCountText').textContent = `目前固定清單：${fixedTemplate.length} 項`;
+    document.getElementById('streakBadge').textContent = `🔥 連續達標 (≥80%)：${calcStreak()} 天`;
+
+    const btnExport = document.getElementById('btnExport');
+    const daysSinceBackup = (Date.now() - lastBackupTime) / 86400000;
+    if (Object.keys(allRecords).length > 0 && (!lastBackupTime || daysSinceBackup > 7)) {
+      btnExport.classList.add('btn-warn'); btnExport.textContent = '⚠️ 建議匯出備份';
+    } else {
+      btnExport.classList.remove('btn-warn'); btnExport.textContent = '📤 匯出';
+    }
+
     const isToday = currentDate === getLogicalToday();
+    document.getElementById('btnBackToday').style.display = isToday ? 'none' : 'inline-block';
     document.getElementById('progressLabel').textContent = isToday ? '今日完成度' : `${currentDate} 歷史完成度`;
     document.getElementById('dateStatusHint').textContent = isToday
       ? '🌙 凌晨 05:00 自動換日（目前為今日進度）'
       : '✏️ 目前正在檢視／編輯歷史日期（修改會自動保存）';
 
-    const tasks = getTasks();
-    const listEl = document.getElementById('taskList');
+    const tasks = getTasks(), listEl = document.getElementById('taskList');
     listEl.innerHTML = '';
-    tasks.forEach(t => {
+    tasks.forEach((t, idx) => {
       const li = document.createElement('li');
       li.className = `task-item ${t.completed ? 'completed' : ''}`;
       li.innerHTML = `
@@ -369,7 +375,11 @@
           <div class="task-text" contenteditable="true" onblur="editTask(${t.id}, this.innerText)"
                onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</div>
           ${t.isFixed ? '<span class="badge-fixed">⭐ 固定</span>' : ''}
-          <button class="btn-del" onclick="delTask(${t.id})">✕</button>
+          <div class="sort-btns">
+            <button class="btn-sort" onclick="moveTask(${idx}, -1)" title="上移">▲</button>
+            <button class="btn-sort" onclick="moveTask(${idx}, 1)" title="下移">▼</button>
+          </div>
+          <button class="btn-del" onclick="delTask(${t.id})" title="刪除">✕</button>
         </div>
         <div class="task-note-row">
           <input type="text" class="task-note-input" value="${(t.note || '').replace(/"/g, '&quot;')}" 
@@ -382,6 +392,18 @@
     document.getElementById('progressText').textContent = `${pct}% (${done}/${tasks.length})`;
     document.getElementById('progressBar').style.width = `${pct}%`;
     updateQuote(false);
+  }
+  function copyDailySummary() {
+    const tasks = getTasks();
+    if (tasks.length === 0) { alert('該日期沒有任務可以總結喔！'); return; }
+    const done = tasks.filter(t => t.completed).length;
+    const pct = Math.round((done / tasks.length) * 100);
+    let text = `📅 日期：${currentDate}\n📊 當日總達成率：${pct}% (${done}/${tasks.length})\n\n【目標執行狀況與筆記】\n`;
+    tasks.forEach(t => {
+      text += `- [${t.completed ? '✅ 已完成' : '⬜ 未完成'}] ${t.text}${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`;
+    });
+    text += `\n請根據我這天的完成狀況與筆記紀錄，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供具體小建議！`;
+    navigator.clipboard.writeText(text).then(() => alert(`📋 ${currentDate} 總結已複製！直接貼上給 AI 即可取得覆盤回饋！`));
   }
 
   let periodReportCache = {};
@@ -398,6 +420,7 @@
       quarter: { label: `${year}年 第${quarter + 1}季 (Q${quarter + 1})`, total: 0, done: 0, days: 0, logs: [] },
       year: { label: `${year}年 年度總統計`, total: 0, done: 0, days: 0, logs: [] }
     };
+    const habitMap = {};
 
     Object.keys(allRecords).sort().forEach(dateStr => {
       const list = allRecords[dateStr];
@@ -408,14 +431,29 @@
       if (d.getFullYear() === year && d.getMonth() === month) pushLog(periods.month);
       if (d.getFullYear() === year && Math.floor(d.getMonth() / 3) === quarter) pushLog(periods.quarter);
       if (d.getFullYear() === year) pushLog(periods.year);
+
+      list.forEach(t => {
+        if (!habitMap[t.text]) habitMap[t.text] = { total: 0, done: 0 };
+        habitMap[t.text].total++;
+        if (t.completed) habitMap[t.text].done++;
+      });
     });
 
     periodReportCache = periods;
+    const habitList = Object.entries(habitMap).filter(([, v]) => v.total >= 2)
+      .map(([name, v]) => ({ name, rate: Math.round((v.done / v.total) * 100), done: v.done, total: v.total }))
+      .sort((a, b) => b.rate - a.rate || b.done - a.done);
+
+    const rankHtml = habitList.length > 0
+      ? `<div class="habit-rank-box"><b>🏆 習慣執行率排行（累計 ≥ 2 天）</b><div style="margin-top:6px;">` +
+        habitList.slice(0, 5).map((h, i) => `<div>${i + 1}. ${h.name.replace(/</g,'&lt;')} — <b>${h.rate}%</b> (${h.done}/${h.total}次)</div>`).join('') + `</div></div>`
+      : '';
+
     document.getElementById('statsView').innerHTML = `<p style="font-size:0.82rem;color:#8c7a70;margin:0 0 8px;">📌 基準日期：<b>${currentDate}</b>（切換主畫面日曆可查詢並複製任意週/月/季/年總結）</p><div class="stat-grid">` +
       Object.entries(periods).map(([key, p]) => {
         const rate = p.total === 0 ? 0 : Math.round((p.done / p.total) * 100);
         return `<div class="stat-card"><h4>${p.label}</h4><div class="stat-rate">${rate}%</div><div class="stat-sub">完成 ${p.done} / ${p.total} 項｜記錄 ${p.days} 天</div><button class="btn btn-yellow btn-sm" onclick="copyPeriodSummary('${key}')">📋 複製總結給 AI</button></div>`;
-      }).join('') + `</div>`;
+      }).join('') + `</div>` + rankHtml;
   }
 
   function copyPeriodSummary(key) {
@@ -455,13 +493,14 @@
   }
   function openHistoryModal(defaultTab) { calcPeriodStats(); renderHistoryLogs(); switchTab(defaultTab); document.getElementById('historyModal').classList.add('active'); }
   function copySyncLink() {
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify({ records: allRecords, template: fixedTemplate }))));
-    navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}#sync=${encoded}`).then(() => alert('🔗 同步專屬連結已複製！傳送到另一台裝置打開即可同步！'));
+    const encoded = encodeSyncData({ records: allRecords, template: fixedTemplate });
+    navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}#sync=${encoded}`).then(() => alert('🔗 壓縮同步連結已複製！傳送到另一台裝置打開即可同步！'));
   }
   function exportJson() {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, template: fixedTemplate }, null, 2)], { type: 'application/json' }));
     a.download = `每日目標手帳備份_${currentDate}.json`; a.click();
+    lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
   }
   function importJson(e) {
     const file = e.target.files; if (!file) return;
@@ -475,6 +514,11 @@
       } catch { alert('檔案格式錯誤'); }
     };
     reader.readAsText(file); e.target.value = '';
+  }
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    const swCode = `self.addEventListener('fetch', e => e.respondWith(caches.open('journal-v1').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))));`;
+    navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
   }
 
   checkUrlSync();
