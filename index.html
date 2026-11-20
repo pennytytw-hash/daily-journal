@@ -218,6 +218,19 @@
   let currentDate = getLogicalToday();
   let currentQuote = "";
 
+  // 自動清理先前誤點未來日期所產生的未完成紀錄
+  (function cleanFutureRecords() {
+    const todayStr = getLogicalToday();
+    let cleaned = false;
+    Object.keys(allRecords).forEach(d => {
+      if (d > todayStr && Array.isArray(allRecords[d]) && allRecords[d].every(t => !t.completed && !t.note)) {
+        delete allRecords[d];
+        cleaned = true;
+      }
+    });
+    if (cleaned) localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
+  })();
+
   const datePicker = document.getElementById('datePicker');
   datePicker.value = currentDate;
   datePicker.addEventListener('change', (e) => { currentDate = e.target.value; currentQuote = ""; render(); });
@@ -244,7 +257,12 @@
     }
   }
 
+  // 僅在「今天」且尚未建立紀錄時才自動帶入固定清單；未來日期回傳空陣列且不寫入紀錄
   function getTasks() {
+    const todayStr = getLogicalToday();
+    if (currentDate > todayStr) {
+      return allRecords[currentDate] || [];
+    }
     if (!allRecords[currentDate]) {
       allRecords[currentDate] = fixedTemplate.map((text, idx) => ({
         id: Date.now() + idx + Math.random(), text, note: '', completed: false, isFixed: true
@@ -259,6 +277,7 @@
     if (shouldRender) render();
   }
   function addTask() {
+    if (currentDate > getLogicalToday()) { alert('⏳ 尚未到達該日期，請在換日後再開始記錄喔！'); return; }
     const input = document.getElementById('newTaskInput');
     const text = input.value.trim();
     if (!text) return;
@@ -269,15 +288,15 @@
     const t = getTasks().find(x => x.id === id);
     if (t) { t.completed = !t.completed; currentQuote = ""; saveAll(); }
   }
-    function moveTask(index, dir) {
+  function moveTask(index, dir) {
     const tasks = getTasks(), target = index + dir;
     if (target < 0 || target >= tasks.length) return;
     [tasks[index], tasks[target]] = [tasks[target], tasks[index]];
-    // 同步更新固定清單的預設順序
     fixedTemplate = tasks.filter(t => t.isFixed).map(t => t.text);
     saveAll();
   }
-    function editTask(id, newText) {
+
+      function editTask(id, newText) {
     const t = getTasks().find(x => x.id === id);
     const trimmed = newText.trim();
     if (t && trimmed && t.text !== trimmed) {
@@ -285,8 +304,7 @@
         const tplIdx = fixedTemplate.indexOf(t.text);
         if (tplIdx !== -1) fixedTemplate[tplIdx] = trimmed;
       }
-      t.text = trimmed;
-      saveAll();
+      t.text = trimmed; saveAll();
     } else render();
   }
   function editNote(id, newNote) {
@@ -302,6 +320,11 @@
     allRecords[currentDate] = tasks.filter(x => x.id !== id);
     saveAll();
   }
+  function toggleAi() {
+    const body = document.getElementById('aiBody');
+    body.classList.toggle('open');
+    document.getElementById('aiIcon').textContent = body.classList.contains('open') ? '▲ 收合' : '▼ 展開';
+  }
   function copyPrompt() {
     navigator.clipboard.writeText(document.getElementById('promptCmd').textContent)
       .then(() => alert('已複製指令！直接貼到 AI 對話框即可。'));
@@ -315,16 +338,23 @@
       if (cleaned) newItems.push(cleaned);
     });
     if (newItems.length === 0) { alert('沒有偵測到有效的目標文字喔！'); return; }
-    if (fixedTemplate.length > 0 && !confirm(`確定要用這 ${newItems.length} 項新目標「覆蓋」原本的每日固定清單嗎？\n（過去日期的歷史紀錄與筆記不會受影響）`)) return;
+    if (fixedTemplate.length > 0 && !confirm(`確定要用這 ${newItems.length} 項新目標「覆蓋」原本的每日固定清單嗎？\n（過去的歷史紀錄與筆記不會受影響）`)) return;
 
     fixedTemplate = newItems;
-    const manualTasks = (allRecords[currentDate] || []).filter(t => !t.isFixed);
-    allRecords[currentDate] = [
+    const todayStr = getLogicalToday();
+    // 僅取代「今日」的固定清單，並保留今日手動新增的臨時項目
+    const manualTasks = (allRecords[todayStr] || []).filter(t => !t.isFixed);
+    allRecords[todayStr] = [
       ...fixedTemplate.map((text, idx) => ({ id: Date.now() + idx + Math.random(), text, note: '', completed: false, isFixed: true })),
       ...manualTasks
     ];
+    // 清除大於今天的殘留紀錄，確保未來換日時自動套用最新清單
+    Object.keys(allRecords).forEach(d => { if (d > todayStr) delete allRecords[d]; });
+
+    currentDate = todayStr;
+    datePicker.value = todayStr;
     area.value = ''; currentQuote = ""; saveAll();
-    alert(`✅ 已成功更新每日固定清單（共 ${newItems.length} 項），每天凌晨 5 點換日都會自動帶入！`);
+    alert(`✅ 已成功更新每日固定清單（共 ${newItems.length} 項），已套用至今日，未來每天凌晨 5 點換日都會自動產生！`);
   }
 
   function calcStreak() {
@@ -363,42 +393,52 @@
       btnExport.classList.remove('btn-warn'); btnExport.textContent = '📤 匯出';
     }
 
-    const isToday = currentDate === getLogicalToday();
+    const todayStr = getLogicalToday();
+    const isToday = currentDate === todayStr;
+    const isFuture = currentDate > todayStr;
+
     document.getElementById('btnBackToday').style.display = isToday ? 'none' : 'inline-block';
-    document.getElementById('progressLabel').textContent = isToday ? '今日完成度' : `${currentDate} 歷史完成度`;
+    document.getElementById('progressLabel').textContent = isToday ? '今日完成度' : (isFuture ? `${currentDate} (未來日期)` : `${currentDate} 歷史完成度`);
     document.getElementById('dateStatusHint').textContent = isToday
       ? '🌙 凌晨 05:00 自動換日（目前為今日進度）'
-      : '✏️ 目前正在檢視／編輯歷史日期（修改會自動保存）';
+      : (isFuture ? '⏳ 尚未到達該日期（將於換日後自動產生固定任務）' : '✏️ 目前正在檢視／編輯歷史日期（修改會自動保存）');
 
     const tasks = getTasks(), listEl = document.getElementById('taskList');
     listEl.innerHTML = '';
-    tasks.forEach((t, idx) => {
-      const li = document.createElement('li');
-      li.className = `task-item ${t.completed ? 'completed' : ''}`;
-      li.innerHTML = `
-        <div class="task-main-row">
-          <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id})">
-          <div class="task-text" contenteditable="true" onblur="editTask(${t.id}, this.innerText)"
-               onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</div>
-          ${t.isFixed ? '<span class="badge-fixed">⭐ 固定</span>' : ''}
-          <div class="sort-btns">
-            <button class="btn-sort" onclick="moveTask(${idx}, -1)" title="上移">▲</button>
-            <button class="btn-sort" onclick="moveTask(${idx}, 1)" title="下移">▼</button>
+
+    if (isFuture && tasks.length === 0) {
+      listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.95rem;">⏳ <b>${currentDate}</b> 尚未到來喔！<br>等該日凌晨 05:00 換日後，系統會自動產生每日固定清單並開始計入統計。</li>`;
+    } else {
+      tasks.forEach((t, idx) => {
+        const li = document.createElement('li');
+        li.className = `task-item ${t.completed ? 'completed' : ''}`;
+        li.innerHTML = `
+          <div class="task-main-row">
+            <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id})">
+            <div class="task-text" contenteditable="true" onblur="editTask(${t.id}, this.innerText)"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</div>
+            ${t.isFixed ? '<span class="badge-fixed">⭐ 固定</span>' : ''}
+            <div class="sort-btns">
+              <button class="btn-sort" onclick="moveTask(${idx}, -1)" title="上移">▲</button>
+              <button class="btn-sort" onclick="moveTask(${idx}, 1)" title="下移">▼</button>
+            </div>
+            <button class="btn-del" onclick="delTask(${t.id})" title="刪除">✕</button>
           </div>
-          <button class="btn-del" onclick="delTask(${t.id})" title="刪除">✕</button>
-        </div>
-        <div class="task-note-row">
-          <input type="text" class="task-note-input" value="${(t.note || '').replace(/"/g, '&quot;')}" 
-                 placeholder="📝 記錄這項目標的執行狀況或心得..." oninput="editNote(${t.id}, this.value)">
-        </div>`;
-      listEl.appendChild(li);
-    });
+          <div class="task-note-row">
+            <input type="text" class="task-note-input" value="${(t.note || '').replace(/"/g, '&quot;')}" 
+                   placeholder="📝 記錄這項目標的執行狀況或心得..." oninput="editNote(${t.id}, this.value)">
+          </div>`;
+        listEl.appendChild(li);
+      });
+    }
+
     const done = tasks.filter(t => t.completed).length;
     const pct = tasks.length === 0 ? 0 : Math.round((done / tasks.length) * 100);
     document.getElementById('progressText').textContent = `${pct}% (${done}/${tasks.length})`;
     document.getElementById('progressBar').style.width = `${pct}%`;
     updateQuote(false);
   }
+
   function copyDailySummary() {
     const tasks = getTasks();
     if (tasks.length === 0) { alert('該日期沒有任務可以總結喔！'); return; }
