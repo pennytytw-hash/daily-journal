@@ -429,7 +429,29 @@
     let weekendSkipItems = JSON.parse(localStorage.getItem('cute_journal_v4_weekend_skip') || '[]');
   let holidayOverrides = JSON.parse(localStorage.getItem('cute_journal_v4_holiday_overrides') || '{}');
   let customHolidays = JSON.parse(localStorage.getItem('cute_journal_v4_custom_holidays') || '[]');
-  let govCalendarMap = JSON.parse(localStorage.getItem('cute_journal_v4_gov_calendar') || '{}');
+    let govCalendarMap = JSON.parse(localStorage.getItem('cute_journal_v4_gov_calendar') || '{}');
+  let currentDate = getLogicalToday(), currentQuote = "", undoSnapshot = null, undoTimer = null, justStampedId = null;
+
+  (function initProjectsAndClean() {
+    const todayStr = getLogicalToday();
+    Object.keys(allRecords).forEach(d => {
+      if (d > todayStr && Array.isArray(allRecords[d]) && allRecords[d].every(t => !t.completed && !t.note)) delete allRecords[d];
+    });
+    if (projects.length === 0) {
+      const sortedDates = Object.keys(allRecords).sort();
+      const initId = 'proj_init_' + Date.now();
+      projects.push({ id: initId, name: '初始目標專案', startDate: sortedDates[0] || todayStr, items: [...fixedTemplate] });
+      activeProjectId = initId;
+    }
+    if (!projects.find(p => p.id === activeProjectId)) activeProjectId = projects[projects.length - 1].id;
+    Object.values(allRecords).forEach(list => {
+      if (Array.isArray(list)) list.forEach(t => {
+        if (!t.projectId) t.projectId = activeProjectId;
+        if (!t.updatedAt) t.updatedAt = Date.now();
+      });
+    });
+    saveAll(false);
+  })();
 
   function isHolidayDate(dStr) {
     if (Object.prototype.hasOwnProperty.call(holidayOverrides, dStr)) return holidayOverrides[dStr];
@@ -446,15 +468,22 @@
     const targetYears = [curYear, curYear + 1];
     let updated = false;
     for (const y of targetYears) {
-      try {
-        const res = await fetch(`https://jsdelivr.net{y}.json`);
-        if (!res.ok) continue;
-        const arr = await res.json();
-        if (Array.isArray(arr)) {
-          arr.forEach(item => { if (item && item.date) govCalendarMap[item.date] = Boolean(item.isHoliday); });
-          updated = true;
-        }
-      } catch (e) {}
+      const urls = [
+        `https://githubusercontent.com{y}.json`,
+        `https://jsdelivr.net{y}.json`
+      ];
+      for (const u of urls) {
+        try {
+          const res = await fetch(u);
+          if (!res.ok) continue;
+          const arr = await res.json();
+          if (Array.isArray(arr)) {
+            arr.forEach(item => { if (item && item.date) govCalendarMap[item.date] = Boolean(item.isHoliday); });
+            updated = true;
+            break;
+          }
+        } catch (e) {}
+      }
     }
     if (updated) {
       localStorage.setItem('cute_journal_v4_gov_calendar', JSON.stringify(govCalendarMap));
