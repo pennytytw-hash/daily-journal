@@ -894,6 +894,10 @@
     const swCode = `self.addEventListener('fetch', e => e.respondWith(caches.open('journal-v1').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))));`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
   }
+    // 監聽網址參數變化（解決手機已開啟分頁時點連結不觸發同步的問題）
+  window.addEventListener('hashchange', checkUrlSync);
+  checkUrlSync();
+  render();
   checkUrlSync();
   render();
 </script>
