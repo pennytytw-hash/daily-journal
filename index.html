@@ -484,7 +484,7 @@
     Object.keys(allRecords).forEach(d => {
       if (d > todayStr && Array.isArray(allRecords[d]) && allRecords[d].every(t => !t.completed && !t.note)) delete allRecords[d];
     });
-    if (projects.length === 0) {
+    if (projects.length === 0 && !window.location.hash.includes('sync=')) {
       const sortedDates = Object.keys(allRecords).sort();
       const initId = 'proj_init_' + Date.now();
       projects.push({ id: initId, name: '初始目標專案', startDate: sortedDates[0] || todayStr, items: [...fixedTemplate] });
@@ -1390,7 +1390,15 @@
     }
     if (Array.isArray(d.template)) fixedTemplate = [...d.template];
     if (Array.isArray(d.projects)) {
-      projects = JSON.parse(JSON.stringify(d.projects));
+      const usedProjIds = new Set();
+      Object.values(allRecords).forEach(list => {
+        if (Array.isArray(list)) list.forEach(t => { if (t.projectId) usedProjIds.add(t.projectId); });
+      });
+      const rawProjs = JSON.parse(JSON.stringify(d.projects));
+      const cleanedProjs = rawProjs.filter(p =>
+        !(p.name === '初始目標專案' && (!p.items || p.items.length === 0) && !usedProjIds.has(p.id) && p.id !== (d.activeProjectId || activeProjectId))
+      );
+      projects = cleanedProjs.length > 0 ? cleanedProjs : rawProjs;
     }
     if (d.activeProjectId) activeProjectId = d.activeProjectId;
     if (typeof d.vision === 'string') {
