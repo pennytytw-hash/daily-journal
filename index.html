@@ -269,13 +269,15 @@
     const t = getTasks().find(x => x.id === id);
     if (t) { t.completed = !t.completed; currentQuote = ""; saveAll(); }
   }
-  function moveTask(index, dir) {
+    function moveTask(index, dir) {
     const tasks = getTasks(), target = index + dir;
     if (target < 0 || target >= tasks.length) return;
     [tasks[index], tasks[target]] = [tasks[target], tasks[index]];
+    // 同步更新固定清單的預設順序
+    fixedTemplate = tasks.filter(t => t.isFixed).map(t => t.text);
     saveAll();
   }
-  function editTask(id, newText) {
+    function editTask(id, newText) {
     const t = getTasks().find(x => x.id === id);
     const trimmed = newText.trim();
     if (t && trimmed && t.text !== trimmed) {
@@ -283,18 +285,22 @@
         const tplIdx = fixedTemplate.indexOf(t.text);
         if (tplIdx !== -1) fixedTemplate[tplIdx] = trimmed;
       }
-      t.text = trimmed; saveAll();
+      t.text = trimmed;
+      saveAll();
     } else render();
   }
   function editNote(id, newNote) {
     const t = getTasks().find(x => x.id === id);
     if (t && (t.note || '') !== newNote.trim()) { t.note = newNote.trim(); saveAll(false); }
   }
-  function delTask(id) { allRecords[currentDate] = getTasks().filter(x => x.id !== id); saveAll(); }
-  function toggleAi() {
-    const body = document.getElementById('aiBody');
-    body.classList.toggle('open');
-    document.getElementById('aiIcon').textContent = body.classList.contains('open') ? '▲ 收合' : '▼ 展開';
+  function delTask(id) {
+    const tasks = getTasks();
+    const target = tasks.find(x => x.id === id);
+    if (target && target.isFixed) {
+      fixedTemplate = fixedTemplate.filter(item => item !== target.text);
+    }
+    allRecords[currentDate] = tasks.filter(x => x.id !== id);
+    saveAll();
   }
   function copyPrompt() {
     navigator.clipboard.writeText(document.getElementById('promptCmd').textContent)
