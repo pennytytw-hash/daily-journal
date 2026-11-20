@@ -666,10 +666,33 @@
     periodReportCache = periods;
 
         const bestStreak = calcBestStreak(records);
-    // 1. 歷史最高連勝 + 基準
+    const dowNames = ['一', '二', '三', '四', '五', '六', '日'];
+
+    // 自動化數據診斷一句話計算
+    let insightMsg = "🌱 持續累積打卡幾天後，這裡會自動為你診斷執行節奏與盲點喔！";
+    const validDows = dowStats.map((s, i) => ({ name: '週' + dowNames[i], rate: s.total > 0 ? Math.round((s.done / s.total) * 100) : -1, total: s.total })).filter(x => x.total > 0);
+    if (validDows.length >= 2) {
+      const bestDow = [...validDows].sort((a, b) => b.rate - a.rate)[0];
+      const worstDow = [...validDows].sort((a, b) => a.rate - b.rate)[0];
+      const fixRate = fixT > 0 ? Math.round((fixD / fixT) * 100) : 100;
+      const tmpRate = tmpT > 0 ? Math.round((tmpD / tmpT) * 100) : 100;
+      let extraTip = "";
+      if (tmpT > 0 && tmpRate < fixRate - 15) extraTip = "臨時待辦完成率較低，建議減少突發雜事干擾；";
+      else if (fixT > 0 && fixRate < 70) extraTip = "核心固定習慣略顯吃力，可請 AI 幫你微調難度；";
+      else extraTip = "整體精力分配相當穩健，繼續保持這個好節奏！";
+
+      insightMsg = bestDow.name === worstDow.name
+        ? `💡 <b>數據診斷：</b>目前在<b>${bestDow.name}</b>表現最亮眼（${bestDow.rate}%），${extraTip}`
+        : `💡 <b>數據診斷：</b>你在<b>${bestDow.name}</b>執行力最強（${bestDow.rate}%），<b>${worstDow.name}</b>較易卡關（${worstDow.rate}%）。${extraTip}`;
+    }
+
+    // 1. 歷史最高連勝 + 基準 + 自動化數據診斷便籤
     let html = `<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;margin-bottom:6px;">
       <span>👑 歷史最高連勝 (≥80%)：<b>${bestStreak} 天</b></span>
       <span style="color:#8c7a70;">基準：${currentDate}</span>
+    </div>
+    <div style="background:#fffdf2;border:1.5px dashed #eab84d;border-radius:12px;padding:9px 12px;font-size:0.82rem;line-height:1.5;color:#6e5523;margin-bottom:8px;">
+      ${insightMsg}
     </div>`;
 
     // 2. 打卡月曆 + 星期一～日執行節奏分析
@@ -689,7 +712,6 @@
       calCells += `<div class="cal-cell" style="background:${bg}" title="${title}" onclick="jumpToDate('${dStr}')">${day}</div>`;
     }
 
-    const dowNames = ['一', '二', '三', '四', '五', '六', '日'];
     const dowBars = dowStats.map((s, idx) => {
       const r = s.total === 0 ? 0 : Math.round((s.done / s.total) * 100);
       return `<div><div class="dow-bar-wrap"><div class="dow-bar-fill" style="height:${r}%"></div></div><div style="font-size:0.7rem;margin-top:3px;">週${dowNames[idx]}<br><b>${r}%</b></div></div>`;
@@ -697,7 +719,7 @@
 
     html += `<div class="panel-box" style="margin-top:4px;"><div class="cal-header"><button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button><b>🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b><button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button></div><div class="cal-grid">${calCells}</div><div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div></div>`;
 
-    // 3. 習慣執行力排行 + 核心固定 vs 臨時待辦分流
+    // 3. 習慣執行力排行
     const habits = Object.entries(habitMap).filter(([, v]) => v.total >= 2).map(([name, v]) => ({ name, rate: Math.round((v.done / v.total) * 100), done: v.done, total: v.total }));
     if (habits.length > 0) {
       const top3 = [...habits].sort((a, b) => b.rate - a.rate || b.done - a.done).slice(0, 3);
@@ -706,12 +728,6 @@
         top3.map((h, i) => `<div>🌟 Top${i + 1}：${h.name.replace(/</g,'&lt;')} — <b>${h.rate}%</b> (${h.done}/${h.total})</div>`).join('') +
         (low2.length ? `<div style="margin-top:6px;color:#b85d58;">⚠️ <b>最常卡關待調整：</b>` + low2.map(h => `${h.name.replace(/</g,'&lt;')} (${h.rate}%)`).join('、') + `</div>` : '') + `</div></div>`;
     }
-
-    const fixRate = fixT === 0 ? 0 : Math.round((fixD / fixT) * 100), tmpRate = tmpT === 0 ? 0 : Math.round((tmpD / tmpT) * 100);
-    html += `<div class="panel-box"><b>⚖️ 核心固定習慣 vs 臨時待辦達成率</b>
-      <div class="split-bar-row"><span style="width:76px;">⭐ 固定 (${fixRate}%)</span><div class="split-track"><div class="split-fill-fixed" style="width:${fixRate}%"></div></div><span>${fixD}/${fixT}</span></div>
-      <div class="split-bar-row"><span style="width:76px;">📌 臨時 (${tmpRate}%)</span><div class="split-track"><div class="split-fill-temp" style="width:${tmpRate}%"></div></div><span>${tmpD}/${tmpT}</span></div>
-    </div>`;
 
     // 4. 4度卡片 + 歷期成長折線圖
     html += `<div class="stat-grid" style="margin-top:12px;">` + Object.entries(periods).map(([key, p]) => {
