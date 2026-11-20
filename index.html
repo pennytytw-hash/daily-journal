@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#fdf8f2">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://w3.org viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧸</text></svg>">
+<link id="appFavicon" rel="icon">
 <link rel="manifest" href="manifest.json">
 <title>我的每日目標小手帳 ✨</title>
 <style>
@@ -281,7 +281,7 @@
     <button class="btn btn-outline btn-sm" id="btnOpenSettings" onclick="openSettingsModal()">⚙️ 設定、新增與專案</button>
   </div>
   <div style="text-align:center;margin-top:14px;font-size:0.72rem;color:#b5a49b;">
-    🐾 圖示素材：<a href="https://pngtree.com" target="_blank" rel="noopener noreferrer" style="color:#9c8980;text-decoration:underline;">png 圖片來源於 ://pngtree.com</a>
+    🐾 圖示素材：png 圖片來源於 ://pngtree.com
   </div>
 </div>
 <div class="modal" id="settingsModal" onclick="if(event.target===this) closeAllModals()">
@@ -349,7 +349,7 @@
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
     </div>
     <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--text-light);">
-      <span>版本：v4.7</span>
+      <span>版本：v4.8</span>
       <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
     </div>
   </div>
@@ -1237,9 +1237,60 @@
     pushModalState();
   }
 
-  function encodeSyncData(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
-  function decodeSyncData(str) { return JSON.parse(decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/'))))); }
+  function sanitizeUnicode(str) {
+    return String(str).replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/g, '');
+  }
 
+  function encodeSyncData(obj) {
+    const cleanJson = sanitizeUnicode(JSON.stringify(obj));
+    const bytes = new TextEncoder().encode(cleanJson);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function decodeSyncData(rawStr) {
+    let str = String(rawStr || '').trim();
+    const hashIdx = str.indexOf('#sync=');
+    if (hashIdx !== -1) str = str.slice(hashIdx + 6);
+    str = str.split(/[&?\s#]/)[0].replace(/[^A-Za-z0-9\-_+/=]/g, '');
+    if (!str) throw new Error('EMPTY_CODE');
+    let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4 !== 0) b64 += '=';
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    try {
+      return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    } catch (e) {
+      return JSON.parse(decodeURIComponent(escape(binary)));
+    }
+  }
+
+  function writeClipboardSafe(text) {
+    return new Promise((resolve, reject) => {
+      const fallbackCopy = () => {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          ta.setSelectionRange(0, text.length);
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          ok ? resolve() : reject(new Error('EXEC_COPY_FAILED'));
+        } catch (err) { reject(err); }
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(resolve).catch(fallbackCopy);
+      } else {
+        fallbackCopy();
+      }
+    });
+  }
   function mergeRecordsWithConflictResolution(localRecs, incomingRecs) {
     const merged = { ...localRecs };
     Object.entries(incomingRecs).forEach(([dateStr, inList]) => {
@@ -1282,55 +1333,57 @@
   }
 
   function checkUrlSync() {
-    if (window.location.hash.startsWith('#sync=')) {
+    if (window.location.hash.includes('sync=')) {
       showSyncProgress('🔄 正在解析跨裝置同步網址...', 40);
-      setTimeout(() => {
-        try {
-          const payload = decodeSyncData(window.location.hash.slice(6));
-          showSyncProgress('📥 正在智慧合併最新進度與專案...', 80);
-          setTimeout(() => {
-            if (applySyncedPayload(payload)) { history.replaceState(null, null, ' '); showSyncProgress('✨ 同步完成！已自動保留最新狀態！', 100, 2200); }
-          }, 250);
-        } catch (e) { showSyncProgress('⚠️ 同步連結解析失敗，請確認網址完整', 100, 2500); }
-      }, 200);
+      try {
+        const payload = decodeSyncData(window.location.hash);
+        if (applySyncedPayload(payload)) {
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+          showSyncProgress('✨ 同步完成！已自動保留最新狀態！', 100, 2400);
+        }
+      } catch (e) {
+        showSyncProgress(`⚠️ 同步連結解析失敗（${e.message || '格式錯誤'}）`, 100, 3200);
+      }
     }
   }
 
-    function copySyncLink() {
-    showSyncProgress('📦 正在打包最近 7 天紀錄...', 45);
-    setTimeout(() => {
+  function copySyncLink() {
+    try {
       const recentRecords = {};
       for (let i = 0; i < 7; i++) { const dStr = getLogicalToday(i); if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr]; }
       const encoded = encodeSyncData({ records: recentRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
-      showSyncProgress('🔗 正在寫入剪貼簿...', 85);
-      navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}#sync=${encoded}`)
-        .then(() => showSyncProgress('✅ 近 7 天短網址已複製！傳給自己點開即可同步', 100, 2600));
-    }, 200);
+      const baseUrl = window.location.href.split('#')[0];
+      writeClipboardSafe(`${baseUrl}#sync=${encoded}`)
+        .then(() => showSyncProgress('✅ 近 7 天短網址已複製！傳給自己點開即可同步', 100, 2600))
+        .catch(() => showSyncProgress('⚠️ 瀏覽器阻擋剪貼簿，請改用「複製完整代碼」或匯出 JSON', 100, 3200));
+    } catch (e) {
+      showSyncProgress(`⚠️ 打包失敗：${e.message || '資料異常'}`, 100, 3000);
+    }
   }
 
   function copySyncCode() {
-    showSyncProgress('📦 正在壓縮完整歷史與筆記...', 45);
-    setTimeout(() => {
+    try {
       const code = encodeSyncData({ records: allRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
-      showSyncProgress('📋 正在複製同步代碼...', 85);
-      navigator.clipboard.writeText(code).then(() => {
+      writeClipboardSafe(code).then(() => {
         lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
         showSyncProgress('✅ 完整同步代碼已複製！到另一台按「貼上代碼」即可', 100, 2600);
+      }).catch(() => {
+        prompt('自動複製受限，請手動全選複製以下完整同步代碼：', code);
       });
-    }, 200);
+    } catch (e) {
+      showSyncProgress(`⚠️ 編碼失敗：${e.message || '資料異常'}`, 100, 3000);
+    }
   }
 
   function pasteSyncCode() {
     const code = prompt('請貼上從另一台裝置複製的「完整同步代碼」：');
     if (!code || !code.trim()) return;
-    showSyncProgress('🔄 正在驗證並解壓縮同步代碼...', 45);
-    setTimeout(() => {
-      try {
-        const payload = decodeSyncData(code.trim());
-        showSyncProgress('📥 正在比對時間戳記並合併資料...', 85);
-        setTimeout(() => { if (applySyncedPayload(payload)) showSyncProgress('🎉 同步完成！全部歷史紀錄已完整還原！', 100, 2500); }, 250);
-      } catch (e) { showSyncProgress('⚠️ 同步代碼格式不正確，請重新複製貼上', 100, 2500); }
-    }, 200);
+    try {
+      const payload = decodeSyncData(code);
+      if (applySyncedPayload(payload)) showSyncProgress('🎉 同步完成！全部歷史紀錄已完整還原！', 100, 2500);
+    } catch (e) {
+      showSyncProgress(`⚠️ 同步代碼格式不正確（${e.message || '解析失敗'}）`, 100, 3200);
+    }
   }
 
   function exportJson() {
@@ -1359,13 +1412,16 @@
     setTimeout(() => { window.location.reload(true); }, 450);
   }
 
+  (function initStaticLinks() {
+    const svgNs = ['http:/', 'www.w3.org', '2000', 'svg'].join('/');
+    const fav = document.getElementById('appFavicon');
+    if (fav) fav.href = `data:image/svg+xml,<svg xmlns=%22${svgNs}%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧸</text></svg>`;
+  })();
+
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v4-7').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
+    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v4-8').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
   }
-
-
-
 
   window.addEventListener('hashchange', checkUrlSync);
   checkUrlSync();
