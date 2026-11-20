@@ -324,13 +324,17 @@
         <button class="btn btn-mint btn-sm" style="flex-shrink:0;" onclick="saveVisionBanner()">儲存</button>
       </div>
     </div>
-        <div class="setting-section">
-      <h4>📅 國定假日清單（設為「假日休」的目標自動跳過）</h4>
-      <p style="font-size:0.78rem;color:var(--text-light);margin:0 0 6px;">已內建台灣主要國定假日，亦可手動補充日期（逗號分隔，格式 YYYY-MM-DD）：</p>
-      <div style="display:flex;gap:6px;">
-        <input type="text" id="customHolidaysInput" class="proj-name-input" style="margin:0;font-size:0.82rem;" placeholder="例如：2026-12-25, 2027-01-01">
-        <button class="btn btn-mint btn-sm" style="flex-shrink:0;" onclick="saveCustomHolidays()">儲存</button>
+    <div class="setting-section">
+      <h4>📅 國定假日與補班日（自動串接政府行事曆）</h4>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px;">
+        <span id="govCalStatus" style="font-size:0.78rem;color:#4a7c5f;font-weight:700;">🔄 政府行事曆同步中...</span>
+        <button class="btn btn-mint btn-sm" style="flex-shrink:0;" onclick="syncGovCalendar(true)">🔄 立即更新</button>
       </div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="customHolidaysInput" class="proj-name-input" style="margin:0;font-size:0.82rem;" placeholder="額外自訂休假日（選填，如：2026-12-25）">
+        <button class="btn btn-outline btn-sm" style="flex-shrink:0;" onclick="saveCustomHolidays()">儲存</button>
+      </div>
+      <div id="lastHolidayHint" style="font-size:0.76rem;color:var(--text-light);margin-top:6px;">📌 目前快取的最後一個假日：載入中...</div>
     </div>
     <div class="setting-section">
       <h4>🔗 跨裝置同步與 JSON 檔案備份</h4>
@@ -344,7 +348,7 @@
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
     </div>
     <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--text-light);">
-      <span>版本：v4.5</span>
+      <span>版本：v4.6</span>
       <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
     </div>
   </div>
@@ -422,46 +426,43 @@
   let activeProjectId = localStorage.getItem('cute_journal_v4_active_proj') || '';
   let lastBackupTime = Number(localStorage.getItem('cute_journal_last_backup') || 0);
   let visionText = localStorage.getItem('cute_journal_vision') || '';
-  let weekendSkipItems = JSON.parse(localStorage.getItem('cute_journal_v4_weekend_skip') || '[]');
+    let weekendSkipItems = JSON.parse(localStorage.getItem('cute_journal_v4_weekend_skip') || '[]');
   let holidayOverrides = JSON.parse(localStorage.getItem('cute_journal_v4_holiday_overrides') || '{}');
   let customHolidays = JSON.parse(localStorage.getItem('cute_journal_v4_custom_holidays') || '[]');
-  const twHolidays = [
-    '2026-01-01','2026-02-16','2026-02-17','2026-02-18','2026-02-19','2026-02-20','2026-02-28',
-    '2026-04-03','2026-04-04','2026-04-05','2026-04-06','2026-05-01','2026-06-19','2026-09-25','2026-10-10',
-    '2027-01-01','2027-02-05','2027-02-06','2027-02-07','2027-02-08','2027-02-09','2027-02-10','2027-02-28',
-    '2027-04-04','2027-04-05','2027-05-01','2027-06-09','2027-09-15','2027-10-10'
-  ];
+  let govCalendarMap = JSON.parse(localStorage.getItem('cute_journal_v4_gov_calendar') || '{}');
 
   function isHolidayDate(dStr) {
     if (Object.prototype.hasOwnProperty.call(holidayOverrides, dStr)) return holidayOverrides[dStr];
+    if (customHolidays.includes(dStr)) return true;
+    const compactKey = dStr.replace(/-/g, '');
+    if (Object.prototype.hasOwnProperty.call(govCalendarMap, compactKey)) return govCalendarMap[compactKey];
     const day = new Date(dStr + 'T00:00:00').getDay();
-    if (day === 0 || day === 6) return true;
-    return twHolidays.includes(dStr) || customHolidays.includes(dStr);
+    return day === 0 || day === 6;
   }
   function isTaskSkipped(t, dStr) { return Boolean(t && t.skipWeekend && isHolidayDate(dStr)); }
 
-  let currentDate = getLogicalToday(), currentQuote = "", undoSnapshot = null, undoTimer = null, justStampedId = null;
-
-  (function initProjectsAndClean() {
-    const todayStr = getLogicalToday();
-    Object.keys(allRecords).forEach(d => {
-      if (d > todayStr && Array.isArray(allRecords[d]) && allRecords[d].every(t => !t.completed && !t.note)) delete allRecords[d];
-    });
-    if (projects.length === 0) {
-      const sortedDates = Object.keys(allRecords).sort();
-      const initId = 'proj_init_' + Date.now();
-      projects.push({ id: initId, name: '初始目標專案', startDate: sortedDates || todayStr, items: [...fixedTemplate] });
-      activeProjectId = initId;
+  async function syncGovCalendar(isManual = false) {
+    const curYear = new Date().getFullYear();
+    const targetYears = [curYear, curYear + 1];
+    let updated = false;
+    for (const y of targetYears) {
+      try {
+        const res = await fetch(`https://jsdelivr.net{y}.json`);
+        if (!res.ok) continue;
+        const arr = await res.json();
+        if (Array.isArray(arr)) {
+          arr.forEach(item => { if (item && item.date) govCalendarMap[item.date] = Boolean(item.isHoliday); });
+          updated = true;
+        }
+      } catch (e) {}
     }
-    if (!projects.find(p => p.id === activeProjectId)) activeProjectId = projects[projects.length - 1].id;
-    Object.values(allRecords).forEach(list => {
-      if (Array.isArray(list)) list.forEach(t => {
-        if (!t.projectId) t.projectId = activeProjectId;
-        if (!t.updatedAt) t.updatedAt = Date.now();
-      });
-    });
-    saveAll(false);
-  })();
+    if (updated) {
+      localStorage.setItem('cute_journal_v4_gov_calendar', JSON.stringify(govCalendarMap));
+      render();
+    }
+    updateLastHolidayDisplay();
+    if (isManual) showSyncProgress(updated ? '✅ 政府行事曆（含補班日）已同步最新！' : '⚠️ 無法連線，目前使用離線快取判斷', 100, 2200);
+  }
 
   const datePicker = document.getElementById('datePicker');
   datePicker.value = currentDate;
@@ -533,10 +534,27 @@
     saveAll();
   }
 
+  function updateLastHolidayDisplay() {
+    const hintEl = document.getElementById('lastHolidayHint');
+    const statusEl = document.getElementById('govCalStatus');
+    const govDates = Object.entries(govCalendarMap)
+      .filter(([, isHol]) => isHol)
+      .map(([k]) => `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}`);
+    const allDates = [...govDates, ...customHolidays].filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s)).sort();
+    if (statusEl) {
+      statusEl.textContent = govDates.length > 0 ? `✅ 已快取政府行事曆（共 ${govDates.length} 天）` : '⚠️ 尚未下載政府日曆（目前依週六日判斷）';
+    }
+    if (hintEl) {
+      const lastDate = allDates.length > 0 ? allDates[allDates.length - 1] : '尚無紀錄';
+      hintEl.textContent = `📌 目前快取的最後一個假日：${lastDate}`;
+    }
+  }
+
   function saveCustomHolidays() {
     const raw = document.getElementById('customHolidaysInput').value;
     customHolidays = raw.split(/[,，\s]+/).map(s => s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s));
     saveAll();
+    updateLastHolidayDisplay();
     showSyncProgress(`📅 已儲存 ${customHolidays.length} 個自訂國定假日！`, 100, 1800);
   }
 
@@ -708,11 +726,15 @@
     const todayStr = getLogicalToday(), now = Date.now();
     const manualTasks = (allRecords[todayStr] || []).filter(t => !t.isFixed);
     allRecords[todayStr] = [
-      ...fixedTemplate.map((text, idx) => ({ id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false, projectId: pid, updatedAt: now })),
+      ...fixedTemplate.map((text, idx) => ({
+        id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false,
+        skipWeekend: weekendSkipItems.includes(text), projectId: pid, updatedAt: now
+      })),
       ...manualTasks
     ];
     saveAll(); renderProjManageList();
   }
+
 
   function renameProjectById(pid) {
     const p = projects.find(x => x.id === pid);
@@ -793,9 +815,10 @@
 
   function openSettingsModal() {
     document.getElementById('visionInput').value = visionText;
+    document.getElementById('customHolidaysInput').value = customHolidays.join(', ');
+    updateLastHolidayDisplay();
     renderProjManageList();
     document.getElementById('settingsModal').classList.add('active');
-    document.getElementById('customHolidaysInput').value = customHolidays.join(', ');
   }
 
   function saveVisionBanner() {
@@ -1245,13 +1268,15 @@
   }
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch', e => e.respondWith(caches.open('journal-v4-5').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))));`;
+    const swCode = `self.addEventListener('fetch', e => e.respondWith(caches.open('journal-v4-6').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))));`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
   }
+
 
   window.addEventListener('hashchange', checkUrlSync);
   checkUrlSync();
   render();
+  syncGovCalendar(false);
 </script>
 </body>
 </html>
