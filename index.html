@@ -218,6 +218,38 @@
   }
   @keyframes fadeInDown { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
   @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  @media (max-width: 520px) {
+    body { padding: 10px 6px 84px; }
+    .journal-container { padding: 22px 13px; border-radius: 20px; border-width: 2px; }
+    h1 { font-size: 1.38rem; margin: 4px 0 8px; }
+    .active-proj-bar, .streak-badge { font-size: 0.78rem; padding: 4px 9px; }
+    .vision-banner { max-width: 100%; font-size: 0.82rem; padding: 8px 11px; }
+    .date-controls { gap: 6px; }
+    input[type="date"] { padding: 6px 9px; font-size: 0.88rem; }
+    .progress-card { padding: 13px 12px; margin-bottom: 14px; }
+    .progress-header { flex-wrap: wrap; gap: 6px; font-size: 0.92rem; }
+    .encouragement-box { padding: 10px; font-size: 0.9rem; line-height: 1.48; }
+    .task-item { padding: 13px 6px; gap: 8px; }
+    .task-main-row { flex-wrap: wrap; gap: 8px 6px; align-items: center; }
+    .task-checkbox { width: 23px; height: 23px; }
+    .btn-mit { font-size: 1.15rem; padding: 2px 3px; }
+    .task-text { flex: 1 1 calc(100% - 88px); font-size: 1rem; line-height: 1.45; padding: 3px 4px; }
+    .task-note-row { padding-left: 31px; }
+    .task-note-input { padding: 7px 10px; font-size: 0.86rem; }
+    .badge-fixed, .btn-weekend { font-size: 0.72rem; padding: 3px 7px; }
+    .sort-btns { flex-direction: row; gap: 5px; margin-left: auto; }
+    .btn-sort { padding: 5px 8px; font-size: 0.72rem; border-radius: 6px; }
+    .btn-del { font-size: 1.15rem; padding: 2px 6px; }
+    .stamp-badge { right: 8px; top: auto; bottom: 44px; font-size: 0.68rem; }
+    .footer-tools { flex-direction: column; gap: 8px; }
+    .footer-tools .btn { width: 100%; padding: 11px 14px; font-size: 0.9rem; }
+    .modal { padding: 8px; }
+    .modal-box { padding: 15px 13px; max-height: 90vh; border-radius: 18px; }
+    .setting-section { padding: 11px 10px; }
+    .setting-btn-grid { grid-template-columns: 1fr; gap: 8px; }
+    .setting-btn-grid .btn { grid-column: span 1 !important; padding: 10px 12px; font-size: 0.86rem; }
+    .cal-cell { height: 32px; font-size: 0.76rem; }
+  }
 </style>
 </head>
 <body>
