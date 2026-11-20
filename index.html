@@ -665,33 +665,14 @@
     });
     periodReportCache = periods;
 
-    const bestStreak = calcBestStreak(records);
+        const bestStreak = calcBestStreak(records);
+    // 1. 歷史最高連勝 + 基準
     let html = `<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;margin-bottom:6px;">
       <span>👑 歷史最高連勝 (≥80%)：<b>${bestStreak} 天</b></span>
       <span style="color:#8c7a70;">基準：${currentDate}</span>
-    </div><div class="stat-grid">` + Object.entries(periods).map(([key, p]) => {
-      const rate = p.total === 0 ? 0 : Math.round((p.done / p.total) * 100);
-      let badge = '';
-      if (p.prevT > 0 && p.total > 0) {
-        const diff = rate - Math.round((p.prevD / p.prevT) * 100);
-        if (diff > 0) badge = `<span class="trend-up">▲+${diff}%</span>`;
-        else if (diff < 0) badge = `<span class="trend-down">▼${diff}%</span>`;
-      }
-      return `<div class="stat-card ${selectedCurveDim === key ? 'active-dim' : ''}" onclick="selectCurveDim('${key}')">
-        <h4>${p.label}</h4><div class="stat-rate">${rate}%${badge}</div><div class="stat-sub">${p.done}/${p.total} 項｜${p.days} 天</div>
-        <button class="btn btn-yellow btn-sm" onclick="event.stopPropagation();copyPeriodSummary('${key}')">📋 複製給 AI</button>
-      </div>`;
-    }).join('') + `</div>`;
-
-    const dimNames = { week: '各週', month: '各月', quarter: '各季', year: '各年' };
-    html += buildGrowthChartHtml(allSeries[selectedCurveDim], dimNames[selectedCurveDim]);
-
-    const fixRate = fixT === 0 ? 0 : Math.round((fixD / fixT) * 100), tmpRate = tmpT === 0 ? 0 : Math.round((tmpD / tmpT) * 100);
-    html += `<div class="panel-box"><b>⚖️ 核心固定習慣 vs 臨時待辦達成率</b>
-      <div class="split-bar-row"><span style="width:76px;">⭐ 固定 (${fixRate}%)</span><div class="split-track"><div class="split-fill-fixed" style="width:${fixRate}%"></div></div><span>${fixD}/${fixT}</span></div>
-      <div class="split-bar-row"><span style="width:76px;">📌 臨時 (${tmpRate}%)</span><div class="split-track"><div class="split-fill-temp" style="width:${tmpRate}%"></div></div><span>${tmpD}/${tmpT}</span></div>
     </div>`;
 
+    // 2. 打卡月曆 + 星期一～日執行節奏分析
     const firstDay = new Date(calViewYear, calViewMonth, 1).getDay(), startPad = firstDay === 0 ? 6 : firstDay - 1;
     const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
     let calCells = ['一','二','三','四','五','六','日'].map(w => `<div class="cal-dow-lbl">${w}</div>`).join('');
@@ -714,8 +695,9 @@
       return `<div><div class="dow-bar-wrap"><div class="dow-bar-fill" style="height:${r}%"></div></div><div style="font-size:0.7rem;margin-top:3px;">週${dowNames[idx]}<br><b>${r}%</b></div></div>`;
     }).join('');
 
-    html += `<div class="panel-box"><div class="cal-header"><button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button><b>🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b><button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button></div><div class="cal-grid">${calCells}</div><div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div></div>`;
+    html += `<div class="panel-box" style="margin-top:4px;"><div class="cal-header"><button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button><b>🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b><button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button></div><div class="cal-grid">${calCells}</div><div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div></div>`;
 
+    // 3. 習慣執行力排行 + 核心固定 vs 臨時待辦分流
     const habits = Object.entries(habitMap).filter(([, v]) => v.total >= 2).map(([name, v]) => ({ name, rate: Math.round((v.done / v.total) * 100), done: v.done, total: v.total }));
     if (habits.length > 0) {
       const top3 = [...habits].sort((a, b) => b.rate - a.rate || b.done - a.done).slice(0, 3);
@@ -724,6 +706,31 @@
         top3.map((h, i) => `<div>🌟 Top${i + 1}：${h.name.replace(/</g,'&lt;')} — <b>${h.rate}%</b> (${h.done}/${h.total})</div>`).join('') +
         (low2.length ? `<div style="margin-top:6px;color:#b85d58;">⚠️ <b>最常卡關待調整：</b>` + low2.map(h => `${h.name.replace(/</g,'&lt;')} (${h.rate}%)`).join('、') + `</div>` : '') + `</div></div>`;
     }
+
+    const fixRate = fixT === 0 ? 0 : Math.round((fixD / fixT) * 100), tmpRate = tmpT === 0 ? 0 : Math.round((tmpD / tmpT) * 100);
+    html += `<div class="panel-box"><b>⚖️ 核心固定習慣 vs 臨時待辦達成率</b>
+      <div class="split-bar-row"><span style="width:76px;">⭐ 固定 (${fixRate}%)</span><div class="split-track"><div class="split-fill-fixed" style="width:${fixRate}%"></div></div><span>${fixD}/${fixT}</span></div>
+      <div class="split-bar-row"><span style="width:76px;">📌 臨時 (${tmpRate}%)</span><div class="split-track"><div class="split-fill-temp" style="width:${tmpRate}%"></div></div><span>${tmpD}/${tmpT}</span></div>
+    </div>`;
+
+    // 4. 4度卡片 + 歷期成長折線圖
+    html += `<div class="stat-grid" style="margin-top:12px;">` + Object.entries(periods).map(([key, p]) => {
+      const rate = p.total === 0 ? 0 : Math.round((p.done / p.total) * 100);
+      let badge = '';
+      if (p.prevT > 0 && p.total > 0) {
+        const diff = rate - Math.round((p.prevD / p.prevT) * 100);
+        if (diff > 0) badge = `<span class="trend-up">▲+${diff}%</span>`;
+        else if (diff < 0) badge = `<span class="trend-down">▼${diff}%</span>`;
+      }
+      return `<div class="stat-card ${selectedCurveDim === key ? 'active-dim' : ''}" onclick="selectCurveDim('${key}')">
+        <h4>${p.label}</h4><div class="stat-rate">${rate}%${badge}</div><div class="stat-sub">${p.done}/${p.total} 項｜${p.days} 天</div>
+        <button class="btn btn-yellow btn-sm" onclick="event.stopPropagation();copyPeriodSummary('${key}')">📋 複製給 AI</button>
+      </div>`;
+    }).join('') + `</div>`;
+
+    const dimNames = { week: '各週', month: '各月', quarter: '各季', year: '各年' };
+    html += buildGrowthChartHtml(allSeries[selectedCurveDim], dimNames[selectedCurveDim]);
+
     document.getElementById('statsView').innerHTML = html;
   }
 
