@@ -3,11 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="目標小手帳">
 <meta name="theme-color" content="#fdf8f2">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://w3.org viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23f4a29e%22/><text y=%22.9em%22 font-size=%2275%22 x=%2212%22>🧸</text></svg>">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://w3.org viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧸</text></svg>">
 <link rel="manifest" href="manifest.json">
 <title>我的每日目標小手帳 ✨</title>
@@ -23,7 +19,7 @@
     background-color: var(--bg-cream);
     background-image: radial-gradient(#e6d7c8 1.2px, transparent 1.2px);
     background-size: 20px 20px; color: var(--text-brown);
-    margin: 0; padding: 20px 12px 60px; display: flex; justify-content: center;
+    margin: 0; padding: 20px 12px 76px; display: flex; justify-content: center;
   }
   .journal-container {
     width: 100%; max-width: 600px; background: var(--paper-white);
@@ -41,7 +37,13 @@
   .active-proj-bar {
     display: inline-flex; align-items: center; gap: 6px; background: #eef7f1;
     border: 1.5px solid #cce3d4; color: #3d7a56; font-size: 0.85rem; font-weight: 700;
-    padding: 4px 12px; border-radius: 20px; margin-bottom: 8px;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 6px;
+  }
+  .vision-banner {
+    background: linear-gradient(135deg, #fff9e6, #fff2eb);
+    border: 1.5px dashed #f2c97d; color: #7a5828; font-size: 0.84rem;
+    font-weight: 700; padding: 7px 14px; border-radius: 14px;
+    margin: 4px auto 10px; max-width: 94%; line-height: 1.45;
   }
   .btn-icon-tiny { background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 0 2px; }
   .date-controls { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -54,7 +56,7 @@
   .streak-badge {
     display: inline-block; background: #fff0e6; border: 1.5px solid #f7c59f;
     color: #d96b27; font-size: 0.82rem; font-weight: 700; padding: 4px 10px;
-    border-radius: 20px; margin-bottom: 8px;
+    border-radius: 20px; margin-bottom: 6px;
   }
   .progress-card { background: #fff6ee; border-radius: 18px; padding: 15px; margin-bottom: 18px; border: 2px solid #fae5d3; }
   .progress-header { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 8px; }
@@ -62,12 +64,17 @@
   .progress-bar-fill {
     height: 100%; width: 0%; border-radius: 10px;
     background: linear-gradient(90deg, var(--primary-pink), var(--accent-yellow));
-    transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .encouragement-box {
     margin-top: 12px; padding: 10px 12px; background: #fff; border-radius: 12px;
     border-left: 5px solid var(--accent-mint); font-size: 0.95rem;
     display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .blindbox-tag {
+    display: inline-block; background: linear-gradient(90deg, #ffecd2, #fcb69f);
+    color: #7d3c1d; font-size: 0.72rem; font-weight: 700; padding: 2px 8px;
+    border-radius: 10px; margin-bottom: 4px;
   }
   .summary-bar { margin-top: 10px; display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
   .ai-section { background: #f9fbf9; border: 2px dashed var(--accent-mint); border-radius: 16px; padding: 13px; margin-bottom: 18px; }
@@ -104,9 +111,19 @@
   .btn-outline:hover { background: #f7efe8; }
   .btn-warn { background: #fff4d4; border-color: #eab84d; color: #8a6214; }
   .task-list { list-style: none; padding: 0; margin: 0; }
-  .task-item { display: flex; flex-direction: column; gap: 6px; padding: 12px 6px; border-bottom: 1.5px dashed var(--border-dashed); }
-  .task-main-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+  .task-item {
+    display: flex; flex-direction: column; gap: 6px; padding: 12px 8px;
+    border-bottom: 1.5px dashed var(--border-dashed); border-radius: 14px; transition: background 0.25s;
+  }
+  .task-item.is-mit {
+    background: #fffbeb; border: 2px solid #f7d47c; margin-bottom: 8px;
+    box-shadow: 0 3px 10px rgba(234, 184, 77, 0.14);
+  }
+  .task-main-row { display: flex; align-items: center; gap: 7px; width: 100%; }
   .task-checkbox { width: 21px; height: 21px; accent-color: var(--primary-pink); cursor: pointer; flex-shrink: 0; }
+  .btn-mit { background: none; border: none; cursor: pointer; font-size: 1.05rem; padding: 0 2px; flex-shrink: 0; opacity: 0.45; transition: 0.2s; }
+  .btn-mit.active { opacity: 1; transform: scale(1.12); }
+  .badge-mit { font-size: 0.7rem; background: #fce181; color: #6e4e11; font-weight: 700; padding: 2px 6px; border-radius: 8px; flex-shrink: 0; }
   .task-text { flex: 1; font-size: 1.02rem; padding: 2px 6px; border-radius: 6px; outline: none; word-break: break-word; }
   .task-text:focus { background: #fff; box-shadow: 0 0 0 2px var(--accent-yellow); }
   .task-item.completed .task-text { text-decoration: line-through; color: var(--text-light); }
@@ -116,20 +133,23 @@
   .btn-del { background: none; border: none; color: #cbbab0; font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
   .task-note-row { padding-left: 29px; width: 100%; }
   .task-note-input { width: 100%; border: 1px solid #efe4da; background: #fcf9f6; border-radius: 8px; padding: 5px 10px; font-size: 0.85rem; color: #7a665c; outline: none; }
-  .footer-tools { margin-top: 24px; padding-top: 14px; border-top: 2px solid #f2e6dc; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+  .footer-tools { margin-top: 24px; padding-top: 14px; border-top: 2px solid #f2e6dc; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .modal { display: none; position: fixed; inset: 0; background: rgba(92, 75, 67, 0.45); justify-content: center; align-items: center; padding: 14px; z-index: 100; }
   .modal.active { display: flex; }
   .modal-box { background: var(--paper-white); border-radius: 20px; padding: 18px; width: 100%; max-width: 500px; max-height: 88vh; overflow-y: auto; border: 3px solid #f2e6dc; }
+  .setting-section { background: #fcf8f4; border: 1.5px solid #eddcd0; border-radius: 14px; padding: 12px; margin-top: 12px; }
+  .setting-section h4 { margin: 0 0 8px; font-size: 0.92rem; color: var(--text-brown); }
+  .setting-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .proj-filter-bar { background: #fdf6ef; padding: 10px; border-radius: 12px; border: 1.5px solid #f0dfd1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
   .tab-bar { display: flex; gap: 8px; margin: 10px 0; border-bottom: 2px solid #f2e6dc; padding-bottom: 8px; }
   .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-  .stat-card { background: #fff8f1; border: 1.5px solid #f3dfd0; border-radius: 14px; padding: 10px; text-align: center; }
+  .stat-card { background: #fff8f1; border: 1.5px solid #f3dfd0; border-radius: 14px; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s; }
+  .stat-card:hover { transform: translateY(-2px); border-color: var(--primary-pink); }
+  .stat-card.active-dim { border: 2px solid var(--primary-pink-dark); background: #fff1eb; box-shadow: 0 4px 10px rgba(244,162,158,0.2); }
   .stat-card h4 { margin: 0 0 4px; font-size: 0.85rem; color: var(--text-light); }
   .stat-rate { font-size: 1.35rem; font-weight: 700; color: var(--primary-pink-dark); }
   .stat-sub { font-size: 0.75rem; color: var(--text-brown); margin: 3px 0 7px; }
   .panel-box { margin-top: 12px; background: #f8fbf9; border: 1.5px solid #d5e6dc; border-radius: 14px; padding: 11px; font-size: 0.83rem; }
-  .heat-row { display: flex; gap: 4px; justify-content: space-between; margin-top: 6px; }
-  .heat-cell { flex: 1; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; color: #5c4b43; border: 1px solid rgba(0,0,0,0.06); }
   .dow-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 8px; text-align: center; }
   .dow-bar-wrap { height: 42px; background: #eae3dc; border-radius: 6px; display: flex; align-items: flex-end; overflow: hidden; }
   .dow-bar-fill { width: 100%; background: var(--primary-pink); transition: height 0.3s; }
@@ -138,18 +158,11 @@
   .history-notes-preview { font-size: 0.8rem; color: #7a665c; margin-top: 5px; padding-left: 8px; border-left: 2px solid var(--accent-mint); }
   .trend-up { font-size: 0.72rem; color: #3d7a56; background: #e3f5ea; padding: 1px 5px; border-radius: 6px; margin-left: 4px; vertical-align: middle; }
   .trend-down { font-size: 0.72rem; color: #b85d58; background: #fde8e8; padding: 1px 5px; border-radius: 6px; margin-left: 4px; vertical-align: middle; }
-  .split-bar-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.8rem; }
-  .split-track { flex: 1; height: 10px; background: #eae3dc; border-radius: 6px; overflow: hidden; }
-  .split-fill-fixed { height: 100%; background: #6eb58c; }
-  .split-fill-temp { height: 100%; background: #eab84d; }
   .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
   .cal-dow-lbl { font-size: 0.7rem; color: var(--text-light); font-weight: 700; }
   .cal-cell { height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; cursor: pointer; border: 1px solid rgba(0,0,0,0.05); }
   .cal-cell:hover { transform: scale(1.08); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-  .stat-card { cursor: pointer; transition: 0.2s; }
-  .stat-card:hover { transform: translateY(-2px); border-color: var(--primary-pink); }
-  .stat-card.active-dim { border: 2px solid var(--primary-pink-dark); background: #fff1eb; box-shadow: 0 4px 10px rgba(244,162,158,0.2); }
   .curve-svg { width: 100%; height: 120px; overflow: visible; margin-top: 8px; }
   .timeline-list { max-height: 110px; overflow-y: auto; margin-top: 8px; border-top: 1px dashed #d5e6dc; padding-top: 6px; font-size: 0.78rem; }
   .timeline-row { display: flex; justify-content: space-between; padding: 3px 4px; border-bottom: 1px dotted #e6dfd8; }
@@ -158,7 +171,7 @@
     display: flex; justify-content: space-between; align-items: center;
     padding: 14px 0 10px; margin-top: -18px; border-bottom: 1.5px dashed var(--border-dashed);
   }
-    .sync-toast {
+  .sync-toast {
     position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
     background: var(--paper-white); border: 2px solid var(--accent-mint);
     border-radius: 16px; padding: 12px 18px; box-shadow: 0 8px 20px rgba(92, 75, 67, 0.2);
@@ -167,13 +180,36 @@
   .sync-toast.active { display: block; animation: fadeInDown 0.25s ease; }
   .sync-toast-bar { width: 100%; height: 8px; background: #eae3dc; border-radius: 6px; overflow: hidden; margin-top: 8px; }
   .sync-toast-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-mint), var(--primary-pink)); transition: width 0.25s ease; }
+  .undo-snackbar {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #4e3f38; color: #fffdf9; border-radius: 16px; padding: 10px 16px;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25); z-index: 210;
+    display: none; align-items: center; justify-content: space-between; gap: 14px;
+    width: 90%; max-width: 380px; font-size: 0.88rem;
+  }
+  .undo-snackbar.active { display: flex; animation: fadeInUp 0.22s ease; }
+  .confetti-layer { position: fixed; inset: 0; pointer-events: none; z-index: 250; overflow: hidden; }
+  .confetti-piece {
+    position: absolute; top: -24px; font-size: 1.2rem;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg) scale(0.9); opacity: 1; }
+    100% { transform: translateY(105vh) rotate(540deg) scale(1.1); opacity: 0; }
+  }
   @keyframes fadeInDown { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translate(-50%, 0); } }
 </style>
 </head>
 <body>
+<div id="confettiLayer" class="confetti-layer"></div>
 <div id="syncToast" class="sync-toast">
   <div id="syncToastMsg" style="font-size:0.9rem;font-weight:700;color:var(--text-brown);">🔄 正在處理同步資料...</div>
   <div class="sync-toast-bar"><div id="syncToastFill" class="sync-toast-fill"></div></div>
+</div>
+<div id="undoSnackbar" class="undo-snackbar">
+  <span id="undoMsg">🗑️ 已刪除任務</span>
+  <button class="btn btn-yellow btn-sm" onclick="performUndo()">↩️ 復原</button>
 </div>
 <div class="journal-container">
   <div class="washi-tape"></div>
@@ -186,6 +222,7 @@
       </span>
       <span id="streakBadge" class="streak-badge">🔥 連續達標 0 天</span>
     </div>
+    <div id="visionBannerDisplay" class="vision-banner" style="display:none;"></div>
     <div class="date-controls">
       <input type="date" id="datePicker">
       <button class="btn btn-mint btn-sm" id="btnBackToday" style="display:none;" onclick="goToday()">↩️ 回到今日</button>
@@ -193,7 +230,7 @@
     <div class="date-hint" id="dateStatusHint">🌙 凌晨 05:00 自動換日</div>
   </header>
   <div class="progress-card">
-        <div class="progress-header">
+    <div class="progress-header">
       <span id="progressLabel">今日完成度</span>
       <div style="display:flex;align-items:center;gap:6px;">
         <select id="quoteStyleSelect" onchange="changeQuoteStyle()" style="padding:2px 6px;font-size:0.78rem;border-radius:8px;border:1.5px solid var(--primary-pink);">
@@ -208,7 +245,10 @@
     </div>
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
     <div class="encouragement-box">
-      <span id="quoteText">🌱 新的一天開始啦，寫下今天想完成的小目標吧！</span>
+      <div style="flex:1;">
+        <div id="blindboxTag" class="blindbox-tag" style="display:none;"></div>
+        <div id="quoteText">🌱 新的一天開始啦，寫下今天想完成的小目標吧！</div>
+      </div>
       <button style="background:none;border:none;cursor:pointer;font-size:1.1rem;" onclick="updateQuote(true)" title="換一句">🔄</button>
     </div>
     <div class="summary-bar">
@@ -238,23 +278,52 @@
     <button class="btn" onclick="addTask()">＋ 新增</button>
   </div>
   <ul class="task-list" id="taskList"></ul>
-  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">✏️ 點擊文字可編輯｜▲▼ 可調整順序｜📝 下方小框記錄執行狀況</p>
-        <div class="footer-tools">
-    <button class="btn btn-outline btn-sm" onclick="openHistoryModal('stats')">📊 專案統計與歷史編輯</button>
-    <div style="display:flex;gap:5px;flex-wrap:wrap;">
-      <button class="btn btn-mint btn-sm" onclick="copySyncLink()" title="只打包近7天進度，網址極短">🔗 同步近期(短網址)</button>
-      <button class="btn btn-mint btn-sm" onclick="copySyncCode()" title="複製完整同步序號">📋 複製代碼</button>
-      <button class="btn btn-outline btn-sm" onclick="pasteSyncCode()" title="貼上序號還原">📥 貼上代碼</button>
-      <button class="btn btn-outline btn-sm" id="btnExport" onclick="exportJson()">📤 匯出</button>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
-      <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
-    </div>
+  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">☆ 設為今日焦點置頂｜✏️ 點擊文字編輯｜▲▼ 調整順序</p>
+  <div class="footer-tools">
+    <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openHistoryModal('stats')">📊 專案統計與歷史編輯</button>
+    <button class="btn btn-outline btn-sm" id="btnOpenSettings" onclick="openSettingsModal()">⚙️ 設定與同步備份</button>
   </div>
   <div style="text-align:center;margin-top:14px;font-size:0.72rem;color:#b5a49b;">
-    🐾 圖示素材：<a href="https://zh.pngtree.com/freepng/pink-cute-cat-claw-vector_4491733.html" target="_blank" rel="noopener noreferrer" style="color:#9c8980;text-decoration:underline;">png 圖片來源於 zh.pngtree.com/</a>
+    🐾 圖示素材：<a href="https://pngtree.com" target="_blank" rel="noopener noreferrer" style="color:#9c8980;text-decoration:underline;">png 圖片來源於 ://pngtree.com</a>
   </div>
 </div>
+<div class="modal" id="settingsModal" onclick="if(event.target===this) this.classList.remove('active')">
+  <div class="modal-box">
+    <div class="modal-header-sticky">
+      <h3 style="margin:0;">⚙️ 設定、願景板與資料同步</h3>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('settingsModal').classList.remove('active')">✕ 關閉</button>
+    </div>
+    <div class="setting-section">
+      <h4>✨ 目標視覺化願景板（Vision Banner）</h4>
+      <p style="font-size:0.8rem;color:var(--text-light);margin:0 0 8px;">寫下一句你想達成此目標的初心或畫面（留白則首頁隱藏不顯示）：</p>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="visionInput" class="proj-name-input" style="margin:0;" placeholder="例如：今年底順利通過多益 850 分！">
+        <button class="btn btn-mint btn-sm" style="flex-shrink:0;" onclick="saveVisionBanner()">儲存</button>
+      </div>
+    </div>
+    <div class="setting-section">
+      <h4>🔗 跨裝置同步（自動衝突比對保留最新進度）</h4>
+      <div class="setting-btn-grid">
+        <button class="btn btn-mint btn-sm" onclick="copySyncLink()">🔗 同步近期(短網址)</button>
+        <button class="btn btn-mint btn-sm" onclick="copySyncCode()">📋 複製完整代碼</button>
+        <button class="btn btn-outline btn-sm" style="grid-column:span 2;" onclick="pasteSyncCode()">📥 貼上完整同步代碼</button>
+      </div>
+    </div>
+    <div class="setting-section">
+      <h4>💾 本機 JSON 檔案備份</h4>
+      <div class="setting-btn-grid">
+        <button class="btn btn-outline btn-sm" id="btnExport" onclick="exportJson()">📤 匯出備份檔</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput').click()">📥 匯入備份檔</button>
+      </div>
+      <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
+    </div>
+    <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--text-light);">
+      <span>版本：v4.2（Android 最佳化版）</span>
+      <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
+    </div>
+  </div>
 </div>
+
 <div class="modal" id="historyModal" onclick="if(event.target===this) this.classList.remove('active')">
   <div class="modal-box">
     <div class="modal-header-sticky">
@@ -273,8 +342,9 @@
     <div id="statsView"></div><div id="logsView" style="display:none;"></div>
   </div>
 </div>
+
 <script>
-    const quotesDB = {
+  const quotesDB = {
     warm: {
       empty: ["🌱 還沒有設定目標喔！點上方綠色區塊從 AI 匯入清單吧～", "✨ 空白的頁面充滿無限可能，準備好規劃新專案了嗎？", "📝 寫下第一個小目標，就是把理想變成現實的魔法開始！", "🧸 今天的手帳正等著你填上可愛的色彩，從一件小事開始吧！", "🌤️ 只要開始規劃，你就已經贏過昨天的自己囉！"],
       zero: ["🐣 新的一天開始啦，先挑一件最簡單的小目標打卡吧！", "☕ 深呼吸一口氣，跨出第一步就是最棒的開始！", "🚀 萬事起頭難，只要完成 1% 就打破零進度的魔咒囉！", "🐾 慢慢來沒關係，先專注在眼前第一項任務就好，加油！", "🌈 每個大成就都是從第一個勾勾累積起來的，現在就動手吧！"],
@@ -299,7 +369,7 @@
     roast: {
       empty: ["🙄 連目標都懶得寫，你今天是打算行光合作用過日子嗎？", "🤡 清單一片空白，這就是傳說中的「只要沒目標就不會失敗」嗎？", "📢 醒醒啊！再不寫下目標，你的人生進度條又要卡在原地了！", "🫠 手帳打開了然後呢？快點把清單貼進來，別測試我的耐心～", "🍿 我就靜靜看著你什麼時候才肯面對現實、寫下今天的任務。"],
       zero: ["🐢 哇，進度 0%，你是在跟樹懶比賽誰比較不動如山嗎？", "📱 手機滑得很開心齁？任務清單在後面哭泣你聽到了嗎？", "⏰ 拖延症末期警告！再不動手，晚上睡前你又要開始後悔囉！", "🙃 計畫訂得很豐滿，執行力卻很骨感，快去完成第一項啦！", "🚨 警報！今日生產力目前為零，再不啟動就要被昨日的自己嘲笑了！"],
-      low: ["😏 喔～居然動了！我還以為你今天打算直接躺平到明天呢！", "🐌 雖然速度跟蝸牛差不多，但至少方向是對的，繼續爬吧！", "👏 恭喜脫離 0% 俱樂部！不過後面還有一大堆，別高興得太早～", "🤨 才完成這一點點就想休息？你的良心不會痛嗎？快去做下一項！", "🔋 電量才剛充進 20%，別這麼快就進入省電模式啊！"],
+      low: ["😏 喔～居然動了！我還以為你今天打算直接躺平到明天呢！", "🐌 雖然速度跟蝸牛差不多，但至少方向是對的，繼續爬吧！", "👏 恭喜脫離 0% 俱部！不過後面還有一大堆，別高興得太早～", "🤨 才完成這一點點就想休息？你的良心不會痛嗎？快去做下一項！", "🔋 電量才剛充進 20%，別這麼快就進入省電模式啊！"],
       high: ["😲 太陽打西邊出來了？你今天的執行力居然這麼正常！", "🔥 過半了耶！既然都已經努力到這裡了，半途而廢就太蠢囉～", "🏃 加油好嗎！只剩最後幾項，別在終點線前表演原地跌倒！", "👀 我正拿著放大鏡看你能不能全破，千萬別讓我失望啊！", "⚡ 狀態不錯嘛，看來你離「自律人類」的稱號只差最後幾步了！"],
       perfect: ["🤯 居然 100% 完成了？！快去買張樂透，今天的你簡直不可思議！", "🏆 算你狠，今天沒有任何藉口讓我吐槽了，給你一個大寫的服字！", "🎉 完美達標！快去躺平耍廢吧，今天你完全有資格理直氣壯地懶惰！", "👑 厲害了我的哥／姐，連這麼難的清單都被你全清了，請收下我的膝蓋！", "🍰 任務全滅！今天允許你大吃一頓，畢竟消耗了這麼多腦細胞嘛～"]
     },
@@ -311,35 +381,40 @@
       perfect: ["🌕 圓滿自在，功德圓滿。今日之事已盡力，今晚請安心入眠。", "🍵 身心合一，知行合一。為這充實而無愧於心的一天喝采。", "🪷 萬事皆備，心無掛礙。放下所有待辦，好好享受當下的寧靜。", "🎋 完美的句點，是明日最好的起點。願你擁有平靜喜樂的夜晚。", "✨ 專注與堅持已化作今日的果實，好好滋養並感謝努力的自己。"]
     }
   };
+  const streakBlindBoxes = [
+    { min: 14, tag: "👑 傳說盲盒解鎖｜連勝 14+ 天大師", quotes: ["🌌 兩週以上的連續堅持，這份自律已經內化成你靈魂的一部分了！", "💎 傳說級盲盒開啟：無數個微小的日常累積，正在為你鋪出閃耀的路！"] },
+    { min: 7,  tag: "🎁 黃金盲盒解鎖｜連勝 7+ 天達人", quotes: ["🔥 整整一週不間斷的奇蹟！你已經戰勝了 90% 半途而廢的人！", "🌟 黃金盲盒開啟：習慣的飛輪已經高速轉動，現在的你勢不可擋！"] },
+    { min: 3,  tag: "✨ 驚喜盲盒解鎖｜連勝 3+ 天新星", quotes: ["🍀 突破三日魔咒！恭喜解鎖連勝盲盒，好習慣的種子正式發芽啦！", "🎈 驚喜盲盒開啟：連續三天穩定輸出，你比自己想像的更有毅力！"] }
+  ];
   let currentQuoteStyle = localStorage.getItem('cute_journal_quote_style') || 'warm';
   function getLogicalToday(offsetDays = 0) {
     return new Date(Date.now() - 5 * 3600000 - offsetDays * 86400000).toLocaleDateString('en-CA');
   }
-
   let allRecords = JSON.parse(localStorage.getItem('cute_journal_v3_records') || localStorage.getItem('cute_journal_v2') || '{}');
   let fixedTemplate = JSON.parse(localStorage.getItem('cute_journal_v3_template') || '[]');
   let projects = JSON.parse(localStorage.getItem('cute_journal_v4_projects') || '[]');
   let activeProjectId = localStorage.getItem('cute_journal_v4_active_proj') || '';
   let lastBackupTime = Number(localStorage.getItem('cute_journal_last_backup') || 0);
-  let currentDate = getLogicalToday();
-  let currentQuote = "";
+  let visionText = localStorage.getItem('cute_journal_vision') || '';
+  let currentDate = getLogicalToday(), currentQuote = "", undoSnapshot = null, undoTimer = null;
 
   (function initProjectsAndClean() {
     const todayStr = getLogicalToday();
     Object.keys(allRecords).forEach(d => {
-      if (d > todayStr && Array.isArray(allRecords[d]) && allRecords[d].every(t => !t.completed && !t.note)) {
-        delete allRecords[d];
-      }
+      if (d > todayStr && Array.isArray(allRecords[d]) && allRecords[d].every(t => !t.completed && !t.note)) delete allRecords[d];
     });
     if (projects.length === 0) {
       const sortedDates = Object.keys(allRecords).sort();
       const initId = 'proj_init_' + Date.now();
-      projects.push({ id: initId, name: '初始目標專案', startDate: sortedDates || todayStr, items: [...fixedTemplate] });
+      projects.push({ id: initId, name: '初始目標專案', startDate: sortedDates[0] || todayStr, items: [...fixedTemplate] });
       activeProjectId = initId;
     }
     if (!projects.find(p => p.id === activeProjectId)) activeProjectId = projects[projects.length - 1].id;
     Object.values(allRecords).forEach(list => {
-      if (Array.isArray(list)) list.forEach(t => { if (!t.projectId) t.projectId = activeProjectId; });
+      if (Array.isArray(list)) list.forEach(t => {
+        if (!t.projectId) t.projectId = activeProjectId;
+        if (!t.updatedAt) t.updatedAt = Date.now();
+      });
     });
     saveAll(false);
   })();
@@ -347,7 +422,6 @@
   const datePicker = document.getElementById('datePicker');
   datePicker.value = currentDate;
   datePicker.addEventListener('change', (e) => { currentDate = e.target.value; currentQuote = ""; render(); });
-
   function goToday() { currentDate = getLogicalToday(); datePicker.value = currentDate; currentQuote = ""; render(); }
   function getActiveProject() { return projects.find(p => p.id === activeProjectId) || projects[projects.length - 1]; }
 
@@ -363,8 +437,9 @@
     const todayStr = getLogicalToday();
     if (currentDate > todayStr) return allRecords[currentDate] || [];
     if (!allRecords[currentDate]) {
+      const now = Date.now();
       allRecords[currentDate] = fixedTemplate.map((text, idx) => ({
-        id: Date.now() + idx + Math.random(), text, note: '', completed: false, isFixed: true, projectId: activeProjectId
+        id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false, projectId: activeProjectId, updatedAt: now
       }));
       localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
     }
@@ -375,13 +450,30 @@
     if (currentDate > getLogicalToday()) { alert('⏳ 尚未到達該日期，請在換日後再開始記錄喔！'); return; }
     const input = document.getElementById('newTaskInput'), text = input.value.trim();
     if (!text) return;
-    getTasks().push({ id: Date.now() + Math.random(), text, note: '', completed: false, isFixed: false, projectId: activeProjectId });
+    getTasks().push({ id: Date.now() + Math.random(), text, note: '', completed: false, isFixed: false, isMit: false, projectId: activeProjectId, updatedAt: Date.now() });
     input.value = ''; saveAll();
   }
+
   function toggleTask(id) {
-    const t = getTasks().find(x => x.id === id);
-    if (t) { t.completed = !t.completed; currentQuote = ""; saveAll(); }
+    const tasks = getTasks(), t = tasks.find(x => x.id === id);
+    if (t) {
+      const wasAllDone = tasks.length > 0 && tasks.every(x => x.completed);
+      t.completed = !t.completed; t.updatedAt = Date.now(); currentQuote = ""; saveAll();
+      if (!wasAllDone && tasks.length > 0 && tasks.every(x => x.completed)) triggerCelebration();
+    }
   }
+  function toggleMit(id) {
+    const tasks = getTasks(), target = tasks.find(x => x.id === id);
+    if (!target) return;
+    const willBeMit = !target.isMit;
+    tasks.forEach(x => { x.isMit = (x.id === id) ? willBeMit : false; x.updatedAt = Date.now(); });
+    if (willBeMit) {
+      const idx = tasks.findIndex(x => x.id === id);
+      if (idx > 0) { tasks.splice(idx, 1); tasks.unshift(target); }
+    }
+    saveAll();
+  }
+
   function moveTask(index, dir) {
     const tasks = getTasks(), target = index + dir;
     if (target < 0 || target >= tasks.length) return;
@@ -390,48 +482,80 @@
     getActiveProject().items = [...fixedTemplate];
     saveAll();
   }
+
   function renameActiveProject() {
     const proj = getActiveProject();
     const newName = prompt('請輸入新的目標專案名稱：', proj.name);
     if (newName && newName.trim()) { proj.name = newName.trim(); saveAll(); }
   }
-    function editTask(id, newText) {
+
+  function editTask(id, newText) {
     const t = getTasks().find(x => x.id === id), trimmed = newText.trim();
     if (t && trimmed && t.text !== trimmed) {
-      const oldText = t.text;
+      const oldText = t.text, now = Date.now();
       if (t.isFixed) {
         const tplIdx = fixedTemplate.indexOf(oldText);
         if (tplIdx !== -1) fixedTemplate[tplIdx] = trimmed;
         getActiveProject().items = [...fixedTemplate];
-
-        // 同步更新同一專案內所有日期的舊名稱，確保習慣排行統計連續不斷裂
         Object.values(allRecords).forEach(list => {
-          if (Array.isArray(list)) {
-            list.forEach(item => {
-              if (item.isFixed && item.projectId === t.projectId && item.text === oldText) {
-                item.text = trimmed;
-              }
-            });
-          }
+          if (Array.isArray(list)) list.forEach(item => {
+            if (item.isFixed && item.projectId === t.projectId && item.text === oldText) { item.text = trimmed; item.updatedAt = now; }
+          });
         });
       }
-      t.text = trimmed;
-      saveAll();
+      t.text = trimmed; t.updatedAt = now; saveAll();
     } else render();
   }
+
   function editNote(id, newNote) {
     const t = getTasks().find(x => x.id === id);
-    if (t && (t.note || '') !== newNote.trim()) { t.note = newNote.trim(); saveAll(false); }
+    if (t && (t.note || '') !== newNote.trim()) { t.note = newNote.trim(); t.updatedAt = Date.now(); saveAll(false); }
   }
+
   function delTask(id) {
     const tasks = getTasks(), target = tasks.find(x => x.id === id);
-    if (target && target.isFixed) {
+    if (!target) return;
+    undoSnapshot = { records: JSON.parse(JSON.stringify(allRecords)), template: [...fixedTemplate], projects: JSON.parse(JSON.stringify(projects)) };
+    if (target.isFixed) {
       fixedTemplate = fixedTemplate.filter(item => item !== target.text);
       getActiveProject().items = [...fixedTemplate];
     }
     allRecords[currentDate] = tasks.filter(x => x.id !== id);
     saveAll();
+    showUndoSnackbar(`🗑️ 已刪除「${target.text.slice(0, 12)}${target.text.length > 12 ? '...' : ''}」`);
   }
+
+  function showUndoSnackbar(msg) {
+    const bar = document.getElementById('undoSnackbar');
+    document.getElementById('undoMsg').textContent = msg;
+    bar.classList.add('active');
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(() => { bar.classList.remove('active'); undoSnapshot = null; }, 4200);
+  }
+
+  function performUndo() {
+    if (!undoSnapshot) return;
+    allRecords = undoSnapshot.records; fixedTemplate = undoSnapshot.template; projects = undoSnapshot.projects;
+    undoSnapshot = null; clearTimeout(undoTimer);
+    document.getElementById('undoSnackbar').classList.remove('active');
+    saveAll();
+  }
+  function triggerCelebration() {
+    const layer = document.getElementById('confettiLayer');
+    layer.innerHTML = '';
+    const icons = ['🎉', '✨', '🧸', '🌸', '⭐', '💛', '🎊'];
+    for (let i = 0; i < 32; i++) {
+      const span = document.createElement('span');
+      span.className = 'confetti-piece';
+      span.textContent = icons[i % icons.length];
+      span.style.left = Math.random() * 96 + 'vw';
+      span.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+      span.style.animationDelay = (Math.random() * 0.35) + 's';
+      layer.appendChild(span);
+    }
+    setTimeout(() => { layer.innerHTML = ''; }, 3400);
+  }
+
   function toggleAi() {
     const body = document.getElementById('aiBody'); body.classList.toggle('open');
     document.getElementById('aiIcon').textContent = body.classList.contains('open') ? '▲ 收合' : '▼ 展開';
@@ -449,21 +573,17 @@
       if (cleaned) newItems.push(cleaned);
     });
     if (newItems.length === 0) { alert('沒有偵測到有效的目標文字喔！'); return; }
-
-    const todayStr = getLogicalToday();
+    const todayStr = getLogicalToday(), now = Date.now();
     const projName = nameInput.value.trim() || `目標專案 #${projects.length + 1} (${todayStr.slice(5)}起)`;
-    const newProjId = 'proj_' + Date.now();
+    const newProjId = 'proj_' + now;
     projects.push({ id: newProjId, name: projName, startDate: todayStr, items: [...newItems] });
-    activeProjectId = newProjId;
-    fixedTemplate = newItems;
-
+    activeProjectId = newProjId; fixedTemplate = newItems;
     const manualTasks = (allRecords[todayStr] || []).filter(t => !t.isFixed);
     allRecords[todayStr] = [
-      ...fixedTemplate.map((text, idx) => ({ id: Date.now() + idx + Math.random(), text, note: '', completed: false, isFixed: true, projectId: newProjId })),
+      ...fixedTemplate.map((text, idx) => ({ id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false, projectId: newProjId, updatedAt: now })),
       ...manualTasks
     ];
     Object.keys(allRecords).forEach(d => { if (d > todayStr) delete allRecords[d]; });
-
     currentDate = todayStr; datePicker.value = todayStr;
     area.value = ''; nameInput.value = ''; currentQuote = ""; saveAll();
     alert(`🚀 已建立新專案「${projName}」（共 ${newItems.length} 項）並套用至今日！舊專案紀錄已完整歸檔保留。`);
@@ -480,19 +600,17 @@
     while (isDayPass(getLogicalToday(offset))) { streak++; offset++; }
     return streak;
   }
-    function changeQuoteStyle() {
+
+  function changeQuoteStyle() {
     currentQuoteStyle = document.getElementById('quoteStyleSelect').value;
     localStorage.setItem('cute_journal_quote_style', currentQuoteStyle);
-    currentQuote = "";
-    updateQuote(true);
+    currentQuote = ""; updateQuote(true);
   }
-
   function updateQuote(force) {
     const sel = document.getElementById('quoteStyleSelect');
     if (sel) sel.value = currentQuoteStyle;
     const stylePack = quotesDB[currentQuoteStyle] || quotesDB.warm;
-
-    const tasks = getTasks();
+    const streak = calcStreak(), tasks = getTasks();
     const rate = tasks.length === 0 ? -1 : Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100);
     let pool = stylePack.empty;
     if (rate === 0) pool = stylePack.zero;
@@ -500,10 +618,30 @@
     else if (rate > 50 && rate < 100) pool = stylePack.high;
     else if (rate === 100) pool = stylePack.perfect;
 
-    if (force || !currentQuote || !pool.includes(currentQuote)) {
-      currentQuote = pool[Math.floor(Math.random() * pool.length)];
+    const boxTier = streakBlindBoxes.find(b => streak >= b.min);
+    const tagEl = document.getElementById('blindboxTag');
+    let activePool = [...pool];
+    if (boxTier && rate >= 80) {
+      tagEl.style.display = 'inline-block'; tagEl.textContent = boxTier.tag;
+      activePool = [...boxTier.quotes, ...pool];
+    } else { tagEl.style.display = 'none'; }
+
+    if (force || !currentQuote || !activePool.includes(currentQuote)) {
+      currentQuote = activePool[Math.floor(Math.random() * activePool.length)];
     }
     document.getElementById('quoteText').textContent = currentQuote;
+  }
+
+  function openSettingsModal() {
+    document.getElementById('visionInput').value = visionText;
+    document.getElementById('settingsModal').classList.add('active');
+  }
+
+  function saveVisionBanner() {
+    visionText = document.getElementById('visionInput').value.trim();
+    localStorage.setItem('cute_journal_vision', visionText);
+    render();
+    showSyncProgress(visionText ? '✨ 目標願景板已更新顯示！' : '🫧 已清空並隱藏願景板', 100, 1800);
   }
 
   function render() {
@@ -511,28 +649,39 @@
     document.getElementById('templateCountText').textContent = `目前專案固定清單：${fixedTemplate.length} 項`;
     document.getElementById('streakBadge').textContent = `🔥 連續達標 (≥80%)：${calcStreak()} 天`;
 
-    const btnExport = document.getElementById('btnExport');
+    const visionEl = document.getElementById('visionBannerDisplay');
+    if (visionText) { visionEl.style.display = 'block'; visionEl.textContent = `🌈 願景初心：${visionText}`; }
+    else { visionEl.style.display = 'none'; }
+
+    const btnExport = document.getElementById('btnExport'), btnSettings = document.getElementById('btnOpenSettings');
     const daysSinceBackup = (Date.now() - lastBackupTime) / 86400000;
-    if (Object.keys(allRecords).length > 0 && (!lastBackupTime || daysSinceBackup > 7)) {
-      btnExport.classList.add('btn-warn'); btnExport.textContent = '⚠️ 建議匯出備份';
-    } else { btnExport.classList.remove('btn-warn'); btnExport.textContent = '📤 匯出'; }
+    const needBackup = Object.keys(allRecords).length > 0 && (!lastBackupTime || daysSinceBackup > 7);
+    if (needBackup) {
+      if (btnExport) { btnExport.classList.add('btn-warn'); btnExport.textContent = '⚠️ 建議匯出備份'; }
+      btnSettings.classList.add('btn-warn'); btnSettings.textContent = '⚙️ 設定與備份 ⚠️';
+    } else {
+      if (btnExport) { btnExport.classList.remove('btn-warn'); btnExport.textContent = '📤 匯出備份檔'; }
+      btnSettings.classList.remove('btn-warn'); btnSettings.textContent = '⚙️ 設定與同步備份';
+    }
 
     const todayStr = getLogicalToday(), isToday = currentDate === todayStr, isFuture = currentDate > todayStr;
     document.getElementById('btnBackToday').style.display = isToday ? 'none' : 'inline-block';
     document.getElementById('progressLabel').textContent = isToday ? '今日完成度' : (isFuture ? `${currentDate} (未來日期)` : `${currentDate} 歷史完成度`);
     document.getElementById('dateStatusHint').textContent = isToday ? '🌙 凌晨 05:00 自動換日（目前為今日進度）' : (isFuture ? '⏳ 尚未到達該日期（將於換日後自動產生任務）' : '✏️ 目前正在檢視／編輯歷史日期');
-
     const tasks = getTasks(), listEl = document.getElementById('taskList'); listEl.innerHTML = '';
     if (isFuture && tasks.length === 0) {
       listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.95rem;">⏳ <b>${currentDate}</b> 尚未到來喔！<br>等該日凌晨 05:00 換日後，系統會自動帶入目前專案的每日固定清單。</li>`;
     } else {
       tasks.forEach((t, idx) => {
-        const li = document.createElement('li'); li.className = `task-item ${t.completed ? 'completed' : ''}`;
+        const li = document.createElement('li');
+        li.className = `task-item ${t.completed ? 'completed' : ''} ${t.isMit ? 'is-mit' : ''}`;
         li.innerHTML = `
           <div class="task-main-row">
             <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id})">
+            <button class="btn-mit ${t.isMit ? 'active' : ''}" onclick="toggleMit(${t.id})" title="設為今日焦點置頂">${t.isMit ? '⭐' : '☆'}</button>
+            ${t.isMit ? '<span class="badge-mit">焦點</span>' : ''}
             <div class="task-text" contenteditable="true" onblur="editTask(${t.id}, this.innerText)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</div>
-            ${t.isFixed ? '<span class="badge-fixed">⭐ 固定</span>' : ''}
+            ${t.isFixed ? '<span class="badge-fixed">固定</span>' : ''}
             <div class="sort-btns"><button class="btn-sort" onclick="moveTask(${idx}, -1)">▲</button><button class="btn-sort" onclick="moveTask(${idx}, 1)">▼</button></div>
             <button class="btn-del" onclick="delTask(${t.id})">✕</button>
           </div>
@@ -545,12 +694,13 @@
     document.getElementById('progressBar').style.width = `${pct}%`;
     updateQuote(false);
   }
-    function copyDailySummary() {
+
+  function copyDailySummary() {
     const tasks = getTasks();
     if (tasks.length === 0) { alert('該日期沒有任務可以總結喔！'); return; }
     const done = tasks.filter(t => t.completed).length, pct = Math.round((done / tasks.length) * 100);
     let text = `📅 日期：${currentDate}（專案：${getActiveProject().name}）\n📊 當日總達成率：${pct}% (${done}/${tasks.length})\n\n【目標執行狀況與筆記】\n`;
-    tasks.forEach(t => { text += `- [${t.completed ? '✅ 已完成' : '⬜ 未完成'}] ${t.text}${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`; });
+    tasks.forEach(t => { text += `- [${t.completed ? '✅ 已完成' : '⬜ 未完成'}] ${t.isMit ? '⭐[今日焦點] ' : ''}${t.text}${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`; });
     text += `\n請根據我這天的完成狀況與筆記紀錄，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供具體小建議！`;
     navigator.clipboard.writeText(text).then(() => alert(`📋 ${currentDate} 總結已複製！直接貼上給 AI 即可取得覆盤回饋！`));
   }
@@ -581,7 +731,6 @@
     });
     return best;
   }
-
   function getWeekKey(d) {
     const tmp = new Date(d.getTime());
     const dow = tmp.getDay() === 0 ? 7 : tmp.getDay();
@@ -601,7 +750,7 @@
     const entries = Object.entries(seriesMap).sort((a, b) => a.localeCompare(b));
     if (entries.length === 0) return `<div class="panel-box"><b>📈 ${dimLabel}成長曲線</b><p style="color:#999;margin:6px 0 0;">尚無足夠數據繪製曲線</p></div>`;
     const pointsData = entries.map(([label, v]) => ({ label, rate: Math.round((v.done / v.total) * 100), done: v.done, total: v.total, days: v.days }));
-    const chartPts = pointsData.slice(-10); // 圖表最多顯示最近 10 期保持清晰，下方列表顯示全部期別
+    const chartPts = pointsData.slice(-10);
     const W = 400, H = 90, padX = 24, padY = 16;
     const coords = chartPts.map((pt, i) => {
       const x = chartPts.length === 1 ? W / 2 : padX + (i / (chartPts.length - 1)) * (W - padX * 2);
@@ -614,11 +763,9 @@
       <text x="${c.x}" y="${c.y - 8}" text-anchor="middle" font-size="10" font-weight="bold" fill="#5c4b43">${c.rate}%</text>
       <text x="${c.x}" y="${H + 14}" text-anchor="middle" font-size="9" fill="#8c7a70">${c.label.replace(/^\d{4}-/, '')}</text>
     `).join('');
-
     const listRows = [...pointsData].reverse().map(p =>
       `<div class="timeline-row"><span><b>${p.label}</b> (${p.days}天)</span><span>完成 ${p.done}/${p.total} 項 (<b>${p.rate}%</b>)</span></div>`
     ).join('');
-
     return `<div class="panel-box">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <b>📈 ${dimLabel}歷期成長曲線（共 ${pointsData.length} 期）</b>
@@ -632,6 +779,7 @@
       <div class="timeline-list">${listRows}</div>
     </div>`;
   }
+
   function renderStatsDashboard() {
     const records = getFilteredRecords();
     const base = new Date(currentDate + 'T00:00:00');
@@ -644,7 +792,6 @@
     const prevWeekEnd = new Date(weekStart); prevWeekEnd.setDate(weekStart.getDate() - 1);
     const prevMonth = month === 0 ? 11 : month - 1, prevMonthYear = month === 0 ? year - 1 : year;
     const prevQ = quarter === 0 ? 3 : quarter - 1, prevQYear = quarter === 0 ? year - 1 : year;
-
     const periods = {
       week: { label: '本週統計', total: 0, done: 0, days: 0, logs: [], prevT: 0, prevD: 0 },
       month: { label: `${month + 1}月統計`, total: 0, done: 0, days: 0, logs: [], prevT: 0, prevD: 0 },
@@ -667,7 +814,6 @@
       if (d.getFullYear() === year) pushLog(periods.year);
       else if (d.getFullYear() === year - 1) { periods.year.prevT += list.length; periods.year.prevD += doneCnt; }
 
-      // 累計全部期別序列
       const addS = (map, k) => { if (!map[k]) map[k] = { total: 0, done: 0, days: 0 }; map[k].total += list.length; map[k].done += doneCnt; map[k].days++; };
       addS(allSeries.week, getWeekKey(d));
       addS(allSeries.month, `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}月`);
@@ -684,10 +830,7 @@
     });
     periodReportCache = periods;
 
-        const bestStreak = calcBestStreak(records);
-    const dowNames = ['一', '二', '三', '四', '五', '六', '日'];
-
-    // 自動化數據診斷一句話計算
+    const bestStreak = calcBestStreak(records), dowNames = ['一', '二', '三', '四', '五', '六', '日'];
     let insightMsg = "🌱 持續累積打卡幾天後，這裡會自動為你診斷執行節奏與盲點喔！";
     const validDows = dowStats.map((s, i) => ({ name: '週' + dowNames[i], rate: s.total > 0 ? Math.round((s.done / s.total) * 100) : -1, total: s.total })).filter(x => x.total > 0);
     if (validDows.length >= 2) {
@@ -699,22 +842,15 @@
       if (tmpT > 0 && tmpRate < fixRate - 15) extraTip = "臨時待辦完成率較低，建議減少突發雜事干擾；";
       else if (fixT > 0 && fixRate < 70) extraTip = "核心固定習慣略顯吃力，可請 AI 幫你微調難度；";
       else extraTip = "整體精力分配相當穩健，繼續保持這個好節奏！";
-
       insightMsg = bestDow.name === worstDow.name
         ? `💡 <b>數據診斷：</b>目前在<b>${bestDow.name}</b>表現最亮眼（${bestDow.rate}%），${extraTip}`
         : `💡 <b>數據診斷：</b>你在<b>${bestDow.name}</b>執行力最強（${bestDow.rate}%），<b>${worstDow.name}</b>較易卡關（${worstDow.rate}%）。${extraTip}`;
     }
 
-    // 1. 歷史最高連勝 + 基準 + 自動化數據診斷便籤
     let html = `<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;margin-bottom:6px;">
-      <span>👑 歷史最高連勝 (≥80%)：<b>${bestStreak} 天</b></span>
-      <span style="color:#8c7a70;">基準：${currentDate}</span>
-    </div>
-    <div style="background:#fffdf2;border:1.5px dashed #eab84d;border-radius:12px;padding:9px 12px;font-size:0.82rem;line-height:1.5;color:#6e5523;margin-bottom:8px;">
-      ${insightMsg}
-    </div>`;
+      <span>👑 歷史最高連勝 (≥80%)：<b>${bestStreak} 天</b></span><span style="color:#8c7a70;">基準：${currentDate}</span>
+    </div><div style="background:#fffdf2;border:1.5px dashed #eab84d;border-radius:12px;padding:9px 12px;font-size:0.82rem;line-height:1.5;color:#6e5523;margin-bottom:8px;">${insightMsg}</div>`;
 
-    // 2. 打卡月曆 + 星期一～日執行節奏分析
     const firstDay = new Date(calViewYear, calViewMonth, 1).getDay(), startPad = firstDay === 0 ? 6 : firstDay - 1;
     const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
     let calCells = ['一','二','三','四','五','六','日'].map(w => `<div class="cal-dow-lbl">${w}</div>`).join('');
@@ -730,15 +866,12 @@
       }
       calCells += `<div class="cal-cell" style="background:${bg}" title="${title}" onclick="jumpToDate('${dStr}')">${day}</div>`;
     }
-
     const dowBars = dowStats.map((s, idx) => {
       const r = s.total === 0 ? 0 : Math.round((s.done / s.total) * 100);
       return `<div><div class="dow-bar-wrap"><div class="dow-bar-fill" style="height:${r}%"></div></div><div style="font-size:0.7rem;margin-top:3px;">週${dowNames[idx]}<br><b>${r}%</b></div></div>`;
     }).join('');
-
     html += `<div class="panel-box" style="margin-top:4px;"><div class="cal-header"><button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button><b>🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b><button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button></div><div class="cal-grid">${calCells}</div><div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div></div>`;
 
-    // 3. 習慣執行力排行
     const habits = Object.entries(habitMap).filter(([, v]) => v.total >= 2).map(([name, v]) => ({ name, rate: Math.round((v.done / v.total) * 100), done: v.done, total: v.total }));
     if (habits.length > 0) {
       const top3 = [...habits].sort((a, b) => b.rate - a.rate || b.done - a.done).slice(0, 3);
@@ -748,7 +881,6 @@
         (low2.length ? `<div style="margin-top:6px;color:#b85d58;">⚠️ <b>最常卡關待調整：</b>` + low2.map(h => `${h.name.replace(/</g,'&lt;')} (${h.rate}%)`).join('、') + `</div>` : '') + `</div></div>`;
     }
 
-    // 4. 4度卡片 + 歷期成長折線圖
     html += `<div class="stat-grid" style="margin-top:12px;">` + Object.entries(periods).map(([key, p]) => {
       const rate = p.total === 0 ? 0 : Math.round((p.done / p.total) * 100);
       let badge = '';
@@ -765,15 +897,10 @@
 
     const dimNames = { week: '各週', month: '各月', quarter: '各季', year: '各年' };
     html += buildGrowthChartHtml(allSeries[selectedCurveDim], dimNames[selectedCurveDim]);
-
     document.getElementById('statsView').innerHTML = html;
   }
 
-  function jumpToDate(dStr) {
-    currentDate = dStr; datePicker.value = dStr; currentQuote = "";
-    document.getElementById('historyModal').classList.remove('active'); render();
-  }
-
+  function jumpToDate(dStr) { currentDate = dStr; datePicker.value = dStr; currentQuote = ""; document.getElementById('historyModal').classList.remove('active'); render(); }
 
   function copyPeriodSummary(key) {
     const p = periodReportCache[key];
@@ -803,7 +930,6 @@
       box.appendChild(card);
     });
   }
-
   function refreshProjSelect() {
     const sel = document.getElementById('statsProjSelect');
     sel.innerHTML = `<option value="ALL">🌐 全部目標專案總覽 (${projects.length}個)</option>` +
@@ -832,12 +958,28 @@
     document.getElementById('historyModal').classList.add('active');
   }
 
-    function encodeSyncData(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function encodeSyncData(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   function decodeSyncData(str) { return JSON.parse(decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/'))))); }
+
+  function mergeRecordsWithConflictResolution(localRecs, incomingRecs) {
+    const merged = { ...localRecs };
+    Object.entries(incomingRecs).forEach(([dateStr, inList]) => {
+      if (!Array.isArray(inList)) return;
+      if (!Array.isArray(merged[dateStr])) { merged[dateStr] = inList; return; }
+      const taskMap = new Map();
+      merged[dateStr].forEach(t => taskMap.set(String(t.id), t));
+      inList.forEach(inTask => {
+        const key = String(inTask.id), existing = taskMap.get(key);
+        if (!existing || (inTask.updatedAt || 0) >= (existing.updatedAt || 0)) taskMap.set(key, inTask);
+      });
+      merged[dateStr] = Array.from(taskMap.values());
+    });
+    return merged;
+  }
 
   function applySyncedPayload(d) {
     if (!d || typeof d !== 'object') return false;
-    if (d.records) allRecords = { ...allRecords, ...d.records };
+    if (d.records) allRecords = mergeRecordsWithConflictResolution(allRecords, d.records);
     if (Array.isArray(d.template)) fixedTemplate = d.template;
     if (Array.isArray(d.projects)) {
       const map = new Map(projects.map(p => [p.id, p]));
@@ -845,18 +987,16 @@
       projects = Array.from(map.values());
     }
     if (d.activeProjectId) activeProjectId = d.activeProjectId;
-    saveAll(true);
-    return true;
+    if (typeof d.vision === 'string' && d.vision) { visionText = d.vision; localStorage.setItem('cute_journal_vision', visionText); }
+    saveAll(true); return true;
   }
 
-    function showSyncProgress(msg, percent, autoHideMs = 0) {
+  function showSyncProgress(msg, percent, autoHideMs = 0) {
     const toast = document.getElementById('syncToast');
     document.getElementById('syncToastMsg').textContent = msg;
     document.getElementById('syncToastFill').style.width = percent + '%';
     toast.classList.add('active');
-    if (autoHideMs > 0) {
-      setTimeout(() => { toast.classList.remove('active'); }, autoHideMs);
-    }
+    if (autoHideMs > 0) setTimeout(() => { toast.classList.remove('active'); }, autoHideMs);
   }
 
   function checkUrlSync() {
@@ -865,17 +1005,11 @@
       setTimeout(() => {
         try {
           const payload = decodeSyncData(window.location.hash.slice(6));
-          showSyncProgress('📥 正在合併近期進度與專案設定...', 80);
+          showSyncProgress('📥 正在智慧合併最新進度與專案...', 80);
           setTimeout(() => {
-            if (applySyncedPayload(payload)) {
-              history.replaceState(null, null, ' ');
-              showSyncProgress('✨ 同步完成！所有進度已成功合併！', 100, 2200);
-            }
+            if (applySyncedPayload(payload)) { history.replaceState(null, null, ' '); showSyncProgress('✨ 同步完成！已自動保留最新狀態！', 100, 2200); }
           }, 250);
-        } catch (e) {
-          console.error(e);
-          showSyncProgress('⚠️ 同步連結解析失敗，請確認網址完整', 100, 2500);
-        }
+        } catch (e) { showSyncProgress('⚠️ 同步連結解析失敗，請確認網址完整', 100, 2500); }
       }, 200);
     }
   }
@@ -884,11 +1018,8 @@
     showSyncProgress('📦 正在打包最近 7 天紀錄...', 45);
     setTimeout(() => {
       const recentRecords = {};
-      for (let i = 0; i < 7; i++) {
-        const dStr = getLogicalToday(i);
-        if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr];
-      }
-      const encoded = encodeSyncData({ records: recentRecords, template: fixedTemplate, projects, activeProjectId });
+      for (let i = 0; i < 7; i++) { const dStr = getLogicalToday(i); if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr]; }
+      const encoded = encodeSyncData({ records: recentRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText });
       showSyncProgress('🔗 正在寫入剪貼簿...', 85);
       navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}#sync=${encoded}`)
         .then(() => showSyncProgress('✅ 近 7 天短網址已複製！傳給自己點開即可同步', 100, 2600));
@@ -898,10 +1029,12 @@
   function copySyncCode() {
     showSyncProgress('📦 正在壓縮完整歷史與筆記...', 45);
     setTimeout(() => {
-      const code = encodeSyncData({ records: allRecords, template: fixedTemplate, projects, activeProjectId });
+      const code = encodeSyncData({ records: allRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText });
       showSyncProgress('📋 正在複製同步代碼...', 85);
-      navigator.clipboard.writeText(code)
-        .then(() => showSyncProgress('✅ 完整同步代碼已複製！到另一台按「貼上代碼」即可', 100, 2600));
+      navigator.clipboard.writeText(code).then(() => {
+        lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
+        showSyncProgress('✅ 完整同步代碼已複製！到另一台按「貼上代碼」即可', 100, 2600);
+      });
     }, 200);
   }
 
@@ -912,47 +1045,46 @@
     setTimeout(() => {
       try {
         const payload = decodeSyncData(code.trim());
-        showSyncProgress('📥 正在合併所有歷史紀錄與專案...', 85);
-        setTimeout(() => {
-          if (applySyncedPayload(payload)) {
-            showSyncProgress('🎉 同步完成！全部歷史紀錄已完整還原！', 100, 2500);
-          }
-        }, 250);
-      } catch (e) {
-        showSyncProgress('⚠️ 同步代碼格式不正確，請重新複製貼上', 100, 2500);
-      }
+        showSyncProgress('📥 正在比對時間戳記並合併資料...', 85);
+        setTimeout(() => { if (applySyncedPayload(payload)) showSyncProgress('🎉 同步完成！全部歷史紀錄已完整還原！', 100, 2500); }, 250);
+      } catch (e) { showSyncProgress('⚠️ 同步代碼格式不正確，請重新複製貼上', 100, 2500); }
     }, 200);
   }
 
-
   function exportJson() {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, template: fixedTemplate, projects, activeProjectId }, null, 2)], { type: 'application/json' }));
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText }, null, 2)], { type: 'application/json' }));
     a.download = `每日目標手帳備份_${currentDate}.json`; a.click();
     lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
   }
+
   function importJson(e) {
-    const file = e.target.files; if (!file) return;
+    const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      try {
-        if (applySyncedPayload(JSON.parse(ev.target.result))) alert('備份、筆記與專案資料匯入成功！');
-      } catch { alert('檔案格式錯誤'); }
+      try { if (applySyncedPayload(JSON.parse(ev.target.result))) alert('備份、筆記與專案資料匯入成功！'); }
+      catch { alert('檔案格式錯誤'); }
     };
     reader.readAsText(file); e.target.value = '';
   }
 
+  async function forceAppUpdate() {
+    showSyncProgress('🔄 正在清除舊快取並重新載入最新版...', 60);
+    try {
+      if ('serviceWorker' in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); for (const r of regs) await r.unregister(); }
+      if ('caches' in window) { const keys = await caches.keys(); for (const k of keys) await caches.delete(k); }
+    } catch (e) {}
+    setTimeout(() => { window.location.reload(true); }, 450);
+  }
+
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch', e => e.respondWith(caches.open('journal-v1').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))));`;
+    const swCode = `self.addEventListener('fetch', e => e.respondWith(caches.open('journal-v4-2').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))));`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
   }
-    // 監聽網址參數變化（解決手機已開啟分頁時點連結不觸發同步的問題）
+
   window.addEventListener('hashchange', checkUrlSync);
-  checkUrlSync();
-  render();
   checkUrlSync();
   render();
 </script>
 </body>
 </html>
-
