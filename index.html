@@ -158,9 +158,23 @@
     display: flex; justify-content: space-between; align-items: center;
     padding: 14px 0 10px; margin-top: -18px; border-bottom: 1.5px dashed var(--border-dashed);
   }
+    .sync-toast {
+    position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--paper-white); border: 2px solid var(--accent-mint);
+    border-radius: 16px; padding: 12px 18px; box-shadow: 0 8px 20px rgba(92, 75, 67, 0.2);
+    z-index: 200; width: 88%; max-width: 340px; text-align: center; display: none;
+  }
+  .sync-toast.active { display: block; animation: fadeInDown 0.25s ease; }
+  .sync-toast-bar { width: 100%; height: 8px; background: #eae3dc; border-radius: 6px; overflow: hidden; margin-top: 8px; }
+  .sync-toast-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-mint), var(--primary-pink)); transition: width 0.25s ease; }
+  @keyframes fadeInDown { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
 </style>
 </head>
 <body>
+<div id="syncToast" class="sync-toast">
+  <div id="syncToastMsg" style="font-size:0.9rem;font-weight:700;color:var(--text-brown);">🔄 正在處理同步資料...</div>
+  <div class="sync-toast-bar"><div id="syncToastFill" class="sync-toast-fill"></div></div>
+</div>
 <div class="journal-container">
   <div class="washi-tape"></div>
   <header>
@@ -835,48 +849,81 @@
     return true;
   }
 
+    function showSyncProgress(msg, percent, autoHideMs = 0) {
+    const toast = document.getElementById('syncToast');
+    document.getElementById('syncToastMsg').textContent = msg;
+    document.getElementById('syncToastFill').style.width = percent + '%';
+    toast.classList.add('active');
+    if (autoHideMs > 0) {
+      setTimeout(() => { toast.classList.remove('active'); }, autoHideMs);
+    }
+  }
+
   function checkUrlSync() {
     if (window.location.hash.startsWith('#sync=')) {
-      try {
-        if (applySyncedPayload(decodeSyncData(window.location.hash.slice(6)))) {
-          history.replaceState(null, null, ' ');
-          alert('✨ 最近 7 天進度與專案設定已自動同步合併！');
+      showSyncProgress('🔄 正在解析跨裝置同步網址...', 40);
+      setTimeout(() => {
+        try {
+          const payload = decodeSyncData(window.location.hash.slice(6));
+          showSyncProgress('📥 正在合併近期進度與專案設定...', 80);
+          setTimeout(() => {
+            if (applySyncedPayload(payload)) {
+              history.replaceState(null, null, ' ');
+              showSyncProgress('✨ 同步完成！所有進度已成功合併！', 100, 2200);
+            }
+          }, 250);
+        } catch (e) {
+          console.error(e);
+          showSyncProgress('⚠️ 同步連結解析失敗，請確認網址完整', 100, 2500);
         }
-      } catch (e) { console.error(e); }
+      }, 200);
     }
   }
 
-  // 方案 1：僅打包最近 7 天紀錄，確保短網址永不被截斷
   function copySyncLink() {
-    const recentRecords = {};
-    for (let i = 0; i < 7; i++) {
-      const dStr = getLogicalToday(i);
-      if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr];
-    }
-    const encoded = encodeSyncData({ records: recentRecords, template: fixedTemplate, projects, activeProjectId });
-    navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}#sync=${encoded}`)
-      .then(() => alert('🔗 近 7 天短網址已複製！\n貼到 LINE 傳給自己，在另一台裝置點開即可秒同步！'));
+    showSyncProgress('📦 正在打包最近 7 天紀錄...', 45);
+    setTimeout(() => {
+      const recentRecords = {};
+      for (let i = 0; i < 7; i++) {
+        const dStr = getLogicalToday(i);
+        if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr];
+      }
+      const encoded = encodeSyncData({ records: recentRecords, template: fixedTemplate, projects, activeProjectId });
+      showSyncProgress('🔗 正在寫入剪貼簿...', 85);
+      navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}#sync=${encoded}`)
+        .then(() => showSyncProgress('✅ 近 7 天短網址已複製！傳給自己點開即可同步', 100, 2600));
+    }, 200);
   }
 
-  // 方案 2A：複製完整同步代碼（免下載檔案）
   function copySyncCode() {
-    const code = encodeSyncData({ records: allRecords, template: fixedTemplate, projects, activeProjectId });
-    navigator.clipboard.writeText(code)
-      .then(() => alert('📋 完整同步代碼已複製！\n請到另一台裝置點擊「📥 貼上代碼」並貼上即可還原全部紀錄！'));
+    showSyncProgress('📦 正在壓縮完整歷史與筆記...', 45);
+    setTimeout(() => {
+      const code = encodeSyncData({ records: allRecords, template: fixedTemplate, projects, activeProjectId });
+      showSyncProgress('📋 正在複製同步代碼...', 85);
+      navigator.clipboard.writeText(code)
+        .then(() => showSyncProgress('✅ 完整同步代碼已複製！到另一台按「貼上代碼」即可', 100, 2600));
+    }, 200);
   }
 
-  // 方案 2B：貼上同步代碼直接合併還原
   function pasteSyncCode() {
     const code = prompt('請貼上從另一台裝置複製的「完整同步代碼」：');
     if (!code || !code.trim()) return;
-    try {
-      if (applySyncedPayload(decodeSyncData(code.trim()))) {
-        alert('🎉 同步代碼驗證成功！所有歷史紀錄、筆記與專案已完整合併！');
+    showSyncProgress('🔄 正在驗證並解壓縮同步代碼...', 45);
+    setTimeout(() => {
+      try {
+        const payload = decodeSyncData(code.trim());
+        showSyncProgress('📥 正在合併所有歷史紀錄與專案...', 85);
+        setTimeout(() => {
+          if (applySyncedPayload(payload)) {
+            showSyncProgress('🎉 同步完成！全部歷史紀錄已完整還原！', 100, 2500);
+          }
+        }, 250);
+      } catch (e) {
+        showSyncProgress('⚠️ 同步代碼格式不正確，請重新複製貼上', 100, 2500);
       }
-    } catch (e) {
-      alert('⚠️ 同步代碼格式不正確，請確認有完整複製到整串代碼喔！');
-    }
+    }, 200);
   }
+
 
   function exportJson() {
     const a = document.createElement('a');
