@@ -380,8 +380,8 @@
       </div>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
     </div>
-    <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--text-light);">
-      <span>版本：v4.8</span>
+    <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;font-size:0.75rem;color:var(--text-light);">
+      <span>版本：v4.8｜<span id="storageUsageText">空間計算中...</span></span>
       <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
     </div>
   </div>
@@ -540,11 +540,20 @@
         } catch (e) { lastErr = e.message || String(e); }
       }
     }
-    if (updated) {
+    const minKeepPrefix = String(curYear - 1);
+    let prunedCount = 0;
+    Object.keys(govCalendarMap).forEach(k => {
+      if (k.slice(0, 4) < minKeepPrefix) {
+        delete govCalendarMap[k];
+        prunedCount++;
+      }
+    });
+    if (updated || prunedCount > 0) {
       localStorage.setItem('cute_journal_v4_gov_calendar', JSON.stringify(govCalendarMap));
+      updateStorageUsageDisplay();
       render();
     }
-    updateLastHolidayDisplay();
+   updateLastHolidayDisplay();
     if (isManual) {
       showSyncProgress(
         updated ? '✅ 2026～2027 政府行事曆同步成功！' : `⚠️ 失敗原因：${lastErr || '無資料'}`,
@@ -569,8 +578,10 @@
     localStorage.setItem('cute_journal_v4_weekend_skip', JSON.stringify(weekendSkipItems));
     localStorage.setItem('cute_journal_v4_holiday_overrides', JSON.stringify(holidayOverrides));
     localStorage.setItem('cute_journal_v4_custom_holidays', JSON.stringify(customHolidays));
+    updateStorageUsageDisplay();
     if (shouldRender) render();
   }
+
 
   function getTasks() {
     const todayStr = getLogicalToday();
@@ -926,15 +937,31 @@
     if (modalHistoryPushed) closeAllModals(true);
   });
 
+  function updateStorageUsageDisplay() {
+    const el = document.getElementById('storageUsageText');
+    if (!el) return;
+    let totalBytes = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('cute_journal_')) {
+        totalBytes += (k.length + (localStorage.getItem(k) || '').length) * 2;
+      }
+    }
+    const kb = (totalBytes / 1024).toFixed(1);
+    const pct = ((totalBytes / (5 * 1024 * 1024)) * 100).toFixed(1);
+    el.textContent = `已用 ${kb} KB (${pct}%)`;
+    el.style.color = totalBytes > 4 * 1024 * 1024 ? '#c95650' : '';
+  }
+
   function openSettingsModal() {
     document.getElementById('visionInput').value = visionText;
     document.getElementById('customHolidaysInput').value = customHolidays.join(', ');
     updateLastHolidayDisplay();
+    updateStorageUsageDisplay();
     renderProjManageList();
     document.getElementById('settingsModal').classList.add('active');
     pushModalState();
   }
-
 
   function saveVisionBanner() {
     visionText = document.getElementById('visionInput').value.trim();
