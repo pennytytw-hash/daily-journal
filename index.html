@@ -331,7 +331,7 @@
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
     </div>
     <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--text-light);">
-      <span>版本：v4.3（Android 最佳化版）</span>
+      <span>版本：v4.4（Android 最佳化版）</span>
       <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
     </div>
   </div>
@@ -347,9 +347,10 @@
       <select id="statsProjSelect" onchange="onStatsProjChange()" style="flex:1;min-width:140px;"></select>
       </div>
     <div class="tab-bar">
-      <button class="btn btn-sm" id="tabStatsBtn" onclick="switchTab('stats')">📈 週月季年與熱力分析</button>
-      <button class="btn btn-outline btn-sm" id="tabLogsBtn" onclick="switchTab('logs')">📅 點擊歷史日期編輯</button>
+      <button class="btn btn-sm" id="tabOverviewBtn" onclick="switchTab('overview')">🗓️ 打卡月曆與習慣排行</button>
+      <button class="btn btn-outline btn-sm" id="tabTrendsBtn" onclick="switchTab('trends')">📈 週月季年與成長曲線</button>
     </div>
+    <div id="overviewView"></div><div id="trendsView" style="display:none;"></div>
     <div id="statsView"></div><div id="logsView" style="display:none;"></div>
   </div>
 </div>
@@ -969,7 +970,9 @@
         (low2.length ? `<div style="margin-top:6px;color:#b85d58;">⚠️ <b>最常卡關待調整：</b>` + low2.map(h => `${h.name.replace(/</g,'&lt;')} (${h.rate}%)`).join('、') + `</div>` : '') + `</div></div>`;
     }
 
-    html += `<div class="stat-grid" style="margin-top:12px;">` + Object.entries(periods).map(([key, p]) => {
+        document.getElementById('overviewView').innerHTML = html;
+
+    let trendsHtml = `<div class="stat-grid" style="margin-top:6px;">` + Object.entries(periods).map(([key, p]) => {
       const rate = p.total === 0 ? 0 : Math.round((p.done / p.total) * 100);
       let badge = '';
       if (p.prevT > 0 && p.total > 0) {
@@ -984,11 +987,12 @@
     }).join('') + `</div>`;
 
     const dimNames = { week: '各週', month: '各月', quarter: '各季', year: '各年' };
-    html += buildGrowthChartHtml(allSeries[selectedCurveDim], dimNames[selectedCurveDim]);
-    document.getElementById('statsView').innerHTML = html;
+    trendsHtml += buildGrowthChartHtml(allSeries[selectedCurveDim], dimNames[selectedCurveDim]);
+    document.getElementById('trendsView').innerHTML = trendsHtml;
   }
 
   function jumpToDate(dStr) { currentDate = dStr; datePicker.value = dStr; currentQuote = ""; document.getElementById('historyModal').classList.remove('active'); render(); }
+  
   function copyPeriodSummary(key) {
     const p = periodReportCache[key];
     if (!p || p.days === 0) { alert('該區間目前沒有紀錄喔！'); return; }
@@ -1004,28 +1008,15 @@
     navigator.clipboard.writeText(text).then(() => alert(`📋 已複製「${projTitle} - ${p.label}」完整報告！`));
   }
 
-  function renderHistoryLogs() {
-    const box = document.getElementById('logsView'); box.innerHTML = '';
-    const records = getFilteredRecords(), dates = Object.keys(records).sort().reverse();
-    if (!dates.length) { box.innerHTML = '<p style="text-align:center;color:#999;">此篩選條件下尚無紀錄</p>'; return; }
-    dates.forEach(d => {
-      const list = records[d], done = list.filter(t => t.completed).length;
-      const notesHtml = list.filter(t => t.note).map(t => `<div>• <b>${t.text.replace(/</g,'&lt;')}</b>：${t.note.replace(/</g,'&lt;')}</div>`).join('');
-      const card = document.createElement('div'); card.className = 'history-card';
-      card.innerHTML = `<div style="display:flex;justify-content:space-between;"><span><b>${d}</b></span><span>完成 ${done}/${list.length} (${Math.round(done/list.length*100)}%) ✏️編輯</span></div>${notesHtml ? `<div class="history-notes-preview">${notesHtml}</div>` : ''}`;
-      card.onclick = () => { currentDate = d; datePicker.value = d; currentQuote = ""; document.getElementById('historyModal').classList.remove('active'); render(); };
-      box.appendChild(card);
-    });
-  }
-
   function refreshProjSelect() {
     const sel = document.getElementById('statsProjSelect');
     sel.innerHTML = `<option value="ALL">🌐 全部目標專案總覽 (${projects.length}個)</option>` +
       projects.map(p => `<option value="${p.id}" ${p.id === selectedStatsProj ? 'selected' : ''}>🎯 ${p.name.replace(/</g,'&lt;')}</option>`).join('');
   }
+  
   function onStatsProjChange() {
     selectedStatsProj = document.getElementById('statsProjSelect').value;
-    renderStatsDashboard(); renderHistoryLogs();
+    renderStatsDashboard();
   }
 
   function renameSelectedProject() {
@@ -1035,16 +1026,17 @@
     if (newName && newName.trim()) { proj.name = newName.trim(); saveAll(); refreshProjSelect(); }
   }
   function switchTab(tab) {
-    document.getElementById('statsView').style.display = tab === 'stats' ? 'block' : 'none';
-    document.getElementById('logsView').style.display = tab === 'logs' ? 'block' : 'none';
-    document.getElementById('tabStatsBtn').className = tab === 'stats' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
-    document.getElementById('tabLogsBtn').className = tab === 'logs' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
+    document.getElementById('overviewView').style.display = tab === 'overview' ? 'block' : 'none';
+    document.getElementById('trendsView').style.display = tab === 'trends' ? 'block' : 'none';
+    document.getElementById('tabOverviewBtn').className = tab === 'overview' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
+    document.getElementById('tabTrendsBtn').className = tab === 'trends' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
   }
   function openHistoryModal(defaultTab) {
-    selectedStatsProj = 'ALL'; refreshProjSelect(); renderStatsDashboard(); renderHistoryLogs(); switchTab(defaultTab);
+    selectedStatsProj = 'ALL'; refreshProjSelect(); renderStatsDashboard();
+    switchTab(defaultTab === 'trends' ? 'trends' : 'overview');
     document.getElementById('historyModal').classList.add('active');
   }
-    function encodeSyncData(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function encodeSyncData(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   function decodeSyncData(str) { return JSON.parse(decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/'))))); }
 
   function mergeRecordsWithConflictResolution(localRecs, incomingRecs) {
@@ -1164,7 +1156,7 @@
   }
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch', e => e.respondWith(caches.open('journal-v4-3').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))));`;
+    const swCode = `self.addEventListener('fetch', e => e.respondWith(caches.open('journal-v4-4').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))));`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
   }
 
