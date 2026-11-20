@@ -372,6 +372,20 @@
     <div id="statsView"></div><div id="logsView" style="display:none;"></div>
   </div>
 </div>
+<div class="modal" id="syncPasteModal" onclick="if(event.target===this) closeAllModals()">
+  <div class="modal-box">
+    <div class="modal-header-sticky">
+      <h3 style="margin:0;">📥 貼上完整同步代碼</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeAllModals()">✕ 關閉</button>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-light);margin:10px 0 8px;">請在下方欄位長按貼上從另一台裝置複製的同步代碼（無字數上限限制）：</p>
+    <textarea id="syncCodeInputArea" style="height:130px;font-family:monospace;font-size:0.8rem;" placeholder="在此貼上同步代碼..."></textarea>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
+      <button class="btn btn-outline btn-sm" onclick="closeAllModals()">取消</button>
+      <button class="btn btn-mint btn-sm" onclick="confirmPasteSyncCode()">✅ 確認合併還原</button>
+    </div>
+  </div>
+</div>
 
 <script>
   const quotesDB = {
@@ -869,6 +883,8 @@
   function closeAllModals(fromPopState = false) {
     document.getElementById('settingsModal').classList.remove('active');
     document.getElementById('historyModal').classList.remove('active');
+    const spm = document.getElementById('syncPasteModal');
+    if (spm) spm.classList.remove('active');
     if (modalHistoryPushed) {
       modalHistoryPushed = false;
       if (!fromPopState) history.back();
@@ -1241,32 +1257,60 @@
     return String(str).replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/g, '');
   }
 
-  function encodeSyncData(obj) {
-    const cleanJson = sanitizeUnicode(JSON.stringify(obj));
-    const bytes = new TextEncoder().encode(cleanJson);
+  function bytesToBase64Url(bytes) {
     let binary = '';
     for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
     return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
 
-  function decodeSyncData(rawStr) {
-    let str = String(rawStr || '').trim();
-    const hashIdx = str.indexOf('#sync=');
-    if (hashIdx !== -1) str = str.slice(hashIdx + 6);
-    str = str.split(/[&?\s#]/)[0].replace(/[^A-Za-z0-9\-_+/=]/g, '');
-    if (!str) throw new Error('EMPTY_CODE');
-    let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  function base64UrlToBytes(b64Url) {
+    let b64 = b64Url.replace(/-/g, '+').replace(/_/g, '/');
     while (b64.length % 4 !== 0) b64 += '=';
     const binary = atob(b64);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  async function encodeSyncData(obj) {
+    const cleanJson = sanitizeUnicode(JSON.stringify(obj));
+    const rawBytes = new TextEncoder().encode(cleanJson);
+    if (typeof CompressionStream !== 'undefined') {
+      const cs = new CompressionStream('gzip');
+      const writer = cs.writable.getWriter();
+      writer.write(rawBytes);
+      writer.close();
+      const buf = await new Response(cs.readable).arrayBuffer();
+      return 'gz_' + bytesToBase64Url(new Uint8Array(buf));
+    }
+    return bytesToBase64Url(rawBytes);
+  }
+
+  async function decodeSyncData(rawStr) {
+    let str = String(rawStr || '').trim();
+    const hashIdx = str.indexOf('#sync=');
+    if (hashIdx !== -1) str = str.slice(hashIdx + 6);
+    str = str.split(/[&?\s#]/).replace(/[^A-Za-z0-9\-_+/=]/g, '');
+    if (!str) throw new Error('EMPTY_CODE');
+    if (str.startsWith('gz_')) {
+      if (typeof DecompressionStream === 'undefined') throw new Error('瀏覽器不支援解壓縮');
+      const compBytes = base64UrlToBytes(str.slice(3));
+      const ds = new DecompressionStream('gzip');
+      const writer = ds.writable.getWriter();
+      writer.write(compBytes);
+      writer.close();
+      const text = await new Response(ds.readable).text();
+      return JSON.parse(text);
+    }
+    const bytes = base64UrlToBytes(str);
     try {
       return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
     } catch (e) {
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
       return JSON.parse(decodeURIComponent(escape(binary)));
     }
   }
-
   function writeClipboardSafe(text) {
     return new Promise((resolve, reject) => {
       const fallbackCopy = () => {
@@ -1291,6 +1335,7 @@
       }
     });
   }
+
   function mergeRecordsWithConflictResolution(localRecs, incomingRecs) {
     const merged = { ...localRecs };
     Object.entries(incomingRecs).forEach(([dateStr, inList]) => {
@@ -1332,11 +1377,11 @@
     if (autoHideMs > 0) setTimeout(() => { toast.classList.remove('active'); }, autoHideMs);
   }
 
-  function checkUrlSync() {
+  async function checkUrlSync() {
     if (window.location.hash.includes('sync=')) {
       showSyncProgress('🔄 正在解析跨裝置同步網址...', 40);
       try {
-        const payload = decodeSyncData(window.location.hash);
+        const payload = await decodeSyncData(window.location.hash);
         if (applySyncedPayload(payload)) {
           history.replaceState(null, '', window.location.pathname + window.location.search);
           showSyncProgress('✨ 同步完成！已自動保留最新狀態！', 100, 2400);
@@ -1347,40 +1392,48 @@
     }
   }
 
-  function copySyncLink() {
+  async function copySyncLink() {
     try {
       const recentRecords = {};
       for (let i = 0; i < 7; i++) { const dStr = getLogicalToday(i); if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr]; }
-      const encoded = encodeSyncData({ records: recentRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
-      const baseUrl = window.location.href.split('#')[0];
-      writeClipboardSafe(`${baseUrl}#sync=${encoded}`)
-        .then(() => showSyncProgress('✅ 近 7 天短網址已複製！傳給自己點開即可同步', 100, 2600))
-        .catch(() => showSyncProgress('⚠️ 瀏覽器阻擋剪貼簿，請改用「複製完整代碼」或匯出 JSON', 100, 3200));
+      const encoded = await encodeSyncData({ records: recentRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
+      const baseUrl = window.location.href.split('#');
+      await writeClipboardSafe(`${baseUrl}#sync=${encoded}`);
+      showSyncProgress('✅ 近 7 天壓縮短網址已複製！傳給自己點開即可同步', 100, 2600);
     } catch (e) {
-      showSyncProgress(`⚠️ 打包失敗：${e.message || '資料異常'}`, 100, 3000);
+      showSyncProgress(`⚠️ 打包失敗：${e.message || '資料異常'}`, 100, 3200);
     }
   }
 
-  function copySyncCode() {
+  async function copySyncCode() {
     try {
-      const code = encodeSyncData({ records: allRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
-      writeClipboardSafe(code).then(() => {
-        lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
-        showSyncProgress('✅ 完整同步代碼已複製！到另一台按「貼上代碼」即可', 100, 2600);
-      }).catch(() => {
-        prompt('自動複製受限，請手動全選複製以下完整同步代碼：', code);
-      });
+      const code = await encodeSyncData({ records: allRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
+      await writeClipboardSafe(code);
+      lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
+      showSyncProgress(`✅ 完整同步代碼已複製（共 ${code.length} 字元）！`, 100, 2600);
     } catch (e) {
-      showSyncProgress(`⚠️ 編碼失敗：${e.message || '資料異常'}`, 100, 3000);
+      showSyncProgress(`⚠️ 複製失敗：${e.message || '資料異常'}`, 100, 3200);
     }
   }
 
   function pasteSyncCode() {
-    const code = prompt('請貼上從另一台裝置複製的「完整同步代碼」：');
-    if (!code || !code.trim()) return;
+    document.getElementById('settingsModal').classList.remove('active');
+    const area = document.getElementById('syncCodeInputArea');
+    area.value = '';
+    document.getElementById('syncPasteModal').classList.add('active');
+    pushModalState();
+    setTimeout(() => area.focus(), 100);
+  }
+
+  async function confirmPasteSyncCode() {
+    const code = document.getElementById('syncCodeInputArea').value;
+    if (!code || !code.trim()) { alert('請先貼上同步代碼喔！'); return; }
     try {
-      const payload = decodeSyncData(code);
-      if (applySyncedPayload(payload)) showSyncProgress('🎉 同步完成！全部歷史紀錄已完整還原！', 100, 2500);
+      const payload = await decodeSyncData(code);
+      if (applySyncedPayload(payload)) {
+        closeAllModals();
+        showSyncProgress('🎉 同步完成！全部歷史紀錄已完整還原！', 100, 2500);
+      }
     } catch (e) {
       showSyncProgress(`⚠️ 同步代碼格式不正確（${e.message || '解析失敗'}）`, 100, 3200);
     }
@@ -1394,7 +1447,7 @@
   }
 
   function importJson(e) {
-    const file = e.target.files[0]; if (!file) return;
+    const file = e.target.files; if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       try { if (applySyncedPayload(JSON.parse(ev.target.result))) alert('備份、筆記與專案資料匯入成功！'); }
@@ -1427,6 +1480,7 @@
   checkUrlSync();
   render();
   syncGovCalendar(false);
+
 </script>
 </body>
 </html>
