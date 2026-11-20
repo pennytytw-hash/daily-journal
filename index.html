@@ -20,7 +20,7 @@
     margin: 0; padding: 20px 12px 60px; display: flex; justify-content: center;
   }
   .journal-container {
-    width: 100%; max-width: 580px; background: var(--paper-white);
+    width: 100%; max-width: 600px; background: var(--paper-white);
     border-radius: 24px; padding: 28px 22px;
     box-shadow: 0 10px 25px rgba(149, 117, 102, 0.12);
     border: 3px solid #f2e6dc; position: relative;
@@ -53,6 +53,7 @@
     border-left: 5px solid var(--accent-mint); font-size: 0.95rem;
     display: flex; justify-content: space-between; align-items: center; gap: 8px;
   }
+  .summary-bar { margin-top: 10px; display: flex; justify-content: flex-end; }
   .ai-section {
     background: #f9fbf9; border: 2px dashed var(--accent-mint);
     border-radius: 16px; padding: 13px; margin-bottom: 18px;
@@ -70,10 +71,7 @@
     width: 100%; height: 80px; border: 1.5px solid #d5e6dc; border-radius: 12px;
     padding: 10px; font-size: 0.95rem; resize: vertical; outline: none; color: var(--text-brown);
   }
-
-
-
-    .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
   .add-row input {
     flex: 1; padding: 10px 14px; border: 2px solid #eedfd3; border-radius: 14px;
     font-size: 1rem; outline: none; color: var(--text-brown);
@@ -86,15 +84,18 @@
   .btn:hover { background: var(--primary-pink-dark); }
   .btn-mint { background: #6eb58c; }
   .btn-mint:hover { background: #589c74; }
+  .btn-yellow { background: #eab84d; color: #4e3b18; }
+  .btn-yellow:hover { background: #d9a63b; }
   .btn-sm { padding: 6px 10px; font-size: 0.8rem; border-radius: 10px; }
   .btn-outline { background: #fff; color: var(--text-brown); border: 1.5px solid #dfd0c5; }
   .btn-outline:hover { background: #f7efe8; }
   .task-list { list-style: none; padding: 0; margin: 0; }
   .task-item {
-    display: flex; align-items: center; gap: 10px; padding: 11px 8px;
+    display: flex; flex-direction: column; gap: 6px; padding: 12px 8px;
     border-bottom: 1.5px dashed var(--border-dashed);
   }
-  .task-checkbox { width: 21px; height: 21px; accent-color: var(--primary-pink); cursor: pointer; }
+  .task-main-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+  .task-checkbox { width: 21px; height: 21px; accent-color: var(--primary-pink); cursor: pointer; flex-shrink: 0; }
   .task-text { flex: 1; font-size: 1.02rem; padding: 2px 6px; border-radius: 6px; outline: none; word-break: break-word; }
   .task-text:focus { background: #fff; box-shadow: 0 0 0 2px var(--accent-yellow); }
   .task-item.completed .task-text { text-decoration: line-through; color: var(--text-light); }
@@ -103,6 +104,12 @@
     padding: 2px 7px; border-radius: 8px; border: 1px solid #cce3d4; flex-shrink: 0;
   }
   .btn-del { background: none; border: none; color: #cbbab0; font-size: 1.1rem; cursor: pointer; }
+  .task-note-row { padding-left: 31px; width: 100%; }
+  .task-note-input {
+    width: 100%; border: 1px solid #efe4da; background: #fcf9f6; border-radius: 8px;
+    padding: 5px 10px; font-size: 0.85rem; color: #7a665c; outline: none; transition: 0.2s;
+  }
+  .task-note-input:focus { border-color: var(--accent-mint); background: #fff; }
   .footer-tools {
     margin-top: 24px; padding-top: 14px; border-top: 2px solid #f2e6dc;
     display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
@@ -114,23 +121,23 @@
   .modal.active { display: flex; }
   .modal-box {
     background: var(--paper-white); border-radius: 20px; padding: 20px;
-    width: 100%; max-width: 440px; max-height: 80vh; overflow-y: auto; border: 3px solid #f2e6dc;
+    width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto; border: 3px solid #f2e6dc;
   }
-  .history-row {
-    display: flex; justify-content: space-between; padding: 10px;
-    border-bottom: 1px dashed var(--border-dashed); cursor: pointer;
-  }
-  .history-row:hover { background: #fdf5ee; }
+  .tab-bar { display: flex; gap: 8px; margin: 12px 0; border-bottom: 2px solid #f2e6dc; padding-bottom: 8px; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .stat-card { background: #fff8f1; border: 1.5px solid #f3dfd0; border-radius: 14px; padding: 12px; text-align: center; }
+  .stat-card h4 { margin: 0 0 6px; font-size: 0.9rem; color: var(--text-light); }
+  .stat-rate { font-size: 1.45rem; font-weight: 700; color: var(--primary-pink-dark); }
+  .stat-sub { font-size: 0.78rem; color: var(--text-brown); margin-top: 4px; }
+  .history-card { padding: 10px; border-bottom: 1px dashed var(--border-dashed); cursor: pointer; border-radius: 10px; }
+  .history-card:hover { background: #fdf5ee; }
+  .history-notes-preview { font-size: 0.8rem; color: #7a665c; margin-top: 5px; padding-left: 8px; border-left: 2px solid var(--accent-mint); }
 </style>
 </head>
 <body>
 <div class="journal-container">
   <div class="washi-tape"></div>
-  <header>
-    <h1>🧸 每日目標小手帳</h1>
-    <input type="date" id="datePicker">
-  </header>
-
+  <header><h1>🧸 每日目標小手帳</h1><input type="date" id="datePicker"></header>
   <div class="progress-card">
     <div class="progress-header"><span>今日完成度</span><span id="progressText">0% (0/0)</span></div>
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
@@ -138,13 +145,10 @@
       <span id="quoteText">🌱 新的一天開始啦，寫下今天想完成的小目標吧！</span>
       <button style="background:none;border:none;cursor:pointer;font-size:1.1rem;" onclick="updateQuote(true)" title="換一句">🔄</button>
     </div>
+    <div class="summary-bar"><button class="btn btn-yellow btn-sm" onclick="copyDailySummary()">📋 複製今日總結向 AI 覆盤</button></div>
   </div>
-
   <div class="ai-section">
-    <div class="ai-header" onclick="toggleAi()">
-      <span>⭐ 設定每日固定清單（由 AI 匯入並覆蓋舊清單）</span>
-      <span id="aiIcon">▼ 展開</span>
-    </div>
+    <div class="ai-header" onclick="toggleAi()"><span>⭐ 設定每日固定清單（由 AI 匯入並覆蓋舊清單）</span><span id="aiIcon">▼ 展開</span></div>
     <div class="ai-body" id="aiBody">
       <div class="prompt-guide">
         💡 <b>向 AI 索取固定清單的指令：</b>討論完目標後複製下方指令貼給 AI。匯入後會<b>自動覆蓋</b>舊的固定清單，並每天自動帶入！
@@ -160,45 +164,39 @@
       </div>
     </div>
   </div>
-
   <div class="add-row">
     <input type="text" id="newTaskInput" placeholder="新增今日臨時小目標... (按 Enter 新增)" onkeypress="if(event.key==='Enter') addTask()">
     <button class="btn" onclick="addTask()">＋ 新增</button>
   </div>
-
   <ul class="task-list" id="taskList"></ul>
-  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">
-    ✏️ 點擊任務文字可直接微調內容｜⭐ 標記為每日自動繼承的固定目標
-  </p>
-
+  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">✏️ 點擊標題可微調文字｜📝 下方小框可記錄執行狀況（自動存進歷史）</p>
   <div class="footer-tools">
-    <button class="btn btn-outline btn-sm" onclick="openHistory()">📅 歷史紀錄</button>
+    <button class="btn btn-outline btn-sm" onclick="openHistoryModal('stats')">📊 歷史與週月季年統計</button>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <button class="btn btn-mint btn-sm" onclick="copySyncLink()">🔗 跨裝置同步連結</button>
+      <button class="btn btn-mint btn-sm" onclick="copySyncLink()">🔗 跨裝置同步</button>
       <button class="btn btn-outline btn-sm" onclick="exportJson()">📤 匯出</button>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
     </div>
   </div>
 </div>
-
 <div class="modal" id="historyModal">
   <div class="modal-box">
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <h3 style="margin:0;">📅 歷史紀錄總覽</h3>
+      <h3 style="margin:0;">📊 歷史回顧與統計分析</h3>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('historyModal').classList.remove('active')">關閉</button>
     </div>
-    <div id="historyList" style="margin-top:12px;"></div>
+    <div class="tab-bar">
+      <button class="btn btn-sm" id="tabStatsBtn" onclick="switchTab('stats')">📈 週/月/季/年統計</button>
+      <button class="btn btn-outline btn-sm" id="tabLogsBtn" onclick="switchTab('logs')">📅 每日紀錄與筆記</button>
+    </div>
+    <div id="statsView"></div><div id="logsView" style="display:none;"></div>
   </div>
 </div>
-
-
-
-
 <script>
   const quotes = {
-    empty: ["🌱 還沒有設定固定目標喔！點上方綠色區塊從 AI 匯入清單吧～", "✨ 空白的頁面充滿無限可能，準備好規劃固定習慣了嗎？"],
-    zero: ["🐣 新的一天開始啦，先挑一件最簡單的固定目標打卡吧！", "☕ 深呼吸一口氣，跨出第一步就是最棒的開始！"],
+    empty: ["🌱 還沒有設定目標喔！點上方綠色區塊從 AI 匯入清單吧～", "✨ 空白的頁面充滿無限可能，準備好規劃固定習慣了嗎？"],
+    zero: ["🐣 新的一天開始啦，先挑一件最簡單的小目標打卡吧！", "☕ 深呼吸一口氣，跨出第一步就是最棒的開始！"],
     low: ["🌿 已經啟動囉！保持這個節奏，慢慢往前推進吧～", "🐾 每完成一件事，就離理想的自己更近一點點！"],
     high: ["🔥 太厲害了，進度已經過半！再加把勁就能大功告成囉！", "🌟 你的專注力閃閃發光，最後幾項也難不倒你的！"],
     perfect: ["🎉 100% 完美達成！今天的你超級棒，快給自己一個大大的獎勵吧！", "🏆 任務全數制霸！好好休息放鬆，享受滿滿的成就感吧！"]
@@ -223,20 +221,16 @@
           if (Array.isArray(decoded.template)) fixedTemplate = decoded.template;
           saveAll(false);
           history.replaceState(null, null, ' ');
-          alert('✨ 跨裝置紀錄與固定清單同步成功！');
+          alert('✨ 跨裝置紀錄與筆記同步成功！');
         }
       } catch (e) { console.error('同步解析失敗', e); }
     }
   }
 
-  // 取得當天任務（若該日尚未建立紀錄，自動繼承固定清單）
   function getTasks() {
     if (!allRecords[currentDate]) {
       allRecords[currentDate] = fixedTemplate.map((text, idx) => ({
-        id: Date.now() + idx + Math.random(),
-        text: text,
-        completed: false,
-        isFixed: true
+        id: Date.now() + idx + Math.random(), text, note: '', completed: false, isFixed: true
       }));
       localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
     }
@@ -253,7 +247,7 @@
     const input = document.getElementById('newTaskInput');
     const text = input.value.trim();
     if (!text) return;
-    getTasks().push({ id: Date.now() + Math.random(), text, completed: false, isFixed: false });
+    getTasks().push({ id: Date.now() + Math.random(), text, note: '', completed: false, isFixed: false });
     input.value = '';
     saveAll();
   }
@@ -267,7 +261,6 @@
     const t = getTasks().find(x => x.id === id);
     const trimmed = newText.trim();
     if (t && trimmed && t.text !== trimmed) {
-      // 若修改的是固定項目，同步更新固定範本內的文字
       if (t.isFixed) {
         const tplIdx = fixedTemplate.indexOf(t.text);
         if (tplIdx !== -1) fixedTemplate[tplIdx] = trimmed;
@@ -277,23 +270,21 @@
     } else render();
   }
 
-  function delTask(id) {
-    allRecords[currentDate] = getTasks().filter(x => x.id !== id);
-    saveAll();
+  function editNote(id, newNote) {
+    const t = getTasks().find(x => x.id === id);
+    if (t && (t.note || '') !== newNote.trim()) { t.note = newNote.trim(); saveAll(false); }
   }
 
+  function delTask(id) { allRecords[currentDate] = getTasks().filter(x => x.id !== id); saveAll(); }
   function toggleAi() {
     const body = document.getElementById('aiBody');
     body.classList.toggle('open');
     document.getElementById('aiIcon').textContent = body.classList.contains('open') ? '▲ 收合' : '▼ 展開';
   }
-
   function copyPrompt() {
     navigator.clipboard.writeText(document.getElementById('promptCmd').textContent)
       .then(() => alert('已複製指令！直接貼到 AI 對話框即可。'));
   }
-
-  // AI 匯入：覆蓋舊的固定清單，並同步更新當天未刪除的固定項目
   function importAiList() {
     const area = document.getElementById('aiPasteArea');
     const newItems = [];
@@ -301,33 +292,30 @@
       const cleaned = line.replace(/^[\s\-\*\•\d\.\)\[\]xX✓✔]+/, '').trim();
       if (cleaned) newItems.push(cleaned);
     });
+    if (newItems.length === 0) { alert('沒有偵測到有效的目標文字喔！'); return; }
+    if (fixedTemplate.length > 0 && !confirm(`確定要用這 ${newItems.length} 項新目標「覆蓋」原本的每日固定清單嗎？\n（過去日期的歷史紀錄與筆記不會受影響）`)) return;
 
-    if (newItems.length === 0) {
-      alert('沒有偵測到有效的目標文字喔！');
-      return;
-    }
-
-    if (fixedTemplate.length > 0 && !confirm(`確定要用這 ${newItems.length} 項新目標「覆蓋」原本的每日固定清單嗎？\n（過去日期的歷史紀錄不會受影響）`)) {
-      return;
-    }
-
-    // 1. 覆蓋永久固定清單範本
     fixedTemplate = newItems;
-
-    // 2. 更新當天清單：保留今日手動新增的臨時項目，並用新的固定清單替換舊的固定項目
     const manualTasks = (allRecords[currentDate] || []).filter(t => !t.isFixed);
     const newFixedTasks = fixedTemplate.map((text, idx) => ({
-      id: Date.now() + idx + Math.random(),
-      text: text,
-      completed: false,
-      isFixed: true
+      id: Date.now() + idx + Math.random(), text, note: '', completed: false, isFixed: true
     }));
     allRecords[currentDate] = [...newFixedTasks, ...manualTasks];
-
-    area.value = '';
-    currentQuote = "";
-    saveAll();
+    area.value = ''; currentQuote = ""; saveAll();
     alert(`✅ 已成功更新每日固定清單（共 ${newItems.length} 項），以後每天都會自動帶入！`);
+  }
+
+  function copyDailySummary() {
+    const tasks = getTasks();
+    if (tasks.length === 0) { alert('今天還沒有任務可以總結喔！'); return; }
+    const done = tasks.filter(t => t.completed).length;
+    const pct = Math.round((done / tasks.length) * 100);
+    let text = `📅 日期：${currentDate}\n📊 今日總達成率：${pct}% (${done}/${tasks.length})\n\n【目標執行狀況與筆記】\n`;
+    tasks.forEach(t => {
+      text += `- [${t.completed ? '✅ 已完成' : '⬜ 未完成'}] ${t.text} ${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`;
+    });
+    text += `\n請根據我今天的完成狀況與筆記紀錄，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供明天可執行的具體小建議！`;
+    navigator.clipboard.writeText(text).then(() => alert('📋 今日總結已複製！\n直接貼上到 AI 對話框，就能獲得專屬鼓勵與覆盤建議囉！'));
   }
 
   function updateQuote(force) {
@@ -338,10 +326,7 @@
     else if (rate > 0 && rate <= 50) pool = quotes.low;
     else if (rate > 50 && rate < 100) pool = quotes.high;
     else if (rate === 100) pool = quotes.perfect;
-
-    if (force || !currentQuote || !pool.includes(currentQuote)) {
-      currentQuote = pool[Math.floor(Math.random() * pool.length)];
-    }
+    if (force || !currentQuote || !pool.includes(currentQuote)) currentQuote = pool[Math.floor(Math.random() * pool.length)];
     document.getElementById('quoteText').textContent = currentQuote;
   }
 
@@ -350,19 +335,23 @@
     const tasks = getTasks();
     const listEl = document.getElementById('taskList');
     listEl.innerHTML = '';
-
     tasks.forEach(t => {
       const li = document.createElement('li');
       li.className = `task-item ${t.completed ? 'completed' : ''}`;
       li.innerHTML = `
-        <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id})">
-        <div class="task-text" contenteditable="true" onblur="editTask(${t.id}, this.innerText)"
-             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g,'&lt;')}</div>
-        ${t.isFixed ? '<span class="badge-fixed">⭐ 固定</span>' : ''}
-        <button class="btn-del" onclick="delTask(${t.id})">✕</button>`;
+        <div class="task-main-row">
+          <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id})">
+          <div class="task-text" contenteditable="true" onblur="editTask(${t.id}, this.innerText)"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</div>
+          ${t.isFixed ? '<span class="badge-fixed">⭐ 固定</span>' : ''}
+          <button class="btn-del" onclick="delTask(${t.id})">✕</button>
+        </div>
+        <div class="task-note-row">
+          <input type="text" class="task-note-input" value="${(t.note || '').replace(/"/g, '&quot;')}" 
+                 placeholder="📝 記錄這項目標的執行狀況或心得..." oninput="editNote(${t.id}, this.value)">
+        </div>`;
       listEl.appendChild(li);
     });
-
     const done = tasks.filter(t => t.completed).length;
     const pct = tasks.length === 0 ? 0 : Math.round((done / tasks.length) * 100);
     document.getElementById('progressText').textContent = `${pct}% (${done}/${tasks.length})`;
@@ -370,56 +359,73 @@
     updateQuote(false);
   }
 
-  function openHistory() {
-    const box = document.getElementById('historyList');
-    box.innerHTML = '';
+  function calcPeriodStats() {
+    const base = new Date(currentDate + 'T00:00:00');
+    const year = base.getFullYear(), month = base.getMonth(), quarter = Math.floor(month / 3);
+    const dayOfWeek = base.getDay() === 0 ? 7 : base.getDay();
+    const weekStart = new Date(base); weekStart.setDate(base.getDate() - dayOfWeek + 1);
+    const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+    const periods = {
+      week: { label: '本週統計 (週一~週日)', total: 0, done: 0, days: 0 },
+      month: { label: `${year}年 ${month + 1}月 統計`, total: 0, done: 0, days: 0 },
+      quarter: { label: `${year}年 第${quarter + 1}季 (Q${quarter + 1})`, total: 0, done: 0, days: 0 },
+      year: { label: `${year}年 年度總統計`, total: 0, done: 0, days: 0 }
+    };
+    Object.entries(allRecords).forEach(([dateStr, list]) => {
+      if (!list || list.length === 0) return;
+      const d = new Date(dateStr + 'T00:00:00'), doneCnt = list.filter(t => t.completed).length;
+      if (d >= weekStart && d <= weekEnd) { periods.week.total += list.length; periods.week.done += doneCnt; periods.week.days++; }
+      if (d.getFullYear() === year && d.getMonth() === month) { periods.month.total += list.length; periods.month.done += doneCnt; periods.month.days++; }
+      if (d.getFullYear() === year && Math.floor(d.getMonth() / 3) === quarter) { periods.quarter.total += list.length; periods.quarter.done += doneCnt; periods.quarter.days++; }
+      if (d.getFullYear() === year) { periods.year.total += list.length; periods.year.done += doneCnt; periods.year.days++; }
+    });
+    document.getElementById('statsView').innerHTML = `<p style="font-size:0.82rem;color:#8c7a70;margin:0 0 8px;">📌 基準日期：<b>${currentDate}</b>（切換上方日曆可查看不同週/月/季/年）</p><div class="stat-grid">` +
+      Object.values(periods).map(p => `<div class="stat-card"><h4>${p.label}</h4><div class="stat-rate">${p.total === 0 ? 0 : Math.round((p.done / p.total) * 100)}%</div><div class="stat-sub">完成 ${p.done} / ${p.total} 項<br>共記錄 ${p.days} 天</div></div>`).join('') + `</div>`;
+  }
+
+  function renderHistoryLogs() {
+    const box = document.getElementById('logsView'); box.innerHTML = '';
     const dates = Object.keys(allRecords).sort().reverse();
-    if (!dates.length) box.innerHTML = '<p style="text-align:center;color:#999;">尚無歷史紀錄</p>';
+    if (!dates.length) { box.innerHTML = '<p style="text-align:center;color:#999;">尚無歷史紀錄</p>'; return; }
     dates.forEach(d => {
-      const list = allRecords[d];
-      if (!list.length) return;
+      const list = allRecords[d]; if (!list.length) return;
       const done = list.filter(t => t.completed).length;
-      const row = document.createElement('div');
-      row.className = 'history-row';
-      row.innerHTML = `<span><b>${d}</b></span><span>完成 ${done}/${list.length} (${Math.round(done/list.length*100)}%) 👉</span>`;
-      row.onclick = () => { currentDate = d; datePicker.value = d; currentQuote = ""; document.getElementById('historyModal').classList.remove('active'); render(); };
-      box.appendChild(row);
+      const notesHtml = list.filter(t => t.note).map(t => `<div>• <b>${t.text.replace(/</g,'&lt;')}</b>：${t.note.replace(/</g,'&lt;')}</div>`).join('');
+      const card = document.createElement('div'); card.className = 'history-card';
+      card.innerHTML = `<div style="display:flex;justify-content:space-between;"><span><b>${d}</b></span><span>完成 ${done}/${list.length} (${Math.round(done/list.length*100)}%) 👉</span></div>${notesHtml ? `<div class="history-notes-preview">${notesHtml}</div>` : ''}`;
+      card.onclick = () => { currentDate = d; datePicker.value = d; currentQuote = ""; document.getElementById('historyModal').classList.remove('active'); render(); };
+      box.appendChild(card);
     });
-    document.getElementById('historyModal').classList.add('active');
   }
 
+  function switchTab(tab) {
+    document.getElementById('statsView').style.display = tab === 'stats' ? 'block' : 'none';
+    document.getElementById('logsView').style.display = tab === 'logs' ? 'block' : 'none';
+    document.getElementById('tabStatsBtn').className = tab === 'stats' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
+    document.getElementById('tabLogsBtn').className = tab === 'logs' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
+  }
+  function openHistoryModal(defaultTab) { calcPeriodStats(); renderHistoryLogs(); switchTab(defaultTab); document.getElementById('historyModal').classList.add('active'); }
   function copySyncLink() {
-    const payload = { records: allRecords, template: fixedTemplate };
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-    const syncUrl = `${window.location.origin}${window.location.pathname}#sync=${encoded}`;
-    navigator.clipboard.writeText(syncUrl).then(() => {
-      alert('🔗 同步專屬連結已複製！\n請傳送到另一台裝置並點擊打開，即可同步所有歷史紀錄與每日固定清單！');
-    });
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify({ records: allRecords, template: fixedTemplate }))));
+    navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}#sync=${encoded}`).then(() => alert('🔗 同步專屬連結已複製！傳送到另一台裝置打開即可同步！'));
   }
-
   function exportJson() {
-    const payload = { records: allRecords, template: fixedTemplate };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `每日目標手帳備份_${currentDate}.json`;
-    a.click();
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, template: fixedTemplate }, null, 2)], { type: 'application/json' }));
+    a.download = `每日目標手帳備份_${currentDate}.json`; a.click();
   }
-
   function importJson(e) {
-    const file = e.target.files;
-    if (!file) return;
+    const file = e.target.files; if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target.result);
         if (data.records) allRecords = { ...allRecords, ...data.records };
         if (Array.isArray(data.template)) fixedTemplate = data.template;
-        saveAll(); alert('備份與固定清單匯入成功！');
+        saveAll(); alert('備份、筆記與固定清單匯入成功！');
       } catch { alert('檔案格式錯誤'); }
     };
-    reader.readAsText(file);
-    e.target.value = '';
+    reader.readAsText(file); e.target.value = '';
   }
 
   checkUrlSync();
