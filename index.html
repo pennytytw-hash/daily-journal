@@ -463,29 +463,26 @@
   }
   function isTaskSkipped(t, dStr) { return Boolean(t && t.skipWeekend && isHolidayDate(dStr)); }
 
-    async function syncGovCalendar(isManual = false) {
-    if (isManual) showSyncProgress('🔄 正在連線政府行事曆資料庫...', 40);
+  async function syncGovCalendar(isManual = false) {
+    if (isManual) showSyncProgress('🔄 正在連線 TaiwanCalendar 資料庫...', 45);
     const curYear = new Date().getFullYear();
     const targetYears = [curYear, curYear + 1];
     let updated = false;
     for (const y of targetYears) {
       const urls = [
         `https://jsdelivr.net{y}.json`,
-        `https://githubusercontent.com{y}.json`,
-        `https://jsdelivr.net{y}.json`,
-        `https://githubusercontent.com{y}.json`,
-        `https://jsdelivr.net{y}.json`
+        `https://githubusercontent.com{y}.json`
       ];
       for (const u of urls) {
         try {
-          const res = await fetch(u, { cache: 'no-store' });
+          const res = await fetch(u);
           if (!res.ok) continue;
           const arr = await res.json();
           if (Array.isArray(arr) && arr.length > 0) {
             arr.forEach(item => {
               if (item && item.date) {
-                const cleanDate = String(item.date).replace(/-/g, '');
-                govCalendarMap[cleanDate] = Boolean(item.isHoliday);
+                const cleanDate = String(item.date).trim().replace(/-/g, '');
+                if (/^\d{8}$/.test(cleanDate)) govCalendarMap[cleanDate] = Boolean(item.isHoliday);
               }
             });
             updated = true;
@@ -501,7 +498,7 @@
     updateLastHolidayDisplay();
     if (isManual) {
       showSyncProgress(
-        updated ? '✅ 政府行事曆（含補班日）已同步最新！' : '⚠️ 目前無網路或資料庫暫時維護中，已啟用離線週六日判斷',
+        updated ? '✅ 2026～2027 政府行事曆同步成功！' : '⚠️ 連線逾時，請確認網路狀態後再試',
         100,
         2400
       );
@@ -1312,9 +1309,10 @@
   }
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch', e => e.respondWith(caches.open('journal-v4-6').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))));`;
+    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v4-6').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
   }
+
 
 
   window.addEventListener('hashchange', checkUrlSync);
