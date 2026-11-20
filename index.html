@@ -181,6 +181,7 @@
   .cal-dow-lbl { font-size: 0.7rem; color: var(--text-light); font-weight: 700; }
   .cal-cell { height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; cursor: pointer; border: 1px solid rgba(0,0,0,0.05); }
   .cal-cell:hover { transform: scale(1.08); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+  .cal-cell.is-holiday { border: 1.5px solid #7fb8d4; box-shadow: inset 0 0 0 1px rgba(127, 184, 212, 0.35); }
   .curve-svg { width: 100%; height: 120px; overflow: visible; margin-top: 8px; }
   .timeline-list { max-height: 110px; overflow-y: auto; margin-top: 8px; border-top: 1px dashed #d5e6dc; padding-top: 6px; font-size: 0.78rem; }
   .timeline-row { display: flex; justify-content: space-between; padding: 3px 4px; border-bottom: 1px dotted #e6dfd8; }
@@ -283,11 +284,11 @@
     🐾 圖示素材：<a href="https://pngtree.com" target="_blank" rel="noopener noreferrer" style="color:#9c8980;text-decoration:underline;">png 圖片來源於 ://pngtree.com</a>
   </div>
 </div>
-<div class="modal" id="settingsModal" onclick="if(event.target===this) this.classList.remove('active')">
+<div class="modal" id="settingsModal" onclick="if(event.target===this) closeAllModals()">
   <div class="modal-box">
     <div class="modal-header-sticky">
       <h3 style="margin:0;">⚙️ 設定、專案與新增任務</h3>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('settingsModal').classList.remove('active')">✕ 關閉</button>
+      <button class="btn btn-outline btn-sm" onclick="closeAllModals()">✕ 關閉</button>
     </div>
     <div class="setting-section">
       <h4>➕ 新增當日臨時小目標</h4>
@@ -348,16 +349,16 @@
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
     </div>
     <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--text-light);">
-      <span>版本：v4.6</span>
+      <span>版本：v4.7</span>
       <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
     </div>
   </div>
 </div>
-<div class="modal" id="historyModal" onclick="if(event.target===this) this.classList.remove('active')">
+<div class="modal" id="historyModal" onclick="if(event.target===this) closeAllModals()">
   <div class="modal-box">
     <div class="modal-header-sticky">
       <h3 style="margin:0;">📊 專案儀表板與歷史回顧</h3>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('historyModal').classList.remove('active')">✕ 關閉</button>
+      <button class="btn btn-outline btn-sm" onclick="closeAllModals()">✕ 關閉</button>
     </div>
     <div class="proj-filter-bar" style="margin-top:10px;">
       <span style="font-size:0.85rem;font-weight:700;">🎯 篩選專案：</span>
@@ -545,7 +546,7 @@
     if (!text) return;
     getTasks().push({ id: Date.now() + Math.random(), text, note: '', completed: false, isFixed: false, isMit: false, projectId: activeProjectId, updatedAt: Date.now() });
     input.value = '';
-    document.getElementById('settingsModal').classList.remove('active');
+    closeAllModals();
     saveAll();
   }
 
@@ -741,10 +742,11 @@
     Object.keys(allRecords).forEach(d => { if (d > todayStr) delete allRecords[d]; });
     currentDate = todayStr; datePicker.value = todayStr;
     area.value = ''; nameInput.value = ''; currentQuote = "";
-    document.getElementById('settingsModal').classList.remove('active');
+    closeAllModals();
     saveAll();
     alert(`🚀 已建立新專案「${projName}」（共 ${newItems.length} 項）並套用至今日！`);
   }
+
   function renderProjManageList() {
     const box = document.getElementById('projManageList');
     if (!box) return;
@@ -857,13 +859,34 @@
     document.getElementById('quoteText').textContent = currentQuote;
   }
 
+  let modalHistoryPushed = false;
+  function pushModalState() {
+    if (!modalHistoryPushed) {
+      history.pushState({ modalOpen: true }, '');
+      modalHistoryPushed = true;
+    }
+  }
+  function closeAllModals(fromPopState = false) {
+    document.getElementById('settingsModal').classList.remove('active');
+    document.getElementById('historyModal').classList.remove('active');
+    if (modalHistoryPushed) {
+      modalHistoryPushed = false;
+      if (!fromPopState) history.back();
+    }
+  }
+  window.addEventListener('popstate', () => {
+    if (modalHistoryPushed) closeAllModals(true);
+  });
+
   function openSettingsModal() {
     document.getElementById('visionInput').value = visionText;
     document.getElementById('customHolidaysInput').value = customHolidays.join(', ');
     updateLastHolidayDisplay();
     renderProjManageList();
     document.getElementById('settingsModal').classList.add('active');
+    pushModalState();
   }
+
 
   function saveVisionBanner() {
     visionText = document.getElementById('visionInput').value.trim();
@@ -935,12 +958,23 @@
   function copyDailySummary() {
     const tasks = getTasks();
     if (tasks.length === 0) { alert('該日期沒有任務可以總結喔！'); return; }
-    const done = tasks.filter(t => t.completed).length, pct = Math.round((done / tasks.length) * 100);
-    let text = `📅 日期：${currentDate}（專案：${getActiveProject().name}）\n📊 當日總達成率：${pct}% (${done}/${tasks.length})\n\n【目標執行狀況與筆記】\n`;
-    tasks.forEach(t => { text += `- [${t.completed ? '✅ 已完成' : '⬜ 未完成'}] ${t.isMit ? '⭐[今日焦點] ' : ''}${t.text}${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`; });
+    const activeTasks = tasks.filter(t => !isTaskSkipped(t, currentDate));
+    const skippedCnt = tasks.length - activeTasks.length;
+    const done = activeTasks.filter(t => t.completed).length;
+    const pct = activeTasks.length === 0 ? 100 : Math.round((done / activeTasks.length) * 100);
+    const isHol = isHolidayDate(currentDate);
+
+    let text = `📅 日期：${currentDate}${isHol ? '（🌴 休假／國定假日）' : ''}（專案：${getActiveProject().name}）\n`;
+    text += `📊 當日應執行達成率：${pct}% (${done}/${activeTasks.length})${skippedCnt > 0 ? `｜已自動排除 ${skippedCnt} 項休假免計目標` : ''}\n\n【目標執行狀況與筆記】\n`;
+    tasks.forEach(t => {
+      const skipped = isTaskSkipped(t, currentDate);
+      const statusTag = skipped ? '🏖️ 休假免計' : (t.completed ? '✅ 已完成' : '⬜ 未完成');
+      text += `- [${statusTag}] ${t.isMit ? '⭐[今日焦點] ' : ''}${t.text}${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`;
+    });
     text += `\n請根據我這天的完成狀況與筆記紀錄，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供具體小建議！`;
     navigator.clipboard.writeText(text).then(() => alert(`📋 ${currentDate} 總結已複製！直接貼上給 AI 即可取得覆盤回饋！`));
   }
+
 
   let selectedStatsProj = 'ALL', selectedCurveDim = 'week', periodReportCache = {}, calViewYear = 0, calViewMonth = 0;
   function getFilteredRecords() {
@@ -1099,15 +1133,21 @@
     for (let i = 0; i < startPad; i++) calCells += `<div></div>`;
     for (let day = 1; day <= daysInMonth; day++) {
       const dStr = `${calViewYear}-${String(calViewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const list = records[dStr];
-      let bg = '#f2ece6', title = `${dStr}：無紀錄`;
+      const isHol = isHolidayDate(dStr);
+      const rawList = records[dStr];
+      const list = Array.isArray(rawList) ? rawList.filter(t => !isTaskSkipped(t, dStr)) : null;
+      let bg = isHol ? '#eef7fb' : '#f2ece6';
+      let title = `${dStr}${isHol ? ' (🌴休假日)' : ''}：無紀錄`;
       if (list && list.length > 0) {
         const r = list.filter(t => t.completed).length / list.length;
         bg = r === 1 ? '#f4a29e' : (r >= 0.8 ? '#f9cbc8' : (r > 0 ? '#fce181' : '#e2dcd5'));
-        title = `${dStr}：達成 ${Math.round(r * 100)}%（點擊跳轉編輯）`;
+        title = `${dStr}${isHol ? ' (🌴休假日)' : ''}：達成 ${Math.round(r * 100)}%（點擊跳轉編輯）`;
+      } else if (Array.isArray(rawList) && rawList.length > 0 && isHol) {
+        title = `${dStr} (🌴休假日)：全休凍結連勝`;
       }
-      calCells += `<div class="cal-cell" style="background:${bg}" title="${title}" onclick="jumpToDate('${dStr}')">${day}</div>`;
+      calCells += `<div class="cal-cell ${isHol ? 'is-holiday' : ''}" style="background:${bg}" title="${title}" onclick="jumpToDate('${dStr}')">${day}</div>`;
     }
+
     const dowBars = dowStats.map((s, idx) => {
       const r = s.total === 0 ? 0 : Math.round((s.done / s.total) * 100);
       return `<div><div class="dow-bar-wrap"><div class="dow-bar-fill" style="height:${r}%"></div></div><div style="font-size:0.7rem;margin-top:3px;">週${dowNames[idx]}<br><b>${r}%</b></div></div>`;
@@ -1144,7 +1184,13 @@
     document.getElementById('trendsView').innerHTML = trendsHtml;
   }
 
-  function jumpToDate(dStr) { currentDate = dStr; datePicker.value = dStr; currentQuote = ""; document.getElementById('historyModal').classList.remove('active'); render(); }
+  function jumpToDate(dStr) {
+    currentDate = dStr;
+    datePicker.value = dStr;
+    currentQuote = "";
+    closeAllModals();
+    render();
+  }
   
   function copyPeriodSummary(key) {
     const p = periodReportCache[key];
@@ -1188,7 +1234,9 @@
     selectedStatsProj = 'ALL'; refreshProjSelect(); renderStatsDashboard();
     switchTab(defaultTab === 'trends' ? 'trends' : 'overview');
     document.getElementById('historyModal').classList.add('active');
+    pushModalState();
   }
+
   function encodeSyncData(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   function decodeSyncData(str) { return JSON.parse(decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/'))))); }
 
@@ -1312,9 +1360,10 @@
   }
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v4-6').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
+    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v4-7').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
   }
+
 
 
 
