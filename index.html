@@ -380,9 +380,12 @@
       </div>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
     </div>
-    <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;font-size:0.75rem;color:var(--text-light);">
-      <span>版本：v4.8｜<span id="storageUsageText">空間計算中...</span></span>
-      <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
+    <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;flex-direction:column;gap:8px;font-size:0.75rem;color:var(--text-light);">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span>版本：v4.8｜<span id="storageUsageText">空間計算中...</span></span>
+        <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="archiveOldDetails()">🗜️ 壓縮前年以前明細</button>
+      </div>
+      <button class="btn btn-outline btn-sm" style="width:100%;font-size:0.72rem;padding:5px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
     </div>
   </div>
 </div>
@@ -473,10 +476,11 @@
   let activeProjectId = localStorage.getItem('cute_journal_v4_active_proj') || '';
   let lastBackupTime = Number(localStorage.getItem('cute_journal_last_backup') || 0);
   let visionText = localStorage.getItem('cute_journal_vision') || '';
-    let weekendSkipItems = JSON.parse(localStorage.getItem('cute_journal_v4_weekend_skip') || '[]');
+  let weekendSkipItems = JSON.parse(localStorage.getItem('cute_journal_v4_weekend_skip') || '[]');
   let holidayOverrides = JSON.parse(localStorage.getItem('cute_journal_v4_holiday_overrides') || '{}');
   let customHolidays = JSON.parse(localStorage.getItem('cute_journal_v4_custom_holidays') || '[]');
-    let govCalendarMap = JSON.parse(localStorage.getItem('cute_journal_v4_gov_calendar') || '{}');
+  let govCalendarMap = JSON.parse(localStorage.getItem('cute_journal_v4_gov_calendar') || '{}');
+  let archivedStats = JSON.parse(localStorage.getItem('cute_journal_v4_archived_stats') || '{}');
   let currentDate = getLogicalToday(), currentQuote = "", undoSnapshot = null, undoTimer = null, justStampedId = null;
 
   (function initProjectsAndClean() {
@@ -578,6 +582,7 @@
     localStorage.setItem('cute_journal_v4_weekend_skip', JSON.stringify(weekendSkipItems));
     localStorage.setItem('cute_journal_v4_holiday_overrides', JSON.stringify(holidayOverrides));
     localStorage.setItem('cute_journal_v4_custom_holidays', JSON.stringify(customHolidays));
+    localStorage.setItem('cute_journal_v4_archived_stats', JSON.stringify(archivedStats));
     updateStorageUsageDisplay();
     if (shouldRender) render();
   }
@@ -952,6 +957,40 @@
     el.textContent = `已用 ${kb} KB (${pct}%)`;
     el.style.color = totalBytes > 4 * 1024 * 1024 ? '#c95650' : '';
   }
+  function archiveOldDetails() {
+    const cutoffYear = Number(getLogicalToday().slice(0, 4)) - 1;
+    const oldDates = Object.keys(allRecords).filter(d => Number(d.slice(0, 4)) < cutoffYear);
+    if (oldDates.length === 0) {
+      alert(`目前沒有 ${cutoffYear - 1} 年及更早的歷史明細需要壓縮喔！`);
+      return;
+    }
+    if (!confirm(`確定要將 ${cutoffYear - 1} 年及更早的 ${oldDates.length} 天任務明細壓縮為純統計摘要嗎？\n\n✅ 保留：連勝紀錄、月曆色塊、週月季年達成率與成長曲線\n🗑️ 移除：逐項任務文字與心得筆記（建議先按「匯出備份檔」留存）`)) return;
+    oldDates.forEach(dStr => {
+      const rawList = allRecords[dStr];
+      if (!Array.isArray(rawList) || rawList.length === 0) { delete allRecords[dStr]; return; }
+      const byProj = {};
+      rawList.forEach(t => {
+        const pid = t.projectId || activeProjectId;
+        if (!byProj[pid]) byProj[pid] = [];
+        byProj[pid].push(t);
+      });
+      archivedStats[dStr] = Object.entries(byProj).map(([pid, list]) => {
+        const active = list.filter(t => !isTaskSkipped(t, dStr));
+        const fix = active.filter(t => t.isFixed);
+        return {
+          p: pid,
+          t: active.length,
+          c: active.filter(t => t.completed).length,
+          f: fix.length,
+          fd: fix.filter(t => t.completed).length,
+          h: isHolidayDate(dStr) ? 1 : 0
+        };
+      });
+      delete allRecords[dStr];
+    });
+    saveAll(true);
+    showSyncProgress(`🗜️ 已壓縮 ${oldDates.length} 天舊明細並完整保留統計！`, 100, 2800);
+  }
 
   function openSettingsModal() {
     document.getElementById('visionInput').value = visionText;
@@ -1003,8 +1042,10 @@
     if (isFuture && tasks.length === 0) {
       listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.95rem;">⏳ <b>${currentDate}</b> 尚未到來喔！<br>等該日凌晨 05:00 換日後，系統會自動帶入目前專案的每日固定清單。</li>`;
     } else {
-      tasks.forEach((t, idx) => {
-        const skipped = isTaskSkipped(t, currentDate);
+      const displayList = tasks
+        .map((t, idx) => ({ t, idx, skipped: isTaskSkipped(t, currentDate) }))
+        .sort((a, b) => Number(a.skipped) - Number(b.skipped));
+      displayList.forEach(({ t, idx, skipped }) => {
         const li = document.createElement('li');
         li.className = `task-item ${t.completed ? 'completed' : ''} ${t.isMit ? 'is-mit' : ''} ${skipped ? 'skipped-holiday' : ''}`;
         const stampHtml = (t.completed && !skipped) ? `<span class="stamp-badge ${justStampedId === t.id ? 'animate' : ''}">DONE! 🐾</span>` : '';
@@ -1062,14 +1103,44 @@
     return res;
   }
 
-    function calcBestStreak(records) {
-    const dates = Object.keys(records).sort();
+  function getMergedStatsDays(records) {
+    const dayMap = {};
+    Object.entries(archivedStats).forEach(([dStr, arr]) => {
+      if (!Array.isArray(arr)) return;
+      const filtered = selectedStatsProj === 'ALL' ? arr : arr.filter(x => x.p === selectedStatsProj);
+      if (filtered.length === 0) return;
+      const t = filtered.reduce((s, x) => s + x.t, 0);
+      const c = filtered.reduce((s, x) => s + x.c, 0);
+      const f = filtered.reduce((s, x) => s + x.f, 0);
+      const fd = filtered.reduce((s, x) => s + x.fd, 0);
+      const h = filtered.some(x => x.h === 1);
+      dayMap[dStr] = { total: t, done: c, fixT: f, fixD: fd, isHol: h, archived: true };
+    });
+    Object.entries(records).forEach(([dStr, rawList]) => {
+      const list = rawList.filter(t => !isTaskSkipped(t, dStr));
+      const fix = list.filter(t => t.isFixed);
+      dayMap[dStr] = {
+        total: list.length,
+        done: list.filter(t => t.completed).length,
+        fixT: fix.length,
+        fixD: fix.filter(t => t.completed).length,
+        isHol: isHolidayDate(dStr),
+        rawList,
+        list,
+        archived: false
+      };
+    });
+    return dayMap;
+  }
+
+  function calcBestStreak(records) {
+    const dayMap = getMergedStatsDays(records);
+    const dates = Object.keys(dayMap).sort();
     let best = 0, cur = 0, prevTime = null;
     dates.forEach(dStr => {
-      const rawList = records[dStr];
-      const list = rawList.filter(t => !isTaskSkipped(t, dStr));
-      if (list.length === 0) return;
-      const pass = (list.filter(t => t.completed).length / list.length) >= 0.8;
+      const info = dayMap[dStr];
+      if (!info || info.total === 0) return;
+      const pass = (info.done / info.total) >= 0.8;
       const t = new Date(dStr + 'T00:00:00').getTime();
       if (pass) {
         cur = (prevTime !== null && Math.round((t - prevTime) / 86400000) === 1) ? cur + 1 : 1;
@@ -1150,34 +1221,37 @@
     const habitMap = {}, dowStats = Array.from({ length: 7 }, () => ({ total: 0, done: 0 }));
     let fixT = 0, fixD = 0, tmpT = 0, tmpD = 0;
 
-        Object.keys(records).sort().forEach(dateStr => {
-      const rawList = records[dateStr];
-      const list = rawList.filter(t => !isTaskSkipped(t, dateStr));
-      if (list.length === 0) return;
-      const d = new Date(dateStr + 'T00:00:00'), doneCnt = list.filter(t => t.completed).length;
-      const pushLog = (p) => { p.total += list.length; p.done += doneCnt; p.days++; p.logs.push({ dateStr, list, doneCnt }); };
+    const dayMap = getMergedStatsDays(records);
+    Object.keys(dayMap).sort().forEach(dateStr => {
+      const info = dayMap[dateStr];
+      if (!info || info.total === 0) return;
+      const d = new Date(dateStr + 'T00:00:00'), doneCnt = info.done, totCnt = info.total;
+      const pushLog = (p) => { p.total += totCnt; p.done += doneCnt; p.days++; p.logs.push({ dateStr, list: info.list || [], doneCnt, totCnt }); };
       if (d >= weekStart && d <= weekEnd) pushLog(periods.week);
-      else if (d >= prevWeekStart && d <= prevWeekEnd) { periods.week.prevT += list.length; periods.week.prevD += doneCnt; }
+      else if (d >= prevWeekStart && d <= prevWeekEnd) { periods.week.prevT += totCnt; periods.week.prevD += doneCnt; }
       if (d.getFullYear() === year && d.getMonth() === month) pushLog(periods.month);
-      else if (d.getFullYear() === prevMonthYear && d.getMonth() === prevMonth) { periods.month.prevT += list.length; periods.month.prevD += doneCnt; }
+      else if (d.getFullYear() === prevMonthYear && d.getMonth() === prevMonth) { periods.month.prevT += totCnt; periods.month.prevD += doneCnt; }
       if (d.getFullYear() === year && Math.floor(d.getMonth() / 3) === quarter) pushLog(periods.quarter);
-      else if (d.getFullYear() === prevQYear && Math.floor(d.getMonth() / 3) === prevQ) { periods.quarter.prevT += list.length; periods.quarter.prevD += doneCnt; }
+      else if (d.getFullYear() === prevQYear && Math.floor(d.getMonth() / 3) === prevQ) { periods.quarter.prevT += totCnt; periods.quarter.prevD += doneCnt; }
       if (d.getFullYear() === year) pushLog(periods.year);
-      else if (d.getFullYear() === year - 1) { periods.year.prevT += list.length; periods.year.prevD += doneCnt; }
+      else if (d.getFullYear() === year - 1) { periods.year.prevT += totCnt; periods.year.prevD += doneCnt; }
 
-      const addS = (map, k) => { if (!map[k]) map[k] = { total: 0, done: 0, days: 0 }; map[k].total += list.length; map[k].done += doneCnt; map[k].days++; };
+      const addS = (map, k) => { if (!map[k]) map[k] = { total: 0, done: 0, days: 0 }; map[k].total += totCnt; map[k].done += doneCnt; map[k].days++; };
       addS(allSeries.week, getWeekKey(d));
       addS(allSeries.month, `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}月`);
       addS(allSeries.quarter, `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`);
       addS(allSeries.year, `${d.getFullYear()}年`);
 
       const dowIdx = d.getDay() === 0 ? 6 : d.getDay() - 1;
-      dowStats[dowIdx].total += list.length; dowStats[dowIdx].done += doneCnt;
-      list.forEach(t => {
-        if (t.isFixed) { fixT++; if (t.completed) fixD++; } else { tmpT++; if (t.completed) tmpD++; }
-        if (!habitMap[t.text]) habitMap[t.text] = { total: 0, done: 0 };
-        habitMap[t.text].total++; if (t.completed) habitMap[t.text].done++;
-      });
+      dowStats[dowIdx].total += totCnt; dowStats[dowIdx].done += doneCnt;
+      fixT += info.fixT; fixD += info.fixD;
+      tmpT += (totCnt - info.fixT); tmpD += (doneCnt - info.fixD);
+      if (!info.archived && Array.isArray(info.list)) {
+        info.list.forEach(t => {
+          if (!habitMap[t.text]) habitMap[t.text] = { total: 0, done: 0 };
+          habitMap[t.text].total++; if (t.completed) habitMap[t.text].done++;
+        });
+      }
     });
     periodReportCache = periods;
 
@@ -1208,16 +1282,15 @@
     for (let i = 0; i < startPad; i++) calCells += `<div></div>`;
     for (let day = 1; day <= daysInMonth; day++) {
       const dStr = `${calViewYear}-${String(calViewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const isHol = isHolidayDate(dStr);
-      const rawList = records[dStr];
-      const list = Array.isArray(rawList) ? rawList.filter(t => !isTaskSkipped(t, dStr)) : null;
+      const info = dayMap[dStr];
+      const isHol = info ? info.isHol : isHolidayDate(dStr);
       let bg = isHol ? '#eef7fb' : '#f2ece6';
       let title = `${dStr}${isHol ? ' (🌴休假日)' : ''}：無紀錄`;
-      if (list && list.length > 0) {
-        const r = list.filter(t => t.completed).length / list.length;
+      if (info && info.total > 0) {
+        const r = info.done / info.total;
         bg = r === 1 ? '#f4a29e' : (r >= 0.8 ? '#f9cbc8' : (r > 0 ? '#fce181' : '#e2dcd5'));
-        title = `${dStr}${isHol ? ' (🌴休假日)' : ''}：達成 ${Math.round(r * 100)}%（點擊跳轉編輯）`;
-      } else if (Array.isArray(rawList) && rawList.length > 0 && isHol) {
+        title = `${dStr}${isHol ? ' (🌴休假日)' : ''}：達成 ${Math.round(r * 100)}%${info.archived ? ' (已壓縮統計)' : '（點擊跳轉編輯）'}`;
+      } else if (info && info.total === 0 && isHol) {
         title = `${dStr} (🌴休假日)：全休凍結連勝`;
       }
       calCells += `<div class="cal-cell ${isHol ? 'is-holiday' : ''}" style="background:${bg}" title="${title}" onclick="jumpToDate('${dStr}')">${day}</div>`;
@@ -1274,7 +1347,7 @@
     const rate = Math.round((p.done / p.total) * 100);
     let text = `📊 【${projTitle} - ${p.label}】階段性覆盤報告\n• 累計執行天數：${p.days} 天｜總達成率：${rate}% (${p.done}/${p.total} 項)\n\n【每日執行摘要與筆記】\n`;
     p.logs.forEach(item => {
-      const dayPct = Math.round((item.doneCnt / item.list.length) * 100);
+      const dayPct = Math.round((item.doneCnt / (item.totCnt || item.list.length)) * 100);
       const notes = item.list.filter(t => t.note).map(t => `${t.text}(${t.note})`).join('；');
       text += `- ${item.dateStr}：達成 ${dayPct}% (${item.doneCnt}/${item.list.length})${notes ? `｜筆記：${notes}` : ''}\n`;
     });
@@ -1408,6 +1481,7 @@
   function applySyncedPayload(d) {
     if (!d || typeof d !== 'object') return false;
     if (d.records) allRecords = mergeRecordsWithConflictResolution(allRecords, d.records);
+    if (d.archivedStats && typeof d.archivedStats === 'object') archivedStats = { ...archivedStats, ...d.archivedStats };
     if (Array.isArray(d.weekendSkip)) weekendSkipItems = [...d.weekendSkip];
     if (d.holidayOverrides && typeof d.holidayOverrides === 'object') {
       holidayOverrides = { ...d.holidayOverrides };
@@ -1473,7 +1547,7 @@
 
   async function copySyncCode() {
     try {
-      const code = await encodeSyncData({ records: allRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
+      const code = await encodeSyncData({ records: allRecords, archivedStats, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
       await writeClipboardSafe(code);
       lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
       showSyncProgress(`✅ 完整同步代碼已複製（共 ${code.length} 字元）！`, 100, 2600);
@@ -1507,7 +1581,7 @@
 
   function exportJson() {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays }, null, 2)], { type: 'application/json' }));
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, archivedStats, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays }, null, 2)], { type: 'application/json' }));
     a.download = `每日目標手帳備份_${currentDate}.json`; a.click();
     lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
   }
