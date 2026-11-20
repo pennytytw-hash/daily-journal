@@ -60,7 +60,7 @@
   .ai-header { display: flex; justify-content: space-between; cursor: pointer; font-weight: 700; color: #4a7c5f; }
   .ai-body { margin-top: 12px; display: none; }
   .ai-body.open { display: block; }
-  .prompt-guide { background: #eef7f1; padding: 10px; border-radius: 10px; font-size: 0.85rem; margin-bottom: 10px; }
+  .prompt-guide { background: #eef7f1; padding: 10px; border-radius: 10px; font-size: 0.85rem; margin-bottom: 10px; line-height: 1.5; }
   .prompt-box {
     background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #cce3d4;
     font-weight: 700; color: #3b664d; margin-top: 6px;
@@ -98,6 +98,10 @@
   .task-text { flex: 1; font-size: 1.02rem; padding: 2px 6px; border-radius: 6px; outline: none; word-break: break-word; }
   .task-text:focus { background: #fff; box-shadow: 0 0 0 2px var(--accent-yellow); }
   .task-item.completed .task-text { text-decoration: line-through; color: var(--text-light); }
+  .badge-fixed {
+    font-size: 0.72rem; background: #eef7f1; color: #4a7c5f;
+    padding: 2px 7px; border-radius: 8px; border: 1px solid #cce3d4; flex-shrink: 0;
+  }
   .btn-del { background: none; border: none; color: #cbbab0; font-size: 1.1rem; cursor: pointer; }
   .footer-tools {
     margin-top: 24px; padding-top: 14px; border-top: 2px solid #f2e6dc;
@@ -137,34 +141,40 @@
   </div>
 
   <div class="ai-section">
-    <div class="ai-header" onclick="toggleAi()"><span>✨ 從 AI 對話貼上目標清單</span><span id="aiIcon">▼ 展開</span></div>
+    <div class="ai-header" onclick="toggleAi()">
+      <span>⭐ 設定每日固定清單（由 AI 匯入並覆蓋舊清單）</span>
+      <span id="aiIcon">▼ 展開</span>
+    </div>
     <div class="ai-body" id="aiBody">
       <div class="prompt-guide">
-        💡 <b>向 AI 索取清單的固定指令：</b>討論完目標後複製下方指令貼給 AI：
+        💡 <b>向 AI 索取固定清單的指令：</b>討論完目標後複製下方指令貼給 AI。匯入後會<b>自動覆蓋</b>舊的固定清單，並每天自動帶入！
         <div class="prompt-box">
           <span id="promptCmd">請將我們剛剛討論的目標整理成純文字清單，每行一項任務，不要加任何編號、符號、標題或額外說明文字。</span>
           <button class="btn btn-mint btn-sm" onclick="copyPrompt()">複製指令</button>
         </div>
       </div>
-      <textarea id="aiPasteArea" placeholder="將 AI 回覆的清單貼在這裡（每行一項），匯入後可直接點擊文字編輯！"></textarea>
-      <div style="text-align:right;margin-top:8px;">
-        <button class="btn btn-mint btn-sm" onclick="importAiList()">📥 智慧解析並匯入</button>
+      <textarea id="aiPasteArea" placeholder="將 AI 回覆的清單貼在這裡（每行一項），點擊匯入後將成為你的「每日固定清單」..."></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+        <span id="templateCountText" style="font-size:0.8rem;color:#4a7c5f;">目前固定清單：0 項</span>
+        <button class="btn btn-mint btn-sm" onclick="importAiList()">🔄 覆蓋並更新固定清單</button>
       </div>
     </div>
   </div>
 
   <div class="add-row">
-    <input type="text" id="newTaskInput" placeholder="新增一項小目標... (按 Enter 新增)" onkeypress="if(event.key==='Enter') addTask()">
+    <input type="text" id="newTaskInput" placeholder="新增今日臨時小目標... (按 Enter 新增)" onkeypress="if(event.key==='Enter') addTask()">
     <button class="btn" onclick="addTask()">＋ 新增</button>
   </div>
 
   <ul class="task-list" id="taskList"></ul>
-  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">✏️ 點擊任務文字可直接修改內容</p>
+  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">
+    ✏️ 點擊任務文字可直接微調內容｜⭐ 標記為每日自動繼承的固定目標
+  </p>
 
   <div class="footer-tools">
     <button class="btn btn-outline btn-sm" onclick="openHistory()">📅 歷史紀錄</button>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <button class="btn btn-mint btn-sm" onclick="copySyncLink()" title="複製網址傳給手機即可同步">🔗 跨裝置同步連結</button>
+      <button class="btn btn-mint btn-sm" onclick="copySyncLink()">🔗 跨裝置同步連結</button>
       <button class="btn btn-outline btn-sm" onclick="exportJson()">📤 匯出</button>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
@@ -184,16 +194,18 @@
 
 
 
+
 <script>
   const quotes = {
-    empty: ["🌱 新的一天開始啦，寫下今天想完成的小目標吧！", "✨ 空白的頁面充滿無限可能，準備好規劃今天了嗎？"],
-    zero: ["🐣 萬事起頭難，先挑一件最簡單的小事開始吧！", "☕ 深呼吸一口氣，跨出第一步就是最棒的開始！"],
+    empty: ["🌱 還沒有設定固定目標喔！點上方綠色區塊從 AI 匯入清單吧～", "✨ 空白的頁面充滿無限可能，準備好規劃固定習慣了嗎？"],
+    zero: ["🐣 新的一天開始啦，先挑一件最簡單的固定目標打卡吧！", "☕ 深呼吸一口氣，跨出第一步就是最棒的開始！"],
     low: ["🌿 已經啟動囉！保持這個節奏，慢慢往前推進吧～", "🐾 每完成一件事，就離理想的自己更近一點點！"],
     high: ["🔥 太厲害了，進度已經過半！再加把勁就能大功告成囉！", "🌟 你的專注力閃閃發光，最後幾項也難不倒你的！"],
     perfect: ["🎉 100% 完美達成！今天的你超級棒，快給自己一個大大的獎勵吧！", "🏆 任務全數制霸！好好休息放鬆，享受滿滿的成就感吧！"]
   };
 
-  let allRecords = JSON.parse(localStorage.getItem('cute_journal_v2') || '{}');
+  let allRecords = JSON.parse(localStorage.getItem('cute_journal_v3_records') || '{}');
+  let fixedTemplate = JSON.parse(localStorage.getItem('cute_journal_v3_template') || '[]');
   let currentDate = new Date().toLocaleDateString('en-CA');
   let currentQuote = "";
 
@@ -201,57 +213,73 @@
   datePicker.value = currentDate;
   datePicker.addEventListener('change', (e) => { currentDate = e.target.value; currentQuote = ""; render(); });
 
-  // 檢查網址是否帶有跨裝置同步資料
   function checkUrlSync() {
     const hash = window.location.hash;
     if (hash.startsWith('#sync=')) {
       try {
-        const encoded = hash.slice(6);
-        const decoded = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+        const decoded = JSON.parse(decodeURIComponent(escape(atob(hash.slice(6)))));
         if (decoded && typeof decoded === 'object') {
-          allRecords = { ...allRecords, ...decoded };
-          localStorage.setItem('cute_journal_v2', JSON.stringify(allRecords));
-          history.replaceState(null, null, ' '); // 清除網址參數保持乾淨
-          alert('✨ 跨裝置紀錄同步合併成功！');
+          if (decoded.records) allRecords = { ...allRecords, ...decoded.records };
+          if (Array.isArray(decoded.template)) fixedTemplate = decoded.template;
+          saveAll(false);
+          history.replaceState(null, null, ' ');
+          alert('✨ 跨裝置紀錄與固定清單同步成功！');
         }
       } catch (e) { console.error('同步解析失敗', e); }
     }
   }
 
+  // 取得當天任務（若該日尚未建立紀錄，自動繼承固定清單）
   function getTasks() {
-    if (!allRecords[currentDate]) allRecords[currentDate] = [];
+    if (!allRecords[currentDate]) {
+      allRecords[currentDate] = fixedTemplate.map((text, idx) => ({
+        id: Date.now() + idx + Math.random(),
+        text: text,
+        completed: false,
+        isFixed: true
+      }));
+      localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
+    }
     return allRecords[currentDate];
   }
 
-  function save() {
-    localStorage.setItem('cute_journal_v2', JSON.stringify(allRecords));
-    render();
+  function saveAll(shouldRender = true) {
+    localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
+    localStorage.setItem('cute_journal_v3_template', JSON.stringify(fixedTemplate));
+    if (shouldRender) render();
   }
 
   function addTask() {
     const input = document.getElementById('newTaskInput');
     const text = input.value.trim();
     if (!text) return;
-    getTasks().push({ id: Date.now() + Math.random(), text, completed: false });
+    getTasks().push({ id: Date.now() + Math.random(), text, completed: false, isFixed: false });
     input.value = '';
-    save();
+    saveAll();
   }
 
   function toggleTask(id) {
     const t = getTasks().find(x => x.id === id);
-    if (t) { t.completed = !t.completed; currentQuote = ""; save(); }
+    if (t) { t.completed = !t.completed; currentQuote = ""; saveAll(); }
   }
 
   function editTask(id, newText) {
     const t = getTasks().find(x => x.id === id);
     const trimmed = newText.trim();
-    if (t && trimmed && t.text !== trimmed) { t.text = trimmed; save(); }
-    else render();
+    if (t && trimmed && t.text !== trimmed) {
+      // 若修改的是固定項目，同步更新固定範本內的文字
+      if (t.isFixed) {
+        const tplIdx = fixedTemplate.indexOf(t.text);
+        if (tplIdx !== -1) fixedTemplate[tplIdx] = trimmed;
+      }
+      t.text = trimmed;
+      saveAll();
+    } else render();
   }
 
   function delTask(id) {
     allRecords[currentDate] = getTasks().filter(x => x.id !== id);
-    save();
+    saveAll();
   }
 
   function toggleAi() {
@@ -265,15 +293,41 @@
       .then(() => alert('已複製指令！直接貼到 AI 對話框即可。'));
   }
 
+  // AI 匯入：覆蓋舊的固定清單，並同步更新當天未刪除的固定項目
   function importAiList() {
     const area = document.getElementById('aiPasteArea');
-    let count = 0;
+    const newItems = [];
     area.value.split('\n').forEach(line => {
       const cleaned = line.replace(/^[\s\-\*\•\d\.\)\[\]xX✓✔]+/, '').trim();
-      if (cleaned) { getTasks().push({ id: Date.now() + Math.random(), text: cleaned, completed: false }); count++; }
+      if (cleaned) newItems.push(cleaned);
     });
-    if (count > 0) { area.value = ''; save(); alert(`成功匯入 ${count} 項目標！`); }
-    else alert('沒有偵測到有效文字喔！');
+
+    if (newItems.length === 0) {
+      alert('沒有偵測到有效的目標文字喔！');
+      return;
+    }
+
+    if (fixedTemplate.length > 0 && !confirm(`確定要用這 ${newItems.length} 項新目標「覆蓋」原本的每日固定清單嗎？\n（過去日期的歷史紀錄不會受影響）`)) {
+      return;
+    }
+
+    // 1. 覆蓋永久固定清單範本
+    fixedTemplate = newItems;
+
+    // 2. 更新當天清單：保留今日手動新增的臨時項目，並用新的固定清單替換舊的固定項目
+    const manualTasks = (allRecords[currentDate] || []).filter(t => !t.isFixed);
+    const newFixedTasks = fixedTemplate.map((text, idx) => ({
+      id: Date.now() + idx + Math.random(),
+      text: text,
+      completed: false,
+      isFixed: true
+    }));
+    allRecords[currentDate] = [...newFixedTasks, ...manualTasks];
+
+    area.value = '';
+    currentQuote = "";
+    saveAll();
+    alert(`✅ 已成功更新每日固定清單（共 ${newItems.length} 項），以後每天都會自動帶入！`);
   }
 
   function updateQuote(force) {
@@ -292,9 +346,11 @@
   }
 
   function render() {
+    document.getElementById('templateCountText').textContent = `目前固定清單：${fixedTemplate.length} 項`;
     const tasks = getTasks();
     const listEl = document.getElementById('taskList');
     listEl.innerHTML = '';
+
     tasks.forEach(t => {
       const li = document.createElement('li');
       li.className = `task-item ${t.completed ? 'completed' : ''}`;
@@ -302,9 +358,11 @@
         <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id})">
         <div class="task-text" contenteditable="true" onblur="editTask(${t.id}, this.innerText)"
              onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g,'&lt;')}</div>
+        ${t.isFixed ? '<span class="badge-fixed">⭐ 固定</span>' : ''}
         <button class="btn-del" onclick="delTask(${t.id})">✕</button>`;
       listEl.appendChild(li);
     });
+
     const done = tasks.filter(t => t.completed).length;
     const pct = tasks.length === 0 ? 0 : Math.round((done / tasks.length) * 100);
     document.getElementById('progressText').textContent = `${pct}% (${done}/${tasks.length})`;
@@ -330,17 +388,18 @@
     document.getElementById('historyModal').classList.add('active');
   }
 
-  // 免伺服器跨裝置同步：將紀錄編碼進網址
   function copySyncLink() {
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(allRecords))));
+    const payload = { records: allRecords, template: fixedTemplate };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
     const syncUrl = `${window.location.origin}${window.location.pathname}#sync=${encoded}`;
     navigator.clipboard.writeText(syncUrl).then(() => {
-      alert('🔗 同步專屬連結已複製！\n請傳送到另一台裝置（例如用 LINE 傳給自己）並點擊打開，紀錄就會自動合併同步囉！');
+      alert('🔗 同步專屬連結已複製！\n請傳送到另一台裝置並點擊打開，即可同步所有歷史紀錄與每日固定清單！');
     });
   }
 
   function exportJson() {
-    const blob = new Blob([JSON.stringify(allRecords, null, 2)], { type: 'application/json' });
+    const payload = { records: allRecords, template: fixedTemplate };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `每日目標手帳備份_${currentDate}.json`;
@@ -353,8 +412,10 @@
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        allRecords = { ...allRecords, ...JSON.parse(ev.target.result) };
-        save(); alert('備份匯入成功！');
+        const data = JSON.parse(ev.target.result);
+        if (data.records) allRecords = { ...allRecords, ...data.records };
+        if (Array.isArray(data.template)) fixedTemplate = data.template;
+        saveAll(); alert('備份與固定清單匯入成功！');
       } catch { alert('檔案格式錯誤'); }
     };
     reader.readAsText(file);
