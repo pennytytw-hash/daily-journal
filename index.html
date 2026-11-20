@@ -470,9 +470,10 @@
     let updated = false, lastErr = '';
     for (const y of targetYears) {
       const urls = [
-        `https://jsdelivr.net{y}.json`,
-        `https://githubusercontent.com{y}.json`
+        ['https:/', 'cdn.jsdelivr.net', 'gh', 'ruyut', 'TaiwanCalendar', 'data', `${y}.json`].join('/'),
+        ['https:/', '://githubusercontent.com', 'ruyut', 'TaiwanCalendar', 'master', 'data', `${y}.json`].join('/')
       ];
+
       for (const u of urls) {
         try {
           const res = await fetch(u);
