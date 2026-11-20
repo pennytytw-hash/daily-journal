@@ -190,10 +190,12 @@
   </div>
   <ul class="task-list" id="taskList"></ul>
   <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">✏️ 點擊文字可編輯｜▲▼ 可調整順序｜📝 下方小框記錄執行狀況</p>
-  <div class="footer-tools">
+    <div class="footer-tools">
     <button class="btn btn-outline btn-sm" onclick="openHistoryModal('stats')">📊 專案統計與歷史編輯</button>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <button class="btn btn-mint btn-sm" onclick="copySyncLink()">🔗 跨裝置同步</button>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+      <button class="btn btn-mint btn-sm" onclick="copySyncLink()" title="只打包近7天進度，網址極短">🔗 同步近期(短網址)</button>
+      <button class="btn btn-mint btn-sm" onclick="copySyncCode()" title="複製完整同步序號">📋 複製代碼</button>
+      <button class="btn btn-outline btn-sm" onclick="pasteSyncCode()" title="貼上序號還原">📥 貼上代碼</button>
       <button class="btn btn-outline btn-sm" id="btnExport" onclick="exportJson()">📤 匯出</button>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
@@ -573,24 +575,66 @@
     document.getElementById('historyModal').classList.add('active');
   }
 
-  function encodeSyncData(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+    function encodeSyncData(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   function decodeSyncData(str) { return JSON.parse(decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/'))))); }
+
+  function applySyncedPayload(d) {
+    if (!d || typeof d !== 'object') return false;
+    if (d.records) allRecords = { ...allRecords, ...d.records };
+    if (Array.isArray(d.template)) fixedTemplate = d.template;
+    if (Array.isArray(d.projects)) {
+      const map = new Map(projects.map(p => [p.id, p]));
+      d.projects.forEach(p => map.set(p.id, p));
+      projects = Array.from(map.values());
+    }
+    if (d.activeProjectId) activeProjectId = d.activeProjectId;
+    saveAll(true);
+    return true;
+  }
+
   function checkUrlSync() {
     if (window.location.hash.startsWith('#sync=')) {
       try {
-        const d = decodeSyncData(window.location.hash.slice(6));
-        if (d.records) allRecords = { ...allRecords, ...d.records };
-        if (Array.isArray(d.template)) fixedTemplate = d.template;
-        if (Array.isArray(d.projects)) projects = d.projects;
-        if (d.activeProjectId) activeProjectId = d.activeProjectId;
-        saveAll(false); history.replaceState(null, null, ' '); alert('✨ 跨裝置紀錄與專案資料同步成功！');
+        if (applySyncedPayload(decodeSyncData(window.location.hash.slice(6)))) {
+          history.replaceState(null, null, ' ');
+          alert('✨ 最近 7 天進度與專案設定已自動同步合併！');
+        }
       } catch (e) { console.error(e); }
     }
   }
+
+  // 方案 1：僅打包最近 7 天紀錄，確保短網址永不被截斷
   function copySyncLink() {
-    const encoded = encodeSyncData({ records: allRecords, template: fixedTemplate, projects, activeProjectId });
-    navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}#sync=${encoded}`).then(() => alert('🔗 壓縮同步連結已複製！傳送到另一台裝置打開即可同步！'));
+    const recentRecords = {};
+    for (let i = 0; i < 7; i++) {
+      const dStr = getLogicalToday(i);
+      if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr];
+    }
+    const encoded = encodeSyncData({ records: recentRecords, template: fixedTemplate, projects, activeProjectId });
+    navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}#sync=${encoded}`)
+      .then(() => alert('🔗 近 7 天短網址已複製！\n貼到 LINE 傳給自己，在另一台裝置點開即可秒同步！'));
   }
+
+  // 方案 2A：複製完整同步代碼（免下載檔案）
+  function copySyncCode() {
+    const code = encodeSyncData({ records: allRecords, template: fixedTemplate, projects, activeProjectId });
+    navigator.clipboard.writeText(code)
+      .then(() => alert('📋 完整同步代碼已複製！\n請到另一台裝置點擊「📥 貼上代碼」並貼上即可還原全部紀錄！'));
+  }
+
+  // 方案 2B：貼上同步代碼直接合併還原
+  function pasteSyncCode() {
+    const code = prompt('請貼上從另一台裝置複製的「完整同步代碼」：');
+    if (!code || !code.trim()) return;
+    try {
+      if (applySyncedPayload(decodeSyncData(code.trim()))) {
+        alert('🎉 同步代碼驗證成功！所有歷史紀錄、筆記與專案已完整合併！');
+      }
+    } catch (e) {
+      alert('⚠️ 同步代碼格式不正確，請確認有完整複製到整串代碼喔！');
+    }
+  }
+
   function exportJson() {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, template: fixedTemplate, projects, activeProjectId }, null, 2)], { type: 'application/json' }));
@@ -602,16 +646,12 @@
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const d = JSON.parse(ev.target.result);
-        if (d.records) allRecords = { ...allRecords, ...d.records };
-        if (Array.isArray(d.template)) fixedTemplate = d.template;
-        if (Array.isArray(d.projects)) projects = d.projects;
-        if (d.activeProjectId) activeProjectId = d.activeProjectId;
-        saveAll(); alert('備份、筆記與專案資料匯入成功！');
+        if (applySyncedPayload(JSON.parse(ev.target.result))) alert('備份、筆記與專案資料匯入成功！');
       } catch { alert('檔案格式錯誤'); }
     };
     reader.readAsText(file); e.target.value = '';
   }
+
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     const swCode = `self.addEventListener('fetch', e => e.respondWith(caches.open('journal-v1').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))));`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
@@ -621,3 +661,4 @@
 </script>
 </body>
 </html>
+
