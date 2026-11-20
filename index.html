@@ -463,22 +463,31 @@
   }
   function isTaskSkipped(t, dStr) { return Boolean(t && t.skipWeekend && isHolidayDate(dStr)); }
 
-  async function syncGovCalendar(isManual = false) {
+    async function syncGovCalendar(isManual = false) {
+    if (isManual) showSyncProgress('🔄 正在連線政府行事曆資料庫...', 40);
     const curYear = new Date().getFullYear();
     const targetYears = [curYear, curYear + 1];
     let updated = false;
     for (const y of targetYears) {
       const urls = [
+        `https://jsdelivr.net{y}.json`,
+        `https://githubusercontent.com{y}.json`,
+        `https://jsdelivr.net{y}.json`,
         `https://githubusercontent.com{y}.json`,
         `https://jsdelivr.net{y}.json`
       ];
       for (const u of urls) {
         try {
-          const res = await fetch(u);
+          const res = await fetch(u, { cache: 'no-store' });
           if (!res.ok) continue;
           const arr = await res.json();
-          if (Array.isArray(arr)) {
-            arr.forEach(item => { if (item && item.date) govCalendarMap[item.date] = Boolean(item.isHoliday); });
+          if (Array.isArray(arr) && arr.length > 0) {
+            arr.forEach(item => {
+              if (item && item.date) {
+                const cleanDate = String(item.date).replace(/-/g, '');
+                govCalendarMap[cleanDate] = Boolean(item.isHoliday);
+              }
+            });
             updated = true;
             break;
           }
@@ -490,7 +499,13 @@
       render();
     }
     updateLastHolidayDisplay();
-    if (isManual) showSyncProgress(updated ? '✅ 政府行事曆（含補班日）已同步最新！' : '⚠️ 無法連線，目前使用離線快取判斷', 100, 2200);
+    if (isManual) {
+      showSyncProgress(
+        updated ? '✅ 政府行事曆（含補班日）已同步最新！' : '⚠️ 目前無網路或資料庫暫時維護中，已啟用離線週六日判斷',
+        100,
+        2400
+      );
+    }
   }
 
   const datePicker = document.getElementById('datePicker');
