@@ -467,7 +467,7 @@
     if (isManual) showSyncProgress('🔄 正在連線 TaiwanCalendar 資料庫...', 45);
     const curYear = new Date().getFullYear();
     const targetYears = [curYear, curYear + 1];
-    let updated = false;
+    let updated = false, lastErr = '';
     for (const y of targetYears) {
       const urls = [
         `https://jsdelivr.net{y}.json`,
@@ -476,8 +476,9 @@
       for (const u of urls) {
         try {
           const res = await fetch(u);
-          if (!res.ok) continue;
-          const arr = await res.json();
+          if (!res.ok) { lastErr = `HTTP ${res.status} (${y})`; continue; }
+          const text = await res.text();
+          const arr = JSON.parse(text.replace(/^\uFEFF/, ''));
           if (Array.isArray(arr) && arr.length > 0) {
             arr.forEach(item => {
               if (item && item.date) {
@@ -488,7 +489,7 @@
             updated = true;
             break;
           }
-        } catch (e) {}
+        } catch (e) { lastErr = e.message || String(e); }
       }
     }
     if (updated) {
@@ -498,12 +499,13 @@
     updateLastHolidayDisplay();
     if (isManual) {
       showSyncProgress(
-        updated ? '✅ 2026～2027 政府行事曆同步成功！' : '⚠️ 連線逾時，請確認網路狀態後再試',
+        updated ? '✅ 2026～2027 政府行事曆同步成功！' : `⚠️ 失敗原因：${lastErr || '無資料'}`,
         100,
-        2400
+        3500
       );
     }
   }
+
 
   const datePicker = document.getElementById('datePicker');
   datePicker.value = currentDate;
