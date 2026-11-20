@@ -136,6 +136,17 @@
   .history-card { padding: 10px; border-bottom: 1px dashed var(--border-dashed); cursor: pointer; border-radius: 10px; }
   .history-card:hover { background: #fdf5ee; }
   .history-notes-preview { font-size: 0.8rem; color: #7a665c; margin-top: 5px; padding-left: 8px; border-left: 2px solid var(--accent-mint); }
+  .trend-up { font-size: 0.72rem; color: #3d7a56; background: #e3f5ea; padding: 1px 5px; border-radius: 6px; margin-left: 4px; vertical-align: middle; }
+  .trend-down { font-size: 0.72rem; color: #b85d58; background: #fde8e8; padding: 1px 5px; border-radius: 6px; margin-left: 4px; vertical-align: middle; }
+  .split-bar-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.8rem; }
+  .split-track { flex: 1; height: 10px; background: #eae3dc; border-radius: 6px; overflow: hidden; }
+  .split-fill-fixed { height: 100%; background: #6eb58c; }
+  .split-fill-temp { height: 100%; background: #eab84d; }
+  .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+  .cal-dow-lbl { font-size: 0.7rem; color: var(--text-light); font-weight: 700; }
+  .cal-cell { height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; cursor: pointer; border: 1px solid rgba(0,0,0,0.05); }
+  .cal-cell:hover { transform: scale(1.08); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 </style>
 </head>
 <body>
@@ -496,7 +507,7 @@
     document.getElementById('progressBar').style.width = `${pct}%`;
     updateQuote(false);
   }
-  function copyDailySummary() {
+    function copyDailySummary() {
     const tasks = getTasks();
     if (tasks.length === 0) { alert('該日期沒有任務可以總結喔！'); return; }
     const done = tasks.filter(t => t.completed).length, pct = Math.round((done / tasks.length) * 100);
@@ -506,7 +517,7 @@
     navigator.clipboard.writeText(text).then(() => alert(`📋 ${currentDate} 總結已複製！直接貼上給 AI 即可取得覆盤回饋！`));
   }
 
-  let selectedStatsProj = 'ALL', periodReportCache = {};
+  let selectedStatsProj = 'ALL', periodReportCache = {}, calViewYear = 0, calViewMonth = 0;
   function getFilteredRecords() {
     const res = {};
     Object.entries(allRecords).forEach(([d, list]) => {
@@ -517,60 +528,126 @@
     return res;
   }
 
+  function calcBestStreak(records) {
+    const dates = Object.keys(records).sort();
+    let best = 0, cur = 0, prevTime = null;
+    dates.forEach(dStr => {
+      const list = records[dStr];
+      const pass = list.length > 0 && (list.filter(t => t.completed).length / list.length) >= 0.8;
+      const t = new Date(dStr + 'T00:00:00').getTime();
+      if (pass) {
+        cur = (prevTime !== null && Math.round((t - prevTime) / 86400000) === 1) ? cur + 1 : 1;
+        if (cur > best) best = cur;
+      } else { cur = 0; }
+      prevTime = t;
+    });
+    return best;
+  }
+
+  function changeCalMonth(delta) {
+    calViewMonth += delta;
+    if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
+    if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+    renderStatsDashboard();
+  }
+
   function renderStatsDashboard() {
     const records = getFilteredRecords();
     const base = new Date(currentDate + 'T00:00:00');
+    if (!calViewYear) { calViewYear = base.getFullYear(); calViewMonth = base.getMonth(); }
     const year = base.getFullYear(), month = base.getMonth(), quarter = Math.floor(month / 3);
     const dayOfWeek = base.getDay() === 0 ? 7 : base.getDay();
     const weekStart = new Date(base); weekStart.setDate(base.getDate() - dayOfWeek + 1);
     const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+    const prevWeekStart = new Date(weekStart); prevWeekStart.setDate(weekStart.getDate() - 7);
+    const prevWeekEnd = new Date(weekStart); prevWeekEnd.setDate(weekStart.getDate() - 1);
+    const prevMonth = month === 0 ? 11 : month - 1, prevMonthYear = month === 0 ? year - 1 : year;
+    const prevQ = quarter === 0 ? 3 : quarter - 1, prevQYear = quarter === 0 ? year - 1 : year;
 
     const periods = {
-      week: { label: '本週統計', total: 0, done: 0, days: 0, logs: [] },
-      month: { label: `${month + 1}月統計`, total: 0, done: 0, days: 0, logs: [] },
-      quarter: { label: `第${quarter + 1}季 (Q${quarter + 1})`, total: 0, done: 0, days: 0, logs: [] },
-      year: { label: `${year}年統計`, total: 0, done: 0, days: 0, logs: [] }
+      week: { label: '本週統計', total: 0, done: 0, days: 0, logs: [], prevT: 0, prevD: 0 },
+      month: { label: `${month + 1}月統計`, total: 0, done: 0, days: 0, logs: [], prevT: 0, prevD: 0 },
+      quarter: { label: `第${quarter + 1}季 (Q${quarter + 1})`, total: 0, done: 0, days: 0, logs: [], prevT: 0, prevD: 0 },
+      year: { label: `${year}年統計`, total: 0, done: 0, days: 0, logs: [], prevT: 0, prevD: 0 }
     };
     const habitMap = {}, dowStats = Array.from({ length: 7 }, () => ({ total: 0, done: 0 }));
+    let fixT = 0, fixD = 0, tmpT = 0, tmpD = 0;
 
     Object.keys(records).sort().forEach(dateStr => {
       const list = records[dateStr], d = new Date(dateStr + 'T00:00:00'), doneCnt = list.filter(t => t.completed).length;
       const pushLog = (p) => { p.total += list.length; p.done += doneCnt; p.days++; p.logs.push({ dateStr, list, doneCnt }); };
       if (d >= weekStart && d <= weekEnd) pushLog(periods.week);
+      else if (d >= prevWeekStart && d <= prevWeekEnd) { periods.week.prevT += list.length; periods.week.prevD += doneCnt; }
       if (d.getFullYear() === year && d.getMonth() === month) pushLog(periods.month);
+      else if (d.getFullYear() === prevMonthYear && d.getMonth() === prevMonth) { periods.month.prevT += list.length; periods.month.prevD += doneCnt; }
       if (d.getFullYear() === year && Math.floor(d.getMonth() / 3) === quarter) pushLog(periods.quarter);
+      else if (d.getFullYear() === prevQYear && Math.floor(d.getMonth() / 3) === prevQ) { periods.quarter.prevT += list.length; periods.quarter.prevD += doneCnt; }
       if (d.getFullYear() === year) pushLog(periods.year);
+      else if (d.getFullYear() === year - 1) { periods.year.prevT += list.length; periods.year.prevD += doneCnt; }
 
       const dowIdx = d.getDay() === 0 ? 6 : d.getDay() - 1;
       dowStats[dowIdx].total += list.length; dowStats[dowIdx].done += doneCnt;
       list.forEach(t => {
+        if (t.isFixed) { fixT++; if (t.completed) fixD++; } else { tmpT++; if (t.completed) tmpD++; }
         if (!habitMap[t.text]) habitMap[t.text] = { total: 0, done: 0 };
         habitMap[t.text].total++; if (t.completed) habitMap[t.text].done++;
       });
     });
     periodReportCache = periods;
-
-    let html = `<div class="stat-grid">` + Object.entries(periods).map(([key, p]) => {
+    const bestStreak = calcBestStreak(records);
+    let html = `<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;margin-bottom:6px;">
+      <span>👑 歷史最高連勝 (≥80%)：<b>${bestStreak} 天</b></span>
+      <span style="color:#8c7a70;">基準：${currentDate}</span>
+    </div><div class="stat-grid">` + Object.entries(periods).map(([key, p]) => {
       const rate = p.total === 0 ? 0 : Math.round((p.done / p.total) * 100);
-      return `<div class="stat-card"><h4>${p.label}</h4><div class="stat-rate">${rate}%</div><div class="stat-sub">${p.done}/${p.total} 項｜${p.days} 天</div><button class="btn btn-yellow btn-sm" onclick="copyPeriodSummary('${key}')">📋 複製給 AI</button></div>`;
+      let badge = '';
+      if (p.prevT > 0 && p.total > 0) {
+        const diff = rate - Math.round((p.prevD / p.prevT) * 100);
+        if (diff > 0) badge = `<span class="trend-up">▲+${diff}%</span>`;
+        else if (diff < 0) badge = `<span class="trend-down">▼${diff}%</span>`;
+      }
+      return `<div class="stat-card"><h4>${p.label}</h4><div class="stat-rate">${rate}%${badge}</div><div class="stat-sub">${p.done}/${p.total} 項｜${p.days} 天</div><button class="btn btn-yellow btn-sm" onclick="copyPeriodSummary('${key}')">📋 複製給 AI</button></div>`;
     }).join('') + `</div>`;
 
-    let heatCells = '';
-    for (let i = 13; i >= 0; i--) {
-      const dStr = getLogicalToday(i), list = records[dStr];
-      let bg = '#eee8e2', txt = dStr.slice(8);
+    const fixRate = fixT === 0 ? 0 : Math.round((fixD / fixT) * 100);
+    const tmpRate = tmpT === 0 ? 0 : Math.round((tmpD / tmpT) * 100);
+    html += `<div class="panel-box"><b>⚖️ 核心固定習慣 vs 臨時待辦達成率</b>
+      <div class="split-bar-row"><span style="width:76px;">⭐ 固定 (${fixRate}%)</span><div class="split-track"><div class="split-fill-fixed" style="width:${fixRate}%"></div></div><span>${fixD}/${fixT}</span></div>
+      <div class="split-bar-row"><span style="width:76px;">📌 臨時 (${tmpRate}%)</span><div class="split-track"><div class="split-fill-temp" style="width:${tmpRate}%"></div></div><span>${tmpD}/${tmpT}</span></div>
+    </div>`;
+
+    const firstDay = new Date(calViewYear, calViewMonth, 1).getDay();
+    const startPad = firstDay === 0 ? 6 : firstDay - 1;
+    const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+    let calCells = ['一','二','三','四','五','六','日'].map(w => `<div class="cal-dow-lbl">${w}</div>`).join('');
+    for (let i = 0; i < startPad; i++) calCells += `<div></div>`;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dStr = `${calViewYear}-${String(calViewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const list = records[dStr];
+      let bg = '#f2ece6', title = `${dStr}：無紀錄`;
       if (list && list.length > 0) {
         const r = list.filter(t => t.completed).length / list.length;
         bg = r === 1 ? '#f4a29e' : (r >= 0.8 ? '#f9cbc8' : (r > 0 ? '#fce181' : '#e2dcd5'));
+        title = `${dStr}：達成 ${Math.round(r * 100)}%（點擊跳轉編輯）`;
       }
-      heatCells += `<div class="heat-cell" style="background:${bg}" title="${dStr}">${txt}</div>`;
+      calCells += `<div class="cal-cell" style="background:${bg}" title="${title}" onclick="jumpToDate('${dStr}')">${day}</div>`;
     }
+
     const dowNames = ['一', '二', '三', '四', '五', '六', '日'];
     const dowBars = dowStats.map((s, idx) => {
       const r = s.total === 0 ? 0 : Math.round((s.done / s.total) * 100);
       return `<div><div class="dow-bar-wrap"><div class="dow-bar-fill" style="height:${r}%"></div></div><div style="font-size:0.7rem;margin-top:3px;">週${dowNames[idx]}<br><b>${r}%</b></div></div>`;
     }).join('');
-    html += `<div class="panel-box"><b>🗓️ 近 14 天打卡熱力色塊</b>（深粉100% / 淺粉≥80% / 黃&lt;80%）<div class="heat-row">${heatCells}</div><div style="margin-top:10px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div></div>`;
+
+    html += `<div class="panel-box">
+      <div class="cal-header">
+        <button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button>
+        <b>🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b>
+        <button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button>
+      </div>
+      <div class="cal-grid">${calCells}</div>
+      <div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div>
+    </div>`;
 
     const habits = Object.entries(habitMap).filter(([, v]) => v.total >= 2).map(([name, v]) => ({ name, rate: Math.round((v.done / v.total) * 100), done: v.done, total: v.total }));
     if (habits.length > 0) {
@@ -582,6 +659,13 @@
     }
     document.getElementById('statsView').innerHTML = html;
   }
+
+  function jumpToDate(dStr) {
+    currentDate = dStr; datePicker.value = dStr; currentQuote = "";
+    document.getElementById('historyModal').classList.remove('active');
+    render();
+  }
+
   function copyPeriodSummary(key) {
     const p = periodReportCache[key];
     if (!p || p.days === 0) { alert('該區間目前沒有紀錄喔！'); return; }
