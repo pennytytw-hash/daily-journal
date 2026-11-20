@@ -1290,7 +1290,7 @@
     let str = String(rawStr || '').trim();
     const hashIdx = str.indexOf('#sync=');
     if (hashIdx !== -1) str = str.slice(hashIdx + 6);
-    str = str.split(/[&?\s#]/).replace(/[^A-Za-z0-9\-_+/=]/g, '');
+    str = str.replace(/[&?\s#].*$/, '').replace(/[^A-Za-z0-9\-_+/=]/g, '');
     if (!str) throw new Error('EMPTY_CODE');
     if (str.startsWith('gz_')) {
       if (typeof DecompressionStream === 'undefined') throw new Error('瀏覽器不支援解壓縮');
@@ -1397,7 +1397,7 @@
       const recentRecords = {};
       for (let i = 0; i < 7; i++) { const dStr = getLogicalToday(i); if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr]; }
       const encoded = await encodeSyncData({ records: recentRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
-      const baseUrl = window.location.href.split('#');
+      const baseUrl = window.location.href.replace(/#.*$/, '');
       await writeClipboardSafe(`${baseUrl}#sync=${encoded}`);
       showSyncProgress('✅ 近 7 天壓縮短網址已複製！傳給自己點開即可同步', 100, 2600);
     } catch (e) {
@@ -1447,7 +1447,7 @@
   }
 
   function importJson(e) {
-    const file = e.target.files; if (!file) return;
+    const file = e.target.files.item(0); if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       try { if (applySyncedPayload(JSON.parse(ev.target.result))) alert('備份、筆記與專案資料匯入成功！'); }
