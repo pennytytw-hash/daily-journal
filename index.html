@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的每日目標小手帳 ✨</title>
+<link href="https://googleapis.com" rel="stylesheet">
+<style>
+  :root {
+    --bg-cream: #fdf8f2; --paper-white: #fffdf9;
+    --primary-pink: #f4a29e; --primary-pink-dark: #e07a75;
+    --accent-mint: #a8d5ba; --accent-yellow: #fce181;
+    --text-brown: #5c4b43; --text-light: #9c8980; --border-dashed: #e3d5ca;
+  }
+  * { box-sizing: border-box; font-family: 'Zen Maru Gothic', sans-serif; }
+  body {
+    background-color: var(--bg-cream);
+    background-image: radial-gradient(#e6d7c8 1.2px, transparent 1.2px);
+    background-size: 20px 20px; color: var(--text-brown);
+    margin: 0; padding: 20px 12px 60px; display: flex; justify-content: center;
+  }
+  .journal-container {
+    width: 100%; max-width: 580px; background: var(--paper-white);
+    border-radius: 24px; padding: 28px 22px;
+    box-shadow: 0 10px 25px rgba(149, 117, 102, 0.12);
+    border: 3px solid #f2e6dc; position: relative;
+  }
+  .washi-tape {
+    width: 130px; height: 28px; background-color: rgba(244, 162, 158, 0.55);
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%) rotate(-2deg);
+    border-left: 2px dashed rgba(255,255,255,0.7); border-right: 2px dashed rgba(255,255,255,0.7);
+  }
+  header { text-align: center; margin-bottom: 18px; }
+  h1 { font-size: 1.55rem; margin: 6px 0 10px; }
+  input[type="date"] {
+    border: 2px dashed var(--primary-pink); background: #fff9f8;
+    color: var(--text-brown); padding: 6px 14px; border-radius: 12px;
+    font-size: 1rem; font-weight: 700; outline: none;
+  }
+  .progress-card {
+    background: #fff6ee; border-radius: 18px; padding: 15px;
+    margin-bottom: 18px; border: 2px solid #fae5d3;
+  }
+  .progress-header { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 8px; }
+  .progress-bar-bg { width: 100%; height: 15px; background: #efe2d6; border-radius: 10px; overflow: hidden; }
+  .progress-bar-fill {
+    height: 100%; width: 0%; border-radius: 10px;
+    background: linear-gradient(90deg, var(--primary-pink), var(--accent-yellow));
+    transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .encouragement-box {
+    margin-top: 12px; padding: 10px 12px; background: #fff; border-radius: 12px;
+    border-left: 5px solid var(--accent-mint); font-size: 0.95rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .ai-section {
+    background: #f9fbf9; border: 2px dashed var(--accent-mint);
+    border-radius: 16px; padding: 13px; margin-bottom: 18px;
+  }
+  .ai-header { display: flex; justify-content: space-between; cursor: pointer; font-weight: 700; color: #4a7c5f; }
+  .ai-body { margin-top: 12px; display: none; }
+  .ai-body.open { display: block; }
+  .prompt-guide { background: #eef7f1; padding: 10px; border-radius: 10px; font-size: 0.85rem; margin-bottom: 10px; }
+  .prompt-box {
+    background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #cce3d4;
+    font-weight: 700; color: #3b664d; margin-top: 6px;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  textarea {
+    width: 100%; height: 80px; border: 1.5px solid #d5e6dc; border-radius: 12px;
+    padding: 10px; font-size: 0.95rem; resize: vertical; outline: none; color: var(--text-brown);
+  }
+
+
+
+    .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .add-row input {
+    flex: 1; padding: 10px 14px; border: 2px solid #eedfd3; border-radius: 14px;
+    font-size: 1rem; outline: none; color: var(--text-brown);
+  }
+  .add-row input:focus { border-color: var(--primary-pink); }
+  .btn {
+    background: var(--primary-pink); color: #fff; border: none; padding: 9px 15px;
+    border-radius: 13px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.9rem;
+  }
+  .btn:hover { background: var(--primary-pink-dark); }
+  .btn-mint { background: #6eb58c; }
+  .btn-mint:hover { background: #589c74; }
+  .btn-sm { padding: 6px 10px; font-size: 0.8rem; border-radius: 10px; }
+  .btn-outline { background: #fff; color: var(--text-brown); border: 1.5px solid #dfd0c5; }
+  .btn-outline:hover { background: #f7efe8; }
+  .task-list { list-style: none; padding: 0; margin: 0; }
+  .task-item {
+    display: flex; align-items: center; gap: 10px; padding: 11px 8px;
+    border-bottom: 1.5px dashed var(--border-dashed);
+  }
+  .task-checkbox { width: 21px; height: 21px; accent-color: var(--primary-pink); cursor: pointer; }
+  .task-text { flex: 1; font-size: 1.02rem; padding: 2px 6px; border-radius: 6px; outline: none; word-break: break-word; }
+  .task-text:focus { background: #fff; box-shadow: 0 0 0 2px var(--accent-yellow); }
+  .task-item.completed .task-text { text-decoration: line-through; color: var(--text-light); }
+  .btn-del { background: none; border: none; color: #cbbab0; font-size: 1.1rem; cursor: pointer; }
+  .footer-tools {
+    margin-top: 24px; padding-top: 14px; border-top: 2px solid #f2e6dc;
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+  }
+  .modal {
+    display: none; position: fixed; inset: 0; background: rgba(92, 75, 67, 0.45);
+    justify-content: center; align-items: center; padding: 16px; z-index: 100;
+  }
+  .modal.active { display: flex; }
+  .modal-box {
+    background: var(--paper-white); border-radius: 20px; padding: 20px;
+    width: 100%; max-width: 440px; max-height: 80vh; overflow-y: auto; border: 3px solid #f2e6dc;
+  }
+  .history-row {
+    display: flex; justify-content: space-between; padding: 10px;
+    border-bottom: 1px dashed var(--border-dashed); cursor: pointer;
+  }
+  .history-row:hover { background: #fdf5ee; }
+</style>
+</head>
+<body>
+<div class="journal-container">
+  <div class="washi-tape"></div>
+  <header>
+    <h1>🧸 每日目標小手帳</h1>
+    <input type="date" id="datePicker">
+  </header>
+
+  <div class="progress-card">
+    <div class="progress-header"><span>今日完成度</span><span id="progressText">0% (0/0)</span></div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="encouragement-box">
+      <span id="quoteText">🌱 新的一天開始啦，寫下今天想完成的小目標吧！</span>
+      <button style="background:none;border:none;cursor:pointer;font-size:1.1rem;" onclick="updateQuote(true)" title="換一句">🔄</button>
+    </div>
+  </div>
+
+  <div class="ai-section">
+    <div class="ai-header" onclick="toggleAi()"><span>✨ 從 AI 對話貼上目標清單</span><span id="aiIcon">▼ 展開</span></div>
+    <div class="ai-body" id="aiBody">
+      <div class="prompt-guide">
+        💡 <b>向 AI 索取清單的固定指令：</b>討論完目標後複製下方指令貼給 AI：
+        <div class="prompt-box">
+          <span id="promptCmd">請將我們剛剛討論的目標整理成純文字清單，每行一項任務，不要加任何編號、符號、標題或額外說明文字。</span>
+          <button class="btn btn-mint btn-sm" onclick="copyPrompt()">複製指令</button>
+        </div>
+      </div>
+      <textarea id="aiPasteArea" placeholder="將 AI 回覆的清單貼在這裡（每行一項），匯入後可直接點擊文字編輯！"></textarea>
+      <div style="text-align:right;margin-top:8px;">
+        <button class="btn btn-mint btn-sm" onclick="importAiList()">📥 智慧解析並匯入</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="add-row">
+    <input type="text" id="newTaskInput" placeholder="新增一項小目標... (按 Enter 新增)" onkeypress="if(event.key==='Enter') addTask()">
+    <button class="btn" onclick="addTask()">＋ 新增</button>
+  </div>
+
+  <ul class="task-list" id="taskList"></ul>
+  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">✏️ 點擊任務文字可直接修改內容</p>
+
+  <div class="footer-tools">
+    <button class="btn btn-outline btn-sm" onclick="openHistory()">📅 歷史紀錄</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="btn btn-mint btn-sm" onclick="copySyncLink()" title="複製網址傳給手機即可同步">🔗 跨裝置同步連結</button>
+      <button class="btn btn-outline btn-sm" onclick="exportJson()">📤 匯出</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput').click()">📥 匯入</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="historyModal">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;">📅 歷史紀錄總覽</h3>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('historyModal').classList.remove('active')">關閉</button>
+    </div>
+    <div id="historyList" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+
+
+<script>
+  const quotes = {
+    empty: ["🌱 新的一天開始啦，寫下今天想完成的小目標吧！", "✨ 空白的頁面充滿無限可能，準備好規劃今天了嗎？"],
+    zero: ["🐣 萬事起頭難，先挑一件最簡單的小事開始吧！", "☕ 深呼吸一口氣，跨出第一步就是最棒的開始！"],
+    low: ["🌿 已經啟動囉！保持這個節奏，慢慢往前推進吧～", "🐾 每完成一件事，就離理想的自己更近一點點！"],
+    high: ["🔥 太厲害了，進度已經過半！再加把勁就能大功告成囉！", "🌟 你的專注力閃閃發光，最後幾項也難不倒你的！"],
+    perfect: ["🎉 100% 完美達成！今天的你超級棒，快給自己一個大大的獎勵吧！", "🏆 任務全數制霸！好好休息放鬆，享受滿滿的成就感吧！"]
+  };
+
+  let allRecords = JSON.parse(localStorage.getItem('cute_journal_v2') || '{}');
+  let currentDate = new Date().toLocaleDateString('en-CA');
+  let currentQuote = "";
+
+  const datePicker = document.getElementById('datePicker');
+  datePicker.value = currentDate;
+  datePicker.addEventListener('change', (e) => { currentDate = e.target.value; currentQuote = ""; render(); });
+
+  // 檢查網址是否帶有跨裝置同步資料
+  function checkUrlSync() {
+    const hash = window.location.hash;
+    if (hash.startsWith('#sync=')) {
+      try {
+        const encoded = hash.slice(6);
+        const decoded = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+        if (decoded && typeof decoded === 'object') {
+          allRecords = { ...allRecords, ...decoded };
+          localStorage.setItem('cute_journal_v2', JSON.stringify(allRecords));
+          history.replaceState(null, null, ' '); // 清除網址參數保持乾淨
+          alert('✨ 跨裝置紀錄同步合併成功！');
+        }
+      } catch (e) { console.error('同步解析失敗', e); }
+    }
+  }
+
+  function getTasks() {
+    if (!allRecords[currentDate]) allRecords[currentDate] = [];
+    return allRecords[currentDate];
+  }
+
+  function save() {
+    localStorage.setItem('cute_journal_v2', JSON.stringify(allRecords));
+    render();
+  }
+
+  function addTask() {
+    const input = document.getElementById('newTaskInput');
+    const text = input.value.trim();
+    if (!text) return;
+    getTasks().push({ id: Date.now() + Math.random(), text, completed: false });
+    input.value = '';
+    save();
+  }
+
+  function toggleTask(id) {
+    const t = getTasks().find(x => x.id === id);
+    if (t) { t.completed = !t.completed; currentQuote = ""; save(); }
+  }
+
+  function editTask(id, newText) {
+    const t = getTasks().find(x => x.id === id);
+    const trimmed = newText.trim();
+    if (t && trimmed && t.text !== trimmed) { t.text = trimmed; save(); }
+    else render();
+  }
+
+  function delTask(id) {
+    allRecords[currentDate] = getTasks().filter(x => x.id !== id);
+    save();
+  }
+
+  function toggleAi() {
+    const body = document.getElementById('aiBody');
+    body.classList.toggle('open');
+    document.getElementById('aiIcon').textContent = body.classList.contains('open') ? '▲ 收合' : '▼ 展開';
+  }
+
+  function copyPrompt() {
+    navigator.clipboard.writeText(document.getElementById('promptCmd').textContent)
+      .then(() => alert('已複製指令！直接貼到 AI 對話框即可。'));
+  }
+
+  function importAiList() {
+    const area = document.getElementById('aiPasteArea');
+    let count = 0;
+    area.value.split('\n').forEach(line => {
+      const cleaned = line.replace(/^[\s\-\*\•\d\.\)\[\]xX✓✔]+/, '').trim();
+      if (cleaned) { getTasks().push({ id: Date.now() + Math.random(), text: cleaned, completed: false }); count++; }
+    });
+    if (count > 0) { area.value = ''; save(); alert(`成功匯入 ${count} 項目標！`); }
+    else alert('沒有偵測到有效文字喔！');
+  }
+
+  function updateQuote(force) {
+    const tasks = getTasks();
+    const rate = tasks.length === 0 ? -1 : Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100);
+    let pool = quotes.empty;
+    if (rate === 0) pool = quotes.zero;
+    else if (rate > 0 && rate <= 50) pool = quotes.low;
+    else if (rate > 50 && rate < 100) pool = quotes.high;
+    else if (rate === 100) pool = quotes.perfect;
+
+    if (force || !currentQuote || !pool.includes(currentQuote)) {
+      currentQuote = pool[Math.floor(Math.random() * pool.length)];
+    }
+    document.getElementById('quoteText').textContent = currentQuote;
+  }
+
+  function render() {
+    const tasks = getTasks();
+    const listEl = document.getElementById('taskList');
+    listEl.innerHTML = '';
+    tasks.forEach(t => {
+      const li = document.createElement('li');
+      li.className = `task-item ${t.completed ? 'completed' : ''}`;
+      li.innerHTML = `
+        <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask(${t.id})">
+        <div class="task-text" contenteditable="true" onblur="editTask(${t.id}, this.innerText)"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g,'&lt;')}</div>
+        <button class="btn-del" onclick="delTask(${t.id})">✕</button>`;
+      listEl.appendChild(li);
+    });
+    const done = tasks.filter(t => t.completed).length;
+    const pct = tasks.length === 0 ? 0 : Math.round((done / tasks.length) * 100);
+    document.getElementById('progressText').textContent = `${pct}% (${done}/${tasks.length})`;
+    document.getElementById('progressBar').style.width = `${pct}%`;
+    updateQuote(false);
+  }
+
+  function openHistory() {
+    const box = document.getElementById('historyList');
+    box.innerHTML = '';
+    const dates = Object.keys(allRecords).sort().reverse();
+    if (!dates.length) box.innerHTML = '<p style="text-align:center;color:#999;">尚無歷史紀錄</p>';
+    dates.forEach(d => {
+      const list = allRecords[d];
+      if (!list.length) return;
+      const done = list.filter(t => t.completed).length;
+      const row = document.createElement('div');
+      row.className = 'history-row';
+      row.innerHTML = `<span><b>${d}</b></span><span>完成 ${done}/${list.length} (${Math.round(done/list.length*100)}%) 👉</span>`;
+      row.onclick = () => { currentDate = d; datePicker.value = d; currentQuote = ""; document.getElementById('historyModal').classList.remove('active'); render(); };
+      box.appendChild(row);
+    });
+    document.getElementById('historyModal').classList.add('active');
+  }
+
+  // 免伺服器跨裝置同步：將紀錄編碼進網址
+  function copySyncLink() {
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(allRecords))));
+    const syncUrl = `${window.location.origin}${window.location.pathname}#sync=${encoded}`;
+    navigator.clipboard.writeText(syncUrl).then(() => {
+      alert('🔗 同步專屬連結已複製！\n請傳送到另一台裝置（例如用 LINE 傳給自己）並點擊打開，紀錄就會自動合併同步囉！');
+    });
+  }
+
+  function exportJson() {
+    const blob = new Blob([JSON.stringify(allRecords, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `每日目標手帳備份_${currentDate}.json`;
+    a.click();
+  }
+
+  function importJson(e) {
+    const file = e.target.files;
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        allRecords = { ...allRecords, ...JSON.parse(ev.target.result) };
+        save(); alert('備份匯入成功！');
+      } catch { alert('檔案格式錯誤'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  checkUrlSync();
+  render();
+</script>
+</body>
+</html>
