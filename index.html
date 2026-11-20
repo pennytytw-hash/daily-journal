@@ -370,15 +370,28 @@
     const newName = prompt('請輸入新的目標專案名稱：', proj.name);
     if (newName && newName.trim()) { proj.name = newName.trim(); saveAll(); }
   }
-  function editTask(id, newText) {
+    function editTask(id, newText) {
     const t = getTasks().find(x => x.id === id), trimmed = newText.trim();
     if (t && trimmed && t.text !== trimmed) {
+      const oldText = t.text;
       if (t.isFixed) {
-        const tplIdx = fixedTemplate.indexOf(t.text);
+        const tplIdx = fixedTemplate.indexOf(oldText);
         if (tplIdx !== -1) fixedTemplate[tplIdx] = trimmed;
         getActiveProject().items = [...fixedTemplate];
+
+        // 同步更新同一專案內所有日期的舊名稱，確保習慣排行統計連續不斷裂
+        Object.values(allRecords).forEach(list => {
+          if (Array.isArray(list)) {
+            list.forEach(item => {
+              if (item.isFixed && item.projectId === t.projectId && item.text === oldText) {
+                item.text = trimmed;
+              }
+            });
+          }
+        });
       }
-      t.text = trimmed; saveAll();
+      t.text = trimmed;
+      saveAll();
     } else render();
   }
   function editNote(id, newNote) {
