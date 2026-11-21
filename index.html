@@ -486,11 +486,13 @@
     </div>
     <div class="summary-bar">
       <div class="summary-left-btns">
-        <button class="btn btn-outline btn-sm" onclick="openHistoryModal('overview')">📊 統計</button>
-        <button class="btn btn-outline btn-sm" id="btnOpenManage" onclick="openManageModal()">🗂️ 管理</button>
+        <button class="btn btn-yellow btn-sm" onclick="copyDailySummary()">📋 複製給AI</button>
         <button class="btn btn-outline btn-sm" id="btnOpenSettings" onclick="openSettingsModal()" title="系統設定與同步">⚙️</button>
       </div>
-      <button class="btn btn-yellow btn-sm" onclick="copyDailySummary()">📋 複製給AI</button>
+      <div class="summary-left-btns">
+        <button class="btn btn-outline btn-sm" onclick="openHistoryModal('overview')">📊 統計</button>
+        <button class="btn btn-outline btn-sm" id="btnOpenManage" onclick="openManageModal()">🗂️ 管理</button>
+      </div>
     </div>
   </div>
   <div id="weeklyReviewBanner" class="weekly-review-card" style="display:none;"></div>
@@ -1336,14 +1338,14 @@
         <div class="manage-task-top" style="align-items:flex-start;">
           <span class="drag-handle" title="按住上下拖曳排序">☰</span>
           <textarea rows="1" class="auto-grow-ta" style="flex:1;" oninput="autoResizeTa(this)" onblur="editTask(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</textarea>
-          ${t.isFixed ? '<span class="badge-fixed" style="margin-top:6px;">固定</span>' : '<span style="font-size:0.7rem;color:#9c8980;margin-top:6px;">臨時</span>'}
         </div>
         <div class="manage-task-actions">
           <label style="font-size:0.75rem;color:var(--text-light);display:inline-flex;align-items:center;gap:3px;">
-            🔢<input type="number" min="0" max="999" value="${t.targetCount || ''}" placeholder="無" style="width:52px;padding:3px 5px;border:1px solid #dfd0c5;border-radius:6px;font-size:0.78rem;" onblur="setTaskTargetCount(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+            🔢<input type="number" min="0" max="999" value="${t.targetCount || ''}" placeholder="無" style="width:50px;padding:3px 5px;border:1px solid #dfd0c5;border-radius:6px;font-size:0.78rem;" onblur="setTaskTargetCount(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
           </label>
           <div style="display:inline-flex;align-items:center;gap:4px;">
             <button class="btn-weekend ${t.skipWeekend ? 'active' : ''}" onclick="toggleWeekendSkip(${t.id})">${t.skipWeekend ? '🏖️ 假日休' : '🏖️ 設假日休'}</button>
+            ${t.isFixed ? '<span class="badge-fixed">固定</span>' : '<span style="font-size:0.7rem;color:#9c8980;padding:2px 4px;">臨時</span>'}
             <button class="btn-del" onclick="delTask(${t.id})" title="刪除任務">✕</button>
           </div>
         </div>
@@ -1461,9 +1463,6 @@
       '✏️ 編輯文字、次數設定、排序與假日休請點「🗂️ 管理」',
       '📝 每項任務下方皆可隨手記錄執行狀況或心得筆記'
     ]);
-    const marqueeEl = document.getElementById('marqueeTipText');
-    if (marqueeEl) marqueeEl.textContent = `${statusStr}　｜　☆ 點擊星星設為今日焦點置頂　｜　✏️ 編輯、排序、計數與假日休設定請點「🗂️ 管理」`;
-
     const tasks = getTasks(), listEl = document.getElementById('taskList'); listEl.innerHTML = '';
     if (isFuture && tasks.length === 0) {
       listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.95rem;">⏳ <b>${currentDate}</b> 尚未到來喔！<br>等該日凌晨 05:00 換日後，系統會自動帶入目前專案的每日固定清單。</li>`;
