@@ -1437,7 +1437,7 @@
       btnHol.className = isHol ? 'btn btn-mint btn-sm' : 'btn btn-outline btn-sm';
       btnHol.textContent = isHol ? '🌴 休假中(免計)' : '🌴 設為休假';
     }
-    document.getElementById('progressLabel').textContent = isToday ? '今日完成度' : (isFuture ? `${currentDate} (未來日期)` : `${currentDate} 歷史完成度`);
+    document.getElementById('progressLabel').textContent = isToday ? '今日完成度' : (isFuture ? '未來完成度' : '歷史完成度');
     const statusStr = isToday ? '🌙 凌晨 05:00 自動換日（目前為今日進度）' : (isFuture ? '⏳ 尚未到達該日期（將於換日後自動產生任務）' : '✏️ 目前正在檢視／編輯歷史日期');
     updateMarqueeMessages([
       statusStr,
@@ -1503,7 +1503,11 @@
     if (activeTasks.length > 0 && pct === 100) {
       const bigStamp = document.createElement('div');
       bigStamp.className = `perfect-day-stamp ${wasJustStamped ? 'animate' : ''}`;
-      bigStamp.textContent = '🏆 ALL CLEAR! 100%';
+      bigStamp.innerHTML = `
+        <div class="perfect-stamp-trophy">🏆</div>
+        <div class="perfect-stamp-pct">100%</div>
+        <div class="perfect-stamp-label">ALL CLEAR!</div>
+      `;
       listEl.appendChild(bigStamp);
     }
     document.getElementById('progressText').textContent = `${pct}% (${done}/${activeTasks.length})`;
