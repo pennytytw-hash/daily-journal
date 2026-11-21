@@ -250,6 +250,14 @@
     .setting-btn-grid .btn { grid-column: span 1 !important; padding: 10px 12px; font-size: 0.86rem; }
     .cal-cell { height: 32px; font-size: 0.76rem; }
   }
+  .weekly-review-card {
+    background: linear-gradient(135deg, #f3f9f5, #fff9ec);
+    border: 1.5px solid #c5dfd0; border-radius: 15px;
+    padding: 11px 14px; margin-bottom: 16px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    font-size: 0.86rem; color: var(--text-brown);
+    box-shadow: 0 3px 10px rgba(110, 181, 140, 0.1);
+  }
 </style>
 </head>
 <body>
@@ -306,6 +314,7 @@
       <button class="btn btn-yellow btn-sm" onclick="copyDailySummary()">📋 複製當日總結給 AI</button>
     </div>
   </div>
+  <div id="weeklyReviewBanner" class="weekly-review-card" style="display:none;"></div>
   <ul class="task-list" id="taskList"></ul>
   <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">☆ 設為今日焦點置頂｜✏️ 點擊文字編輯｜▲▼ 調整順序</p>
   <div class="footer-tools">
@@ -382,7 +391,7 @@
     </div>
     <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;flex-direction:column;gap:8px;font-size:0.75rem;color:var(--text-light);">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span>版本：v4.8｜<span id="storageUsageText">空間計算中...</span></span>
+        <span>版本：v4.9｜<span id="storageUsageText">空間計算中...</span></span>
         <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="archiveOldDetails()">🗜️ 壓縮前年以前明細</button>
       </div>
       <button class="btn btn-outline btn-sm" style="width:100%;font-size:0.72rem;padding:5px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
@@ -1070,6 +1079,70 @@
     document.getElementById('progressText').textContent = `${pct}% (${done}/${activeTasks.length})`;
     document.getElementById('progressBar').style.width = `${pct}%`;
     updateQuote(false);
+    renderWeeklyReviewBanner();
+  }
+  function dismissWeeklyReview(mondayKey) {
+    localStorage.setItem('cute_journal_weekly_review_seen', mondayKey);
+    const el = document.getElementById('weeklyReviewBanner');
+    if (el) el.style.display = 'none';
+  }
+
+  function renderWeeklyReviewBanner() {
+    const el = document.getElementById('weeklyReviewBanner');
+    if (!el) return;
+    const now = new Date();
+    const isMondayAfter8 = now.getDay() === 1 && now.getHours() >= 8;
+    const mondayStr = now.toLocaleDateString('en-CA');
+    if (!isMondayAfter8 || localStorage.getItem('cute_journal_weekly_review_seen') === mondayStr) {
+      el.style.display = 'none';
+      return;
+    }
+
+    const base = new Date(mondayStr + 'T00:00:00');
+    const lastWeekStart = new Date(base); lastWeekStart.setDate(base.getDate() - 7);
+    const lastWeekEnd = new Date(base); lastWeekEnd.setDate(base.getDate() - 1);
+    const prevWeekStart = new Date(base); prevWeekStart.setDate(base.getDate() - 14);
+    const prevWeekEnd = new Date(base); prevWeekEnd.setDate(base.getDate() - 8);
+
+    const prevSavedFilter = selectedStatsProj;
+    selectedStatsProj = 'ALL';
+    const dayMap = typeof getMergedStatsDays === 'function' ? getMergedStatsDays(allRecords) : {};
+    selectedStatsProj = prevSavedFilter;
+
+    let lastT = 0, lastD = 0, lastDays = 0, prevT = 0, prevD = 0;
+    Object.entries(dayMap).forEach(([dStr, info]) => {
+      if (!info || info.total === 0) return;
+      const d = new Date(dStr + 'T00:00:00');
+      if (d >= lastWeekStart && d <= lastWeekEnd) {
+        lastT += info.total; lastD += info.done; lastDays++;
+      } else if (d >= prevWeekStart && d <= prevWeekEnd) {
+        prevT += info.total; prevD += info.done;
+      }
+    });
+
+    if (lastT === 0) {
+      el.style.display = 'none';
+      return;
+    }
+
+    const lastRate = Math.round((lastD / lastT) * 100);
+    let diffHtml = '<span style="color:var(--text-light);font-size:0.78rem;">（首週紀錄）</span>';
+    if (prevT > 0) {
+      const prevRate = Math.round((prevD / prevT) * 100);
+      const diff = lastRate - prevRate;
+      if (diff > 0) diffHtml = `<span class="trend-up">▲ +${diff}%</span>`;
+      else if (diff < 0) diffHtml = `<span class="trend-down">▼ ${diff}%</span>`;
+      else diffHtml = `<span style="color:#4a7c5f;font-size:0.76rem;margin-left:4px;">（與前週持平）</span>`;
+    }
+
+    el.innerHTML = `
+      <div style="line-height:1.45;">
+        <div style="font-weight:700;color:#3d7a56;margin-bottom:2px;">📊 上週覆盤小卡片（執行 ${lastDays} 天）</div>
+        <div>上週達成率：<b>${lastRate}%</b>（${lastD}/${lastT} 項）${diffHtml}</div>
+      </div>
+      <button class="btn btn-outline btn-sm" style="flex-shrink:0;" onclick="dismissWeeklyReview('${mondayStr}')">✕ 知道了</button>
+    `;
+    el.style.display = 'flex';
   }
   function copyDailySummary() {
     const tasks = getTasks();
@@ -1646,10 +1719,9 @@
   })();
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v4-8').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
+    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v4-9').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
   }
-
   window.addEventListener('hashchange', checkUrlSync);
   checkUrlSync();
   render();
