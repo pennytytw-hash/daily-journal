@@ -298,6 +298,16 @@
     margin-top: 6px; font-size: 0.84rem; line-height: 1.45;
   }
   .note-entry-item.is-undone { border-left-color: var(--primary-pink); }
+  textarea.manage-task-input {
+    width: 100%; min-height: 36px; height: auto; resize: none; overflow: hidden;
+    line-height: 1.45; font-family: inherit;
+  }
+  @media (max-width: 520px) {
+    .footer-tools { flex-wrap: wrap !important; flex-direction: row !important; gap: 8px; }
+    .footer-tools button:nth-child(1) { flex: 1 1 100% !important; }
+    .footer-tools button:nth-child(2) { flex: 1 1 calc(100% - 54px) !important; }
+    .footer-tools button:nth-child(3) { flex: 0 0 46px !important; padding: 10px 0 !important; }
+  }
 </style>
 </head>
 <body>
@@ -545,6 +555,7 @@
   let customHolidays = JSON.parse(localStorage.getItem('cute_journal_v4_custom_holidays') || '[]');
   let govCalendarMap = JSON.parse(localStorage.getItem('cute_journal_v4_gov_calendar') || '{}');
   let archivedStats = JSON.parse(localStorage.getItem('cute_journal_v4_archived_stats') || '{}');
+  let fixedTargets = JSON.parse(localStorage.getItem('cute_journal_v5_fixed_targets') || '{}');
   let currentDate = getLogicalToday(), currentQuote = "", undoSnapshot = null, undoTimer = null, justStampedId = null;
 
   (function initProjectsAndClean() {
@@ -650,15 +661,6 @@
     updateStorageUsageDisplay();
     if (shouldRender) render();
   }
-  let fixedTargets = JSON.parse(localStorage.getItem('cute_journal_v5_fixed_targets') || '{}');
-
-  function detectTargetCount(text) {
-    const m = String(text || '').match(/(\d+)\s*(杯|個|組|頁|分鐘|分|下|輪|次|題|篇|公里|km|ml|cc|回|趟|本|章)/i);
-    if (!m) return 0;
-    const num = parseInt(m.at(1), 10);
-    return (num >= 2 && num <= 999) ? num : 0;
-  }
-
   function saveAll(shouldRender = true) {
     localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
     localStorage.setItem('cute_journal_v3_template', JSON.stringify(fixedTemplate));
@@ -862,7 +864,7 @@
   }
 
   function editTask(id, newText) {
-    const t = getTasks().find(x => x.id === id), trimmed = newText.trim();
+    const t = getTasks().find(x => x.id === id), trimmed = String(newText || '').replace(/[\r\n]+/g, ' ').trim();
     if (t && trimmed && t.text !== trimmed) {
       const oldText = t.text, now = Date.now();
       if (t.isFixed) {
@@ -1110,7 +1112,7 @@
     box.innerHTML = tasks.map((t, idx) => `
       <div class="manage-task-row">
         <div class="manage-task-top">
-          <input type="text" class="manage-task-input" value="${t.text.replace(/"/g, '&quot;')}" onblur="editTask(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          <textarea rows="1" class="manage-task-input" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onblur="editTask(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</textarea>
           ${t.isFixed ? '<span class="badge-fixed">固定</span>' : '<span style="font-size:0.7rem;color:#9c8980;">臨時</span>'}
         </div>
         <div class="manage-task-actions">
@@ -1125,7 +1127,11 @@
         </div>
       </div>
     `).join('');
-  }
+      box.querySelectorAll('textarea.manage-task-input').forEach(ta => {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    });
+}
 
   function openManageModal() {
     document.getElementById('visionInput').value = visionText;
