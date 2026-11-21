@@ -404,6 +404,34 @@
     .summary-bar .btn { padding: 5px 7px; font-size: 0.74rem; }
     .summary-left-btns { gap: 4px; }
   }
+  html.modal-open-lock, body.modal-open-lock {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+  }
+  .modal-box { overscroll-behavior: contain; }
+  .marquee-tip-bar {
+    height: 28px; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; background: #fbf5ef; border: 1px dashed #e6d7c8;
+    border-radius: 10px; padding: 0 10px; font-size: 0.76rem; color: var(--text-light);
+    position: relative;
+  }
+  .marquee-tip-item {
+    transition: opacity 0.45s ease, transform 0.45s ease;
+    opacity: 1; transform: translateY(0);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  }
+  .marquee-tip-item.fade-out { opacity: 0; transform: translateY(-10px); }
+  .marquee-tip-item.fade-in-prep { opacity: 0; transform: translateY(10px); transition: none; }
+  .task-list .task-item:nth-child(even):not(.is-mit):not(.skipped-holiday) {
+    background-color: #faf4ed;
+  }
+  .task-list .task-item:nth-child(odd):not(.is-mit):not(.skipped-holiday) {
+    background-color: #fffdf9;
+  }
+  .task-item { margin-bottom: 4px; }
+  @media (max-width: 520px) {
+    .marquee-tip-bar { font-size: 0.72rem; padding: 0 8px; }
+  }
 </style>
 </head>
 <body>
@@ -430,8 +458,8 @@
       <button class="btn btn-outline btn-sm" id="btnToggleHoliday" onclick="toggleDateHoliday()">🌴 設為休假</button>
       <button class="btn btn-mint btn-sm" id="btnBackToday" style="display:none;" onclick="goToday()">↩️ 回到今日</button>
     </div>
-    <div class="marquee-tip-bar">
-     <div class="marquee-tip-track" id="marqueeTipText">🌙 凌晨 05:00 自動換日（目前為今日進度）｜☆ 設為今日焦點置頂｜✏️ 編輯、排序與休假請點管理</div>
+    <div class="marquee-tip-bar" style="margin-top:8px;margin-bottom:0;">
+      <div class="marquee-tip-item" id="marqueeTipText">🌙 凌晨 05:00 自動換日（目前為今日進度）</div>
     </div>
   </header>
   <div class="progress-card">
@@ -1186,6 +1214,8 @@
 
   let modalHistoryPushed = false;
   function pushModalState() {
+    document.documentElement.classList.add('modal-open-lock');
+    document.body.classList.add('modal-open-lock');
     if (!modalHistoryPushed) {
       history.pushState({ modalOpen: true }, '');
       modalHistoryPushed = true;
@@ -1196,6 +1226,8 @@
     document.getElementById('manageModal')?.classList.remove('active');
     document.getElementById('historyModal').classList.remove('active');
     document.getElementById('syncPasteModal')?.classList.remove('active');
+    document.documentElement.classList.remove('modal-open-lock');
+    document.body.classList.remove('modal-open-lock');
     if (modalHistoryPushed) {
       modalHistoryPushed = false;
       if (!fromPopState) history.back();
@@ -1423,6 +1455,12 @@
     }
     document.getElementById('progressLabel').textContent = isToday ? '今日完成度' : (isFuture ? `${currentDate} (未來日期)` : `${currentDate} 歷史完成度`);
     const statusStr = isToday ? '🌙 凌晨 05:00 自動換日（目前為今日進度）' : (isFuture ? '⏳ 尚未到達該日期（將於換日後自動產生任務）' : '✏️ 目前正在檢視／編輯歷史日期');
+    updateMarqueeMessages([
+      statusStr,
+      '☆ 點擊任務左側星星可設為「今日焦點」置頂高亮',
+      '✏️ 編輯文字、次數設定、排序與假日休請點「🗂️ 管理」',
+      '📝 每項任務下方皆可隨手記錄執行狀況或心得筆記'
+    ]);
     const marqueeEl = document.getElementById('marqueeTipText');
     if (marqueeEl) marqueeEl.textContent = `${statusStr}　｜　☆ 點擊星星設為今日焦點置頂　｜　✏️ 編輯、排序、計數與假日休設定請點「🗂️ 管理」`;
 
@@ -1475,6 +1513,33 @@
     document.getElementById('progressBar').style.width = `${pct}%`;
     updateQuote(false);
     renderWeeklyReviewBanner();
+  }
+  let marqueeMsgs = [], marqueeIdx = 0, marqueeTimer = null;
+
+  function updateMarqueeMessages(list) {
+    const isSame = list.length === marqueeMsgs.length && list.every((v, i) => v === marqueeMsgs.at(i));
+    marqueeMsgs = list;
+    const el = document.getElementById('marqueeTipText');
+    if (!el) return;
+    if (!isSame) {
+      marqueeIdx = 0;
+      el.textContent = marqueeMsgs.at(0) || '';
+    }
+    if (!marqueeTimer && marqueeMsgs.length > 1) {
+      marqueeTimer = setInterval(() => {
+        const target = document.getElementById('marqueeTipText');
+        if (!target || marqueeMsgs.length <= 1) return;
+        target.classList.add('fade-out');
+        setTimeout(() => {
+          marqueeIdx = (marqueeIdx + 1) % marqueeMsgs.length;
+          target.classList.remove('fade-out');
+          target.classList.add('fade-in-prep');
+          target.textContent = marqueeMsgs.at(marqueeIdx);
+          void target.offsetWidth;
+          target.classList.remove('fade-in-prep');
+        }, 450);
+      }, 5500);
+    }
   }
 
   function copyDailySummary() {
