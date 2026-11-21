@@ -520,7 +520,6 @@
       <button class="btn btn-outline btn-sm" id="tabNotesBtn" onclick="switchTab('notes')">📝 紀錄查詢</button>
     </div>
     <div id="overviewView"></div><div id="trendsView" style="display:none;"></div><div id="notesView" style="display:none;"></div>
-    <div id="statsView"></div><div id="logsView" style="display:none;"></div>
   </div>
 </div>
 <div class="modal" id="syncPasteModal" onclick="if(event.target===this) closeAllModals()">
@@ -757,45 +756,37 @@
   }
   function isTaskSkipped(t, dStr) { return Boolean(t && t.skipWeekend && isHolidayDate(dStr)); }
 
-  async function syncGovCalendar(isManual = false) {
-    const govDates = Object.entries(govCalendarMap)
+  function getCachedGovHolidays() {
+    return Object.entries(govCalendarMap)
       .filter(([, isHol]) => isHol)
       .map(([k]) => `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}`)
       .sort();
+  }
+
+  async function syncGovCalendar(isManual = false) {
+    const govDates = getCachedGovHolidays();
     const lastCachedStr = govDates.length > 0 ? govDates[govDates.length - 1] : '';
-
     if (!isManual && lastCachedStr) {
-      const todayMs = new Date(getLogicalToday() + 'T00:00:00').getTime();
-      const lastMs = new Date(lastCachedStr + 'T00:00:00').getTime();
-      const diffDays = (lastMs - todayMs) / 86400000;
-      if (diffDays >= 365) {
-        updateLastHolidayDisplay();
-        return;
-      }
+      const diffDays = (new Date(lastCachedStr + 'T00:00:00') - new Date(getLogicalToday() + 'T00:00:00')) / 86400000;
+      if (diffDays >= 365) { updateLastHolidayDisplay(); return; }
     }
-
     if (isManual) showSyncProgress('🔄 正在連線 TaiwanCalendar 資料庫...', 45);
     const curYear = new Date().getFullYear();
-    const targetYears = [curYear, curYear + 1];
     let updated = false, lastErr = '';
-    for (const y of targetYears) {
+    for (const y of [curYear, curYear + 1]) {
       const urls = [
         ['https:/', 'cdn.jsdelivr.net', 'gh', 'ruyut', 'TaiwanCalendar', 'data', `${y}.json`].join('/'),
         ['https:/', '://githubusercontent.com', 'ruyut', 'TaiwanCalendar', 'master', 'data', `${y}.json`].join('/')
       ];
-
       for (const u of urls) {
         try {
           const res = await fetch(u);
           if (!res.ok) { lastErr = `HTTP ${res.status} (${y})`; continue; }
-          const text = await res.text();
-          const arr = JSON.parse(text.replace(/^\uFEFF/, ''));
+          const arr = JSON.parse((await res.text()).replace(/^\uFEFF/, ''));
           if (Array.isArray(arr) && arr.length > 0) {
             arr.forEach(item => {
-              if (item && item.date) {
-                const cleanDate = String(item.date).trim().replace(/-/g, '');
-                if (/^\d{8}$/.test(cleanDate)) govCalendarMap[cleanDate] = Boolean(item.isHoliday);
-              }
+              const cleanDate = String(item?.date || '').trim().replace(/-/g, '');
+              if (/^\d{8}$/.test(cleanDate)) govCalendarMap[cleanDate] = Boolean(item.isHoliday);
             });
             updated = true;
             break;
@@ -809,13 +800,7 @@
       render();
     }
     updateLastHolidayDisplay();
-    if (isManual) {
-      showSyncProgress(
-        updated ? `✅ ${curYear}～${curYear + 1} 政府行事曆同步成功！` : `⚠️ 失敗原因：${lastErr || '無資料'}`,
-        100,
-        3500
-      );
-    }
+    if (isManual) showSyncProgress(updated ? `✅ ${curYear}～${curYear + 1} 政府行事曆同步成功！` : `⚠️ 失敗原因：${lastErr || '無資料'}`, 100, 3500);
   }
 
   const datePicker = document.getElementById('datePicker');
@@ -953,19 +938,12 @@
   }
 
   function updateLastHolidayDisplay() {
-    const hintEl = document.getElementById('lastHolidayHint');
-    const statusEl = document.getElementById('govCalStatus');
-    const govDates = Object.entries(govCalendarMap)
-      .filter(([, isHol]) => isHol)
-      .map(([k]) => `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}`);
+    const govDates = getCachedGovHolidays();
     const allDates = [...govDates, ...customHolidays].filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s)).sort();
-    if (statusEl) {
-      statusEl.textContent = govDates.length > 0 ? `✅ 已快取政府行事曆（共 ${govDates.length} 天）` : '⚠️ 尚未下載政府日曆（目前依週六日判斷）';
-    }
-    if (hintEl) {
-      const lastDate = allDates.length > 0 ? allDates[allDates.length - 1] : '尚無紀錄';
-      hintEl.textContent = `📌 目前快取的最後一個假日：${lastDate}`;
-    }
+    const statusEl = document.getElementById('govCalStatus');
+    const hintEl = document.getElementById('lastHolidayHint');
+    if (statusEl) statusEl.textContent = govDates.length > 0 ? `✅ 已快取政府行事曆（共 ${govDates.length} 天）` : '⚠️ 尚未下載政府日曆（目前依週六日判斷）';
+    if (hintEl) hintEl.textContent = `📌 目前快取的最後一個假日：${allDates.length > 0 ? allDates[allDates.length - 1] : '尚無紀錄'}`;
   }
 
   function saveCustomHolidays() {
@@ -1004,16 +982,6 @@
     saveAll();
   }
 
-
-  function moveTask(index, dir) {
-    const tasks = getTasks(), target = index + dir;
-    if (target < 0 || target >= tasks.length) return;
-    [tasks[index], tasks[target]] = [tasks[target], tasks[index]];
-    fixedTemplate = tasks.filter(t => t.isFixed).map(t => t.text);
-    getActiveProject().items = [...fixedTemplate];
-    saveAll();
-  }
-
   function renameActiveProject() {
     const proj = getActiveProject();
     const newName = prompt('請輸入新的目標專案名稱：', proj.name);
@@ -1039,10 +1007,14 @@
       t.text = trimmed; t.updatedAt = now; saveAll();
     } else render();
   }
-
+  let noteSaveTimer = null;
   function editNote(id, newNote) {
-    const t = getTasks().find(x => x.id === id);
-    if (t && (t.note || '') !== newNote.trim()) { t.note = newNote.trim(); t.updatedAt = Date.now(); saveAll(false); }
+    const t = getTasks().find(x => x.id === id), trimmed = newNote.trim();
+    if (!t || (t.note || '') === trimmed) return;
+    t.note = trimmed;
+    t.updatedAt = Date.now();
+    clearTimeout(noteSaveTimer);
+    noteSaveTimer = setTimeout(() => saveAll(false), 350);
   }
   function delTask(id) {
     const tasks = getTasks(), target = tasks.find(x => x.id === id);
@@ -1267,16 +1239,6 @@
   window.addEventListener('popstate', () => {
     if (modalHistoryPushed) closeAllModals(true);
   });
-
-  function reorderTaskByIndex(fromIdx, toIdx) {
-    const tasks = getTasks();
-    if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= tasks.length || toIdx >= tasks.length) return;
-    const [moved] = tasks.splice(fromIdx, 1);
-    tasks.splice(toIdx, 0, moved);
-    fixedTemplate = tasks.filter(t => t.isFixed).map(t => t.text);
-    getActiveProject().items = [...fixedTemplate];
-    saveAll();
-  }
 
   function commitDomTaskOrder(box) {
     const tasks = getTasks();
@@ -2139,9 +2101,7 @@
   function mergeRecordsWithConflictResolution(localRecs, incomingRecs) {
     const merged = { ...localRecs };
     Object.entries(incomingRecs).forEach(([dateStr, inList]) => {
-      if (Array.isArray(inList)) {
-        merged[dateStr] = JSON.parse(JSON.stringify(inList));
-      }
+      if (Array.isArray(inList)) merged[dateStr] = inList;
     });
     return merged;
   }
@@ -2316,8 +2276,9 @@
   })();
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v5-1').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
-    navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
+    const swCode = `self.addEventListener('fetch',e=>{if(!e.request.url.startsWith(self.location.origin))return;e.respondWith(caches.open('journal-v5-1').then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(res=>{c.put(e.request,res.clone());return res;}))));});`;
+    const swUrl = URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }));
+    navigator.serviceWorker.register(swUrl).finally(() => URL.revokeObjectURL(swUrl)).catch(() => {});
   }
 
   window.addEventListener('hashchange', checkUrlSync);
