@@ -1192,9 +1192,9 @@
     else if (rate === 100) pool = stylePack.perfect;
 
     const isToday = currentDate === getLogicalToday();
-    const unlockedTiers = (isToday && rate >= 80) ? streakBlindBoxes.filter(b => streak >= b.min) : [];
+    const highestTier = (isToday && rate >= 80) ? streakBlindBoxes.find(b => streak >= b.min) : null;
     const exactTier = (isToday && rate >= 80) ? streakBlindBoxes.find(b => streak === b.min) : null;
-    const allUnlockedBlindQuotes = unlockedTiers.flatMap(b => b.quotes);
+    const allUnlockedBlindQuotes = highestTier ? highestTier.quotes : [];
 
     const activePool = [...allUnlockedBlindQuotes, ...pool];
     if (force || !currentQuote || !activePool.includes(currentQuote)) {
@@ -1479,31 +1479,28 @@
         const li = document.createElement('li');
         li.className = `task-item ${t.completed ? 'completed' : ''} ${t.isMit ? 'is-mit' : ''} ${skipped ? 'skipped-holiday' : ''}`;
         const stampHtml = (t.completed && !skipped) ? `<span class="stamp-badge ${justStampedId === t.id ? 'animate' : ''}">DONE! 🐾</span>` : '';
-        let counterRowHtml = '';
+        const metaBadgesHtml = `${skipped ? '<span class="btn-weekend active" style="cursor:default;padding:2px 5px;" title="假日休免計">🏖️</span>' : ''}${t.isWeekly ? '<span class="badge-weekly">每週</span>' : ''}`;
+        let counterPillHtml = '';
         if (t.targetCount && t.targetCount > 0 && !skipped) {
           const cur = Math.min(t.targetCount, t.curCount || 0);
           const pctFill = Math.round((cur / t.targetCount) * 100);
-          counterRowHtml = `<div class="task-counter-row">
-            <div class="counter-pill">
-              <div class="counter-pill-bg" style="width:${pctFill}%"></div>
-              <span onclick="adjustTaskCountManual(${t.id})" style="cursor:pointer;padding:0 3px;" title="點擊自訂次數">${cur}/${t.targetCount}</span>
-              ${!t.completed ? `<button class="btn-count-plus" onclick="incrementTaskCount(${t.id})">＋1</button>` : ''}
-            </div>
+          counterPillHtml = `<div class="counter-pill">
+            <div class="counter-pill-bg" style="width:${pctFill}%"></div>
+            <span onclick="adjustTaskCountManual(${t.id})" style="cursor:pointer;padding:0 3px;" title="點擊自訂次數">${cur}/${t.targetCount}</span>
+            ${!t.completed ? `<button class="btn-count-plus" onclick="incrementTaskCount(${t.id})">＋1</button>` : ''}
           </div>`;
         }
+        const inlineCounterHtml = !metaBadgesHtml ? counterPillHtml : '';
+        const secondRowCounterHtml = (metaBadgesHtml && counterPillHtml) ? `<div class="task-counter-row">${counterPillHtml}</div>` : '';
         li.innerHTML = `${stampHtml}
           <div class="task-main-row">
             <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} ${skipped ? 'disabled' : ''} onchange="toggleTask(${t.id})">
             <button class="btn-mit ${t.isMit ? 'active' : ''}" onclick="toggleMit(${t.id})" title="設為今日焦點置頂">${t.isMit ? '⭐' : '☆'}</button>
             ${t.isMit ? '<span class="badge-mit">焦點</span>' : ''}
             <div class="task-text">${t.text.replace(/</g, '&lt;')}</div>
-            <div class="task-meta-group">
-              ${skipped ? '<span class="btn-weekend active" style="cursor:default;padding:2px 5px;" title="假日休免計">🏖️</span>' : ''}
-              ${t.isWeekly ? '<span class="badge-weekly">每週</span>' : ''}
-              ${t.isFixed ? '<span class="badge-fixed">固定</span>' : ''}
-            </div>
+            ${(metaBadgesHtml || inlineCounterHtml) ? `<div class="task-meta-group">${metaBadgesHtml}${inlineCounterHtml}</div>` : ''}
           </div>
-          ${counterRowHtml}
+          ${secondRowCounterHtml}
           <div class="task-note-row"><input type="text" class="task-note-input" value="${(t.note || '').replace(/"/g, '&quot;')}" placeholder="📝 記錄執行狀況或心得..." oninput="editNote(${t.id}, this.value)"></div>`;
         listEl.appendChild(li);
       });
