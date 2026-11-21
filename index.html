@@ -644,7 +644,7 @@
 
   function getTasks() {
     const todayStr = getLogicalToday();
-    if (currentDate > todayStr) return allRecords[currentDate] || [];
+    if (currentDate !== todayStr) return allRecords[currentDate] || [];
     if (!allRecords[currentDate]) {
       const now = Date.now();
       allRecords[currentDate] = fixedTemplate.map((text, idx) => {
@@ -675,7 +675,9 @@
   (function initProjectsAndClean() {
     const todayStr = getLogicalToday();
     Object.keys(allRecords).forEach(d => {
-      if (d > todayStr && Array.isArray(allRecords[d]) && allRecords[d].every(t => !t.completed && !t.note)) delete allRecords[d];
+      if (d !== todayStr && Array.isArray(allRecords[d]) && allRecords[d].every(t => !t.completed && !t.note && !(t.curCount > 0))) {
+        delete allRecords[d];
+      }
     });
     if (projects.length === 0 && !window.location.hash.includes('sync=')) {
       const sortedDates = Object.keys(allRecords).sort();
@@ -1422,8 +1424,14 @@
       '📝 每項任務下方皆可隨手記錄執行狀況或心得筆記'
     ]);
     const tasks = getTasks(), listEl = document.getElementById('taskList'); listEl.innerHTML = '';
-    if (isFuture && tasks.length === 0) {
-      listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.95rem;">⏳ <b>${currentDate}</b> 尚未到來喔！<br>等該日凌晨 05:00 換日後，系統會自動帶入目前專案的每日固定清單。</li>`;
+    if (tasks.length === 0 && !isToday) {
+      if (isFuture) {
+        listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.92rem;">⏳ <b>${currentDate}</b> 尚未到來喔！<br>等該日凌晨 05:00 換日後，系統會自動帶入目前專案的每日固定清單。</li>`;
+      } else if (archivedStats[currentDate]) {
+        listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.92rem;">🗜️ <b>${currentDate}</b> 的逐項明細已壓縮歸檔，統計數據仍完整保留於儀表板中。</li>`;
+      } else {
+        listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.92rem;">📭 <b>${currentDate}</b> 沒有任務紀錄，不會自動產生新任務。</li>`;
+      }
     } else {
       const displayList = tasks
         .map((t, idx) => {
