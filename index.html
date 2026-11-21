@@ -370,6 +370,40 @@
     .meta-badges-row .active-proj-bar,
     .meta-badges-row .streak-badge { font-size: 0.74rem; padding: 3px 8px; }
   }
+  .summary-bar {
+    margin-top: 10px; display: flex; justify-content: space-between;
+    align-items: center; gap: 6px; flex-wrap: nowrap;
+  }
+  .summary-left-btns { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+  .summary-bar .btn { padding: 6px 9px; font-size: 0.78rem; border-radius: 10px; white-space: nowrap; }
+  .marquee-tip-bar {
+    overflow: hidden; white-space: nowrap; background: #fbf5ef;
+    border: 1px dashed #e6d7c8; border-radius: 10px; padding: 5px 10px;
+    margin-bottom: 12px; font-size: 0.76rem; color: var(--text-light);
+  }
+  .marquee-tip-track {
+    display: inline-block; padding-left: 100%;
+    animation: tipMarquee 18s linear infinite;
+  }
+  .marquee-tip-bar:hover .marquee-tip-track,
+  .marquee-tip-bar:active .marquee-tip-track { animation-play-state: paused; }
+  @keyframes tipMarquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+  .btn-back-top {
+    position: fixed; right: 16px; bottom: 22px; width: 40px; height: 40px;
+    border-radius: 50%; background: var(--primary-pink); color: #fff;
+    border: 2px solid #fffdf9; box-shadow: 0 4px 12px rgba(92, 75, 67, 0.22);
+    font-size: 1.05rem; font-weight: 800; cursor: pointer; z-index: 90;
+    display: none; align-items: center; justify-content: center; transition: 0.2s;
+  }
+  .btn-back-top.visible { display: flex; }
+  .btn-back-top:hover { background: var(--primary-pink-dark); transform: translateY(-2px); }
+  @media (max-width: 520px) {
+    .summary-bar .btn { padding: 5px 7px; font-size: 0.74rem; }
+    .summary-left-btns { gap: 4px; }
+  }
 </style>
 </head>
 <body>
@@ -385,14 +419,7 @@
 <div class="journal-container">
   <div class="washi-tape"></div>
   <header>
-    <div class="top-nav-bar">
-      <h1 class="top-nav-title">🧸 每日目標小手帳</h1>
-      <div class="top-nav-btns">
-        <button class="btn btn-outline btn-sm" onclick="openHistoryModal('overview')">📊 統計</button>
-        <button class="btn btn-outline btn-sm" id="btnOpenManage" onclick="openManageModal()">🗂️ 管理</button>
-        <button class="btn btn-outline btn-sm" id="btnOpenSettings" onclick="openSettingsModal()" title="系統設定與同步">⚙️</button>
-      </div>
-    </div>
+    <h1>🧸 每日目標小手帳</h1>
     <div class="meta-badges-row">
       <span class="active-proj-bar">🎯 <span id="activeProjName">初始目標專案</span></span>
       <span id="streakBadge" class="streak-badge">🔥 連續達標 0 天</span>
@@ -403,7 +430,9 @@
       <button class="btn btn-outline btn-sm" id="btnToggleHoliday" onclick="toggleDateHoliday()">🌴 設為休假</button>
       <button class="btn btn-mint btn-sm" id="btnBackToday" style="display:none;" onclick="goToday()">↩️ 回到今日</button>
     </div>
-    <div class="date-hint" id="dateStatusHint">🌙 凌晨 05:00 自動換日</div>
+    <div class="marquee-tip-bar">
+     <div class="marquee-tip-track" id="marqueeTipText">🌙 凌晨 05:00 自動換日（目前為今日進度）｜☆ 設為今日焦點置頂｜✏️ 編輯、排序與休假請點管理</div>
+    </div>
   </header>
   <div class="progress-card">
     <div class="progress-header">
@@ -428,12 +457,16 @@
       <button style="background:none;border:none;cursor:pointer;font-size:1.1rem;" onclick="updateQuote(true)" title="換一句">🔄</button>
     </div>
     <div class="summary-bar">
-      <button class="btn btn-yellow btn-sm" onclick="copyDailySummary()">📋 複製當日總結給 AI</button>
+      <div class="summary-left-btns">
+        <button class="btn btn-outline btn-sm" onclick="openHistoryModal('overview')">📊 統計</button>
+        <button class="btn btn-outline btn-sm" id="btnOpenManage" onclick="openManageModal()">🗂️ 管理</button>
+        <button class="btn btn-outline btn-sm" id="btnOpenSettings" onclick="openSettingsModal()" title="系統設定與同步">⚙️</button>
+      </div>
+      <button class="btn btn-yellow btn-sm" onclick="copyDailySummary()">📋 複製給AI</button>
     </div>
   </div>
   <div id="weeklyReviewBanner" class="weekly-review-card" style="display:none;"></div>
   <ul class="task-list" id="taskList"></ul>
-  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">☆ 設為今日焦點置頂｜✏️ 編輯、排序與休假請點下方管理</p>
   <div style="text-align:center;margin-top:14px;font-size:0.72rem;color:#b5a49b;">
     🐾 圖示素材：png 圖片來源於 ://pngtree.com
   </div>
@@ -1389,7 +1422,9 @@
       btnHol.textContent = isHol ? '🌴 休假中(免計)' : '🌴 設為休假';
     }
     document.getElementById('progressLabel').textContent = isToday ? '今日完成度' : (isFuture ? `${currentDate} (未來日期)` : `${currentDate} 歷史完成度`);
-    document.getElementById('dateStatusHint').textContent = isToday ? '🌙 凌晨 05:00 自動換日（目前為今日進度）' : (isFuture ? '⏳ 尚未到達該日期（將於換日後自動產生任務）' : '✏️ 目前正在檢視／編輯歷史日期');
+    const statusStr = isToday ? '🌙 凌晨 05:00 自動換日（目前為今日進度）' : (isFuture ? '⏳ 尚未到達該日期（將於換日後自動產生任務）' : '✏️ 目前正在檢視／編輯歷史日期');
+    const marqueeEl = document.getElementById('marqueeTipText');
+    if (marqueeEl) marqueeEl.textContent = `${statusStr}　｜　☆ 點擊星星設為今日焦點置頂　｜　✏️ 編輯、排序、計數與假日休設定請點「🗂️ 管理」`;
 
     const tasks = getTasks(), listEl = document.getElementById('taskList'); listEl.innerHTML = '';
     if (isFuture && tasks.length === 0) {
@@ -2161,8 +2196,13 @@
   render();
   syncGovCalendar(false);
   recordCurrentPageHash();
+  window.addEventListener('scroll', () => {
+    const btnTop = document.getElementById('btnBackTop');
+    if (btnTop) btnTop.classList.toggle('visible', window.scrollY > 220);
+  }, { passive: true });
 
 </script>
+<button id="btnBackTop" class="btn-back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到頂端">↑</button>
 </body>
 </html>
 
