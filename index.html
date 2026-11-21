@@ -291,6 +291,10 @@
     font-size: 0.72rem; background: #f2ecfa; color: #6a4c93;
     padding: 2px 6px; border-radius: 8px; border: 1px solid #d9cbf0; flex-shrink: 0;
   }
+  .task-counter-row {
+    display: flex; justify-content: flex-end; align-items: center;
+    padding-left: 29px; width: 100%;
+  }
 </style>
 </head>
 <body>
@@ -571,17 +575,16 @@
     return { maxCur, anyDone };
   }
 
-  function syncWeeklyTaskAcrossWeek(dStr, taskText, projId, curCount, targetCount, completed) {
+  function syncWeeklyTaskAcrossWeek(dStr, taskText, projId, curCount, targetCount, completed, minDateStr = '') {
     const monStr = getMondayOfDateStr(dStr);
+    const lowerBound = minDateStr && minDateStr > monStr ? minDateStr : monStr;
     const monDate = new Date(monStr + 'T00:00:00');
     const sunDate = new Date(monDate); sunDate.setDate(monDate.getDate() + 6);
     const sunStr = sunDate.toLocaleDateString('en-CA');
     Object.entries(allRecords).forEach(([k, list]) => {
-      if (k >= monStr && k <= sunStr && Array.isArray(list)) {
+      if (k >= lowerBound && k <= sunStr && Array.isArray(list)) {
         list.forEach(item => {
-          if (item.text === taskText && (item.projectId || '') === (projId || '')) {
-            item.isWeekly = true;
-            item.skipWeekend = false;
+          if (item.text === taskText && (item.projectId || '') === (projId || '') && item.isWeekly) {
             item.targetCount = targetCount;
             item.curCount = curCount;
             item.completed = completed;
@@ -589,6 +592,31 @@
         });
       }
     });
+  }
+
+  function toggleTaskWeeklyMode(id) {
+    const tasks = getTasks(), t = tasks.find(x => x.id === id);
+    if (!t) return;
+    t.isWeekly = !t.isWeekly;
+    if (t.isWeekly) {
+      t.skipWeekend = false;
+      weekendSkipItems = weekendSkipItems.filter(x => x !== t.text);
+      const tgt = t.targetCount && t.targetCount >= 1 ? t.targetCount : (detectTargetCount(t.text) || 1);
+      t.targetCount = tgt;
+      const prog = getWeeklyProgressInWeek(currentDate, t.text, t.projectId);
+      t.curCount = t.completed ? tgt : Math.min(tgt, Math.max(t.curCount || 0, prog.maxCur));
+      t.completed = t.curCount >= tgt;
+      weeklyTargets[t.text] = tgt;
+      delete fixedTargets[t.text];
+      syncWeeklyTaskAcrossWeek(currentDate, t.text, t.projectId, t.curCount, tgt, t.completed, currentDate);
+    } else {
+      delete weeklyTargets[t.text];
+      delete fixedTargets[t.text];
+      delete t.targetCount;
+      delete t.curCount;
+    }
+    t.updatedAt = Date.now();
+    saveAll();
   }
 
   function detectTargetCount(text) {
@@ -758,29 +786,6 @@
     input.value = '';
     autoResizeTa(input);
     if (tgtInput) tgtInput.value = '';
-    saveAll();
-  }
-
-  function toggleTaskWeeklyMode(id) {
-    const tasks = getTasks(), t = tasks.find(x => x.id === id);
-    if (!t) return;
-    t.isWeekly = !t.isWeekly;
-    if (t.isWeekly) {
-      t.skipWeekend = false;
-      weekendSkipItems = weekendSkipItems.filter(x => x !== t.text);
-      const tgt = t.targetCount && t.targetCount >= 1 ? t.targetCount : (detectTargetCount(t.text) || 1);
-      t.targetCount = tgt;
-      const prog = getWeeklyProgressInWeek(currentDate, t.text, t.projectId);
-      t.curCount = t.completed ? tgt : Math.min(tgt, Math.max(t.curCount || 0, prog.maxCur));
-      t.completed = t.curCount >= tgt;
-      weeklyTargets[t.text] = tgt;
-      delete fixedTargets[t.text];
-      syncWeeklyTaskAcrossWeek(currentDate, t.text, t.projectId, t.curCount, tgt, t.completed);
-    } else {
-      delete weeklyTargets[t.text];
-      if (t.isFixed && t.targetCount >= 1) fixedTargets[t.text] = t.targetCount;
-    }
-    t.updatedAt = Date.now();
     saveAll();
   }
 
@@ -1423,7 +1428,7 @@
       const displayList = tasks
         .map((t, idx) => {
           const skipped = isTaskSkipped(t, currentDate);
-          const tier = skipped ? 2 : (t.completed ? 1 : 0);
+          const tier = skipped ? 3 : (t.completed ? 2 : (t.isWeekly ? 1 : 0));
           return { t, idx, skipped, tier };
         })
         .sort((a, b) => a.tier - b.tier || a.idx - b.idx);
@@ -1432,14 +1437,16 @@
         const li = document.createElement('li');
         li.className = `task-item ${t.completed ? 'completed' : ''} ${t.isMit ? 'is-mit' : ''} ${skipped ? 'skipped-holiday' : ''}`;
         const stampHtml = (t.completed && !skipped) ? `<span class="stamp-badge ${justStampedId === t.id ? 'animate' : ''}">DONE! 🐾</span>` : '';
-        let counterHtml = '';
+        let counterRowHtml = '';
         if (t.targetCount && t.targetCount > 0 && !skipped) {
           const cur = Math.min(t.targetCount, t.curCount || 0);
           const pctFill = Math.round((cur / t.targetCount) * 100);
-          counterHtml = `<div class="counter-pill">
-            <div class="counter-pill-bg" style="width:${pctFill}%"></div>
-            <span onclick="adjustTaskCountManual(${t.id})" style="cursor:pointer;padding:0 3px;" title="點擊自訂次數">${cur}/${t.targetCount}</span>
-            ${!t.completed ? `<button class="btn-count-plus" onclick="incrementTaskCount(${t.id})">＋1</button>` : ''}
+          counterRowHtml = `<div class="task-counter-row">
+            <div class="counter-pill">
+              <div class="counter-pill-bg" style="width:${pctFill}%"></div>
+              <span onclick="adjustTaskCountManual(${t.id})" style="cursor:pointer;padding:0 3px;" title="點擊自訂次數">${cur}/${t.targetCount}</span>
+              ${!t.completed ? `<button class="btn-count-plus" onclick="incrementTaskCount(${t.id})">＋1</button>` : ''}
+            </div>
           </div>`;
         }
         li.innerHTML = `${stampHtml}
@@ -1449,12 +1456,12 @@
             ${t.isMit ? '<span class="badge-mit">焦點</span>' : ''}
             <div class="task-text">${t.text.replace(/</g, '&lt;')}</div>
             <div class="task-meta-group">
-              ${counterHtml}
               ${skipped ? '<span class="btn-weekend active" style="cursor:default;padding:2px 5px;" title="假日休免計">🏖️</span>' : ''}
               ${t.isWeekly ? '<span class="badge-weekly">每週</span>' : ''}
               ${t.isFixed ? '<span class="badge-fixed">固定</span>' : ''}
             </div>
           </div>
+          ${counterRowHtml}
           <div class="task-note-row"><input type="text" class="task-note-input" value="${(t.note || '').replace(/"/g, '&quot;')}" placeholder="📝 記錄執行狀況或心得..." oninput="editNote(${t.id}, this.value)"></div>`;
         listEl.appendChild(li);
       });
