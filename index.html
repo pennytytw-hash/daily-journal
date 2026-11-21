@@ -344,6 +344,9 @@
     background: #eef7fb;
     border-color: #9ecce0;
   }
+  .progress-card.holiday-freeze .progress-bar-fill {
+    background: linear-gradient(90deg, #9ecce0, #a8d5ba);
+  }
 </style>
 </head>
 <body>
@@ -566,7 +569,7 @@
       perfect: ["🤯 居然 100% 完成了？！快去買張樂透，今天的你簡直不可思議！", "🏆 算你狠，今天沒有任何藉口讓我吐槽了，給你一個大寫的服字！", "🎉 完美達標！快去躺平耍廢吧，今天你完全有資格理直氣壯地懶惰！", "👑 厲害了我的哥／姐，連這麼難的清單都被你全清了，請收下我的膝蓋！", "🍰 任務全滅！今天允許你大吃一頓，畢竟消耗了這麼多腦細胞嘛～", "🫡 奇蹟發生了！今天的你自律得簡直不像本人，請受我一拜！", "🎊 100% 全清！好吧，今天破例不吐槽你，你確實有兩把刷子！", "🌟 滿分收工！連我都挑不出毛病的執行力，快去好好休息吧！"]
     },
     zen: {
-      empty: ["🍵 心如止水，萬物皆空。寫下今日之念，方能定靜安慮得。", "🎋 紙白如雪，靜待落筆。思索今日真正重要之事，不在多而在精。", "🍃 凡事預則立，不預則廢。花一分鐘為今日定下方向吧。", "🪷 一念起，萬水千山。寫下第一個目標，即是修行的起點。", "☁️ 雲淡風輕之日，最適合靜下心來梳理內心真正渴望完成的事務。", "📜 心無所住而生其心，寫下今日所願，方能步步踏實。", "🌿 靜坐常思己願，落筆方知行處，為今日定下幾件要事吧。", "🍵 찻잔未滿，紙頁尚白，且以從容之心寫下今日的修行清單。"],
+      empty: ["🍵 心如止水，萬物皆空。寫下今日之念，方能定靜安慮得。", "🎋 紙白如雪，靜待落筆。思索今日真正重要之事，不在多而在精。", "🍃 凡事預則立，不預則廢。花一分鐘為今日定下方向吧。", "🪷 一念起，萬水千山。寫下第一個目標，即是修行的起點。", "☁️ 雲淡風輕之日，最適合靜下心來梳理內心真正渴望完成的事務。", "📜 心無所住而生其心，寫下今日所願，方能步步踏實。", "🌿 靜坐常思己願，落筆方知行處，為今日定下幾件要事吧。", "🍵 茶盞未滿，紙頁尚白，且以從容之心寫下今日的修行清單。"],
       zero: ["🌱 千里之行，始於足下。勿以善小而不為，從第一件小事開始。", "🍵 莫急莫慌，專注當下。放下雜念，先完成眼前這一件便好。", "🌊 水滴石穿，非力使然，恆也。踏出第一步，萬事皆會順流而行。", "🎋 昨日已逝，明日未來，你所能掌握的唯有此刻的行動。", "🪷 靜心呼吸，將注意力收回到當下，一件一件從容完成。", "🍃 萬事起於微末，不求一蹴可幾，但求此刻開始動手。", "☁️ 心念一轉，行動隨之。放下猶豫，從最平易的一項著手吧。", "🌱 播下一顆行動的種子，靜待今日開花結果。"],
       low: ["🌿 不疾不徐，行穩致遠。每完成一項，內心便多一分踏實。", "🍃 進度如溪水潺潺，雖不汹湧，卻已堅定地流向遠方。", "🍵 放下對完美的執著，欣賞自己已經完成的部分，繼續前行。", "🎋 專注於過程而非結果，心無旁騖地完成下一項任務吧。", "☁️ 步伐雖小，方向正確，終能抵達心之所向。", "🪷 一念專注，一事圓滿；不問路途尚遠，但顧腳下這一步。", "🌊 順流而行，心無掛礙，一項接著一項自然水到渠成。", "🌿 耕耘不問收穫，專注做好眼前事，自在從容。"],
       high: ["🌕 皓月將滿，功不唐捐。過半的堅持已證明你的定力與決心。", "🔥 持之以恆，水到渠成。保持這份覺知，從容圓滿最後幾步。", "🎋 行百里者半九十，越是接近尾聲，越要保持平常心穩步推進。", "🌊 勢如破竹，心境卻依然平和，這正是自律的最高境界。", "🪷 剩下的任務皆是風景，以愉悅之心一一完成它們吧。", "🍵 過半之功已成，心定氣和，從容收束今日的最後幾道工序。", "☁️ 雲開見月明，堅持至此已見真章，穩步走向圓滿吧。", "🌕 專注力凝聚之處，萬事皆可成，靜心完成最後的拼圖。"],
@@ -1540,8 +1543,9 @@
     justStampedId = null;
     const activeTasks = tasks.filter(t => isDailyCountedTask(t, currentDate));
     const done = activeTasks.filter(t => t.completed).length, pct = activeTasks.length === 0 ? 0 : Math.round((done / activeTasks.length) * 100);
+    const isFreezeDay = isHol && activeTasks.length === 0;
     const progCard = document.querySelector('.progress-card');
-    if (progCard) progCard.classList.toggle('holiday-freeze', isHol && activeTasks.length === 0);
+    if (progCard) progCard.classList.toggle('holiday-freeze', isFreezeDay);
     if (activeTasks.length > 0 && pct === 100) {
       const bigStamp = document.createElement('div');
       bigStamp.className = `perfect-day-stamp ${wasJustStamped ? 'animate' : ''}`;
@@ -1561,8 +1565,8 @@
         bigStamp.style.setProperty('top', `${alignTop}px`, 'important');
       }
     }
-    document.getElementById('progressText').textContent = `${pct}% (${done}/${activeTasks.length})`;
-    document.getElementById('progressBar').style.width = `${pct}%`;
+    document.getElementById('progressText').textContent = isFreezeDay ? '🌴 休假凍結中' : `${pct}% (${done}/${activeTasks.length})`;
+    document.getElementById('progressBar').style.width = isFreezeDay ? '100%' : `${pct}%`;
     updateQuote(false);
     renderWeeklyReviewBanner();
   }
