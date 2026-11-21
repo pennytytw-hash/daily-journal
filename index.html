@@ -342,6 +342,34 @@
     .manage-task-actions .btn-weekend { padding: 3px 6px; font-size: 0.72rem; white-space: nowrap; }
     .manage-task-actions .btn-del { padding: 2px 5px; font-size: 1.05rem; }
   }
+  .top-nav-bar {
+    display: flex; justify-content: space-between; align-items: center; gap: 6px;
+    margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1.5px dashed var(--border-dashed);
+  }
+  .top-nav-title { font-size: 1.25rem; font-weight: 800; margin: 0; white-space: nowrap; }
+  .top-nav-btns { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+  .top-nav-btns .btn { padding: 6px 10px; font-size: 0.82rem; border-radius: 10px; white-space: nowrap; }
+  .meta-badges-row {
+    display: flex; justify-content: center; align-items: center; gap: 6px;
+    flex-wrap: wrap; margin-bottom: 6px;
+  }
+  .meta-badges-row .active-proj-bar,
+  .meta-badges-row .streak-badge { margin-bottom: 0; font-size: 0.78rem; padding: 3px 9px; }
+  header { margin-bottom: 10px; }
+  .vision-banner { margin: 4px auto 8px; padding: 5px 12px; font-size: 0.8rem; }
+  .date-hint { font-size: 0.72rem; margin-top: 3px; }
+  .progress-card { padding: 12px 13px; margin-bottom: 12px; }
+  .encouragement-box { margin-top: 8px; padding: 8px 10px; font-size: 0.88rem; }
+  .summary-bar { margin-top: 8px; }
+  @media (max-width: 520px) {
+    body { padding: 8px 6px 40px; }
+    .journal-container { padding: 16px 12px; }
+    .top-nav-title { font-size: 1.12rem; }
+    .top-nav-btns { gap: 4px; }
+    .top-nav-btns .btn { padding: 5px 8px; font-size: 0.78rem; }
+    .meta-badges-row .active-proj-bar,
+    .meta-badges-row .streak-badge { font-size: 0.74rem; padding: 3px 8px; }
+  }
 </style>
 </head>
 <body>
@@ -357,11 +385,16 @@
 <div class="journal-container">
   <div class="washi-tape"></div>
   <header>
-    <h1>🧸 每日目標小手帳</h1>
-    <div>
-      <span class="active-proj-bar">
-        <span>🎯 進行中專案：<span id="activeProjName">初始目標專案</span></span>
-      </span>
+    <div class="top-nav-bar">
+      <h1 class="top-nav-title">🧸 每日目標小手帳</h1>
+      <div class="top-nav-btns">
+        <button class="btn btn-outline btn-sm" onclick="openHistoryModal('overview')">📊 統計</button>
+        <button class="btn btn-outline btn-sm" id="btnOpenManage" onclick="openManageModal()">🗂️ 管理</button>
+        <button class="btn btn-outline btn-sm" id="btnOpenSettings" onclick="openSettingsModal()" title="系統設定與同步">⚙️</button>
+      </div>
+    </div>
+    <div class="meta-badges-row">
+      <span class="active-proj-bar">🎯 <span id="activeProjName">初始目標專案</span></span>
       <span id="streakBadge" class="streak-badge">🔥 連續達標 0 天</span>
     </div>
     <div id="visionBannerDisplay" class="vision-banner" style="display:none;"></div>
@@ -401,11 +434,6 @@
   <div id="weeklyReviewBanner" class="weekly-review-card" style="display:none;"></div>
   <ul class="task-list" id="taskList"></ul>
   <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">☆ 設為今日焦點置頂｜✏️ 編輯、排序與休假請點下方管理</p>
-  <div class="footer-tools" style="flex-direction:row;">
-    <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openHistoryModal('overview')">📊 專案統計與歷史</button>
-    <button class="btn btn-outline btn-sm" style="flex:1;" id="btnOpenManage" onclick="openManageModal()">🗂️ 專案與任務管理</button>
-    <button class="btn btn-outline btn-sm" style="flex:0 0 auto;padding:9px 12px;" id="btnOpenSettings" onclick="openSettingsModal()" title="系統設定與同步">⚙️</button>
-  </div>
   <div style="text-align:center;margin-top:14px;font-size:0.72rem;color:#b5a49b;">
     🐾 圖示素材：png 圖片來源於 ://pngtree.com
   </div>
@@ -1154,49 +1182,73 @@
     saveAll();
   }
 
+  function commitDomTaskOrder(box) {
+    const tasks = getTasks();
+    const orderedIds = Array.from(box.querySelectorAll('.manage-task-row')).map(el => el.dataset.taskId);
+    if (orderedIds.length !== tasks.length) return;
+    const map = new Map(tasks.map(t => [String(t.id), t]));
+    const newTasks = orderedIds.map(id => map.get(id)).filter(Boolean);
+    if (newTasks.length === tasks.length) {
+      allRecords[currentDate] = newTasks;
+      fixedTemplate = newTasks.filter(t => t.isFixed).map(t => t.text);
+      getActiveProject().items = [...fixedTemplate];
+      saveAll();
+    }
+  }
+
   function bindDragSortEvents(box) {
-    let dragSrcIdx = null;
+    let draggingRow = null;
     const rows = Array.from(box.querySelectorAll('.manage-task-row'));
-    rows.forEach((row, idx) => {
+    rows.forEach(row => {
       const handle = row.querySelector('.drag-handle');
       if (!handle) return;
+
       // 電腦滑鼠拖曳
       handle.addEventListener('mousedown', () => { row.setAttribute('draggable', 'true'); });
       row.addEventListener('dragstart', e => {
-        dragSrcIdx = idx;
+        draggingRow = row;
         row.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
       });
       row.addEventListener('dragend', () => {
         row.classList.remove('dragging');
         row.removeAttribute('draggable');
+        if (draggingRow) {
+          draggingRow = null;
+          commitDomTaskOrder(box);
+        }
       });
-      row.addEventListener('dragover', e => { e.preventDefault(); });
-      row.addEventListener('drop', e => {
+      row.addEventListener('dragover', e => {
         e.preventDefault();
-        if (dragSrcIdx !== null && dragSrcIdx !== idx) reorderTaskByIndex(dragSrcIdx, idx);
+        if (!draggingRow || draggingRow === row) return;
+        const rect = row.getBoundingClientRect();
+        const after = (e.clientY - rect.top) > rect.height / 2;
+        box.insertBefore(draggingRow, after ? row.nextSibling : row);
       });
-      // 手機觸控拖曳
+
+      // 手機觸控拖曳（拖曳中僅移動 DOM 不重建畫面，放開才存檔）
       handle.addEventListener('touchstart', () => {
-        dragSrcIdx = idx;
+        draggingRow = row;
         row.classList.add('dragging');
       }, { passive: true });
+
       handle.addEventListener('touchmove', e => {
-        if (dragSrcIdx === null) return;
+        if (!draggingRow) return;
         e.preventDefault();
         const touch = e.touches.item(0);
         const targetEl = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.manage-task-row');
-        if (targetEl && targetEl !== row) {
-          const targetIdx = rows.indexOf(targetEl);
-          if (targetIdx !== -1 && targetIdx !== dragSrcIdx) {
-            reorderTaskByIndex(dragSrcIdx, targetIdx);
-            dragSrcIdx = targetIdx;
-          }
+        if (targetEl && targetEl !== draggingRow && targetEl.parentNode === box) {
+          const rect = targetEl.getBoundingClientRect();
+          const after = (touch.clientY - rect.top) > rect.height / 2;
+          box.insertBefore(draggingRow, after ? targetEl.nextSibling : targetEl);
         }
       }, { passive: false });
+
       handle.addEventListener('touchend', () => {
-        row.classList.remove('dragging');
-        dragSrcIdx = null;
+        if (!draggingRow) return;
+        draggingRow.classList.remove('dragging');
+        draggingRow = null;
+        commitDomTaskOrder(box);
       });
     });
   }
@@ -1215,7 +1267,7 @@
       return;
     }
     box.innerHTML = tasks.map(t => `
-      <div class="manage-task-row">
+      <div class="manage-task-row" data-task-id="${t.id}">
         <div class="manage-task-top" style="align-items:flex-start;">
           <span class="drag-handle" title="按住上下拖曳排序">☰</span>
           <textarea rows="1" class="auto-grow-ta" style="flex:1;" oninput="autoResizeTa(this)" onblur="editTask(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</textarea>
