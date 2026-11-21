@@ -1825,6 +1825,12 @@
     if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
     renderStatsDashboard();
   }
+  function resetCalMonthToToday() {
+    const today = new Date(getLogicalToday() + 'T00:00:00');
+    calViewYear = today.getFullYear();
+    calViewMonth = today.getMonth();
+    renderStatsDashboard();
+  }
   function buildGrowthChartHtml(seriesMap, dimLabel) {
     const entries = Object.entries(seriesMap).sort((a, b) => a.localeCompare(b));
     if (entries.length === 0) return `<div class="panel-box"><b>📈 ${dimLabel}成長曲線</b><p style="color:#999;margin:6px 0 0;">尚無足夠數據繪製曲線</p></div>`;
@@ -1960,8 +1966,7 @@
       const r = s.total === 0 ? 0 : Math.round((s.done / s.total) * 100);
       return `<div><div class="dow-bar-wrap"><div class="dow-bar-fill" style="height:${r}%"></div></div><div style="font-size:0.7rem;margin-top:3px;">週${dowNames[idx]}<br><b>${r}%</b></div></div>`;
     }).join('');
-    html += `<div class="panel-box" style="margin-top:4px;"><div class="cal-header"><button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button><b>🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b><button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button></div><div class="cal-grid">${calCells}</div><div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div></div>`;
-
+    html += `<div class="panel-box" style="margin-top:4px;"><div class="cal-header"><button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button><b onclick="resetCalMonthToToday()" style="cursor:pointer;" title="點擊回到本月">🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b><button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button></div><div class="cal-grid">${calCells}</div><div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div></div>`;
     const habits = Object.entries(habitMap).filter(([, v]) => v.total >= 2).map(([name, v]) => ({ name, rate: Math.round((v.done / v.total) * 100), done: v.done, total: v.total }));
     if (habits.length > 0) {
       const top3 = [...habits].sort((a, b) => b.rate - a.rate || b.done - a.done).slice(0, 3);
