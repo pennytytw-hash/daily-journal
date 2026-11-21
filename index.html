@@ -295,27 +295,50 @@
     display: flex; justify-content: flex-end; align-items: center;
     padding-left: 29px; width: 100%;
   }
-  .task-list { position: relative; }
+  .task-list { position: relative; min-height: 240px; }
   .perfect-day-stamp {
-    position: absolute; top: -14px; right: 8px; z-index: 8; pointer-events: none;
-    border: 3px double #d96b27; color: #d96b27;
-    background: rgba(255, 250, 235, 0.92);
-    padding: 5px 12px; border-radius: 14px;
-    font-size: 0.86rem; font-weight: 900; letter-spacing: 0.8px;
-    box-shadow: 0 3px 10px rgba(217, 107, 39, 0.16);
-    transform: rotate(-10deg) scale(1); opacity: 0.92;
+    position: absolute !important;
+    top: 50% !important; left: 50% !important; right: auto !important; bottom: auto !important;
+    z-index: 20 !important; pointer-events: none !important;
+    width: clamp(230px, 60vw, 310px) !important;
+    height: clamp(230px, 60vw, 310px) !important;
+    border-radius: 50% !important;
+    border: 6px double rgba(217, 107, 39, 0.72) !important;
+    background: radial-gradient(circle, rgba(255, 251, 235, 0.48) 0%, rgba(255, 243, 214, 0.24) 100%) !important;
+    color: rgba(217, 107, 39, 0.88) !important;
+    display: flex !important; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 0 5px rgba(217, 107, 39, 0.16), 0 8px 24px rgba(217, 107, 39, 0.12);
+    transform: translate(-50%, -50%) rotate(-12deg) scale(1);
+    user-select: none;
+  }
+  .perfect-stamp-center {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    width: 140px; height: 115px;
+  }
+  .perfect-stamp-trophy {
+    font-size: clamp(5.2rem, 16vw, 6.8rem); line-height: 1;
+    opacity: 0.85; filter: drop-shadow(0 3px 6px rgba(217, 107, 39, 0.22));
+  }
+  .perfect-stamp-pct {
+    position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%);
+    font-size: clamp(2rem, 6.8vw, 2.6rem); font-weight: 900; letter-spacing: 0.5px;
+    color: #c84b28;
+    text-shadow: 0 0 6px #fffdf9, 0 0 6px #fffdf9, 0 2px 4px rgba(255, 253, 249, 0.95);
+    line-height: 1; white-space: nowrap;
+  }
+  .perfect-stamp-label {
+    font-size: clamp(1rem, 3.4vw, 1.25rem); font-weight: 900; letter-spacing: 2px;
+    border-top: 2.5px solid rgba(217, 107, 39, 0.6); border-bottom: 2.5px solid rgba(217, 107, 39, 0.6);
+    padding: 3px 12px; margin-top: 4px;
   }
   .perfect-day-stamp.animate {
     animation: perfectStampDrop 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
   @keyframes perfectStampDrop {
-    0% { opacity: 0; transform: rotate(-22deg) scale(2.4); }
-    45% { opacity: 1; transform: rotate(-7deg) scale(0.92); }
-    75% { opacity: 0.95; transform: rotate(-11deg) scale(1.04); }
-    100% { opacity: 0.92; transform: rotate(-10deg) scale(1); }
-  }
-  @media (max-width: 520px) {
-    .perfect-day-stamp { top: -12px; right: 4px; font-size: 0.76rem; padding: 4px 9px; }
+    0% { opacity: 0; transform: translate(-50%, -50%) rotate(-24deg) scale(2.1); }
+    45% { opacity: 1; transform: translate(-50%, -50%) rotate(-8deg) scale(0.92); }
+    75% { opacity: 0.96; transform: translate(-50%, -50%) rotate(-13deg) scale(1.03); }
+    100% { opacity: 1; transform: translate(-50%, -50%) rotate(-12deg) scale(1); }
   }
 </style>
 </head>
@@ -1171,21 +1194,26 @@
     const sel = document.getElementById('quoteStyleSelect');
     if (sel) sel.value = currentQuoteStyle;
     const stylePack = quotesDB[currentQuoteStyle] || quotesDB.warm;
-    const streak = calcStreak(), tasks = getTasks();
-    const rate = tasks.length === 0 ? -1 : Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100);
+    const streak = calcStreak();
+    const countedTasks = getTasks().filter(t => isDailyCountedTask(t, currentDate));
+    const rate = countedTasks.length === 0 ? -1 : Math.round((countedTasks.filter(t => t.completed).length / countedTasks.length) * 100);
     let pool = stylePack.empty;
     if (rate === 0) pool = stylePack.zero;
     else if (rate > 0 && rate <= 50) pool = stylePack.low;
     else if (rate > 50 && rate < 100) pool = stylePack.high;
     else if (rate === 100) pool = stylePack.perfect;
 
-    const boxTier = streakBlindBoxes.find(b => streak >= b.min);
+    const isToday = currentDate === getLogicalToday();
+    const boxTier = isToday ? streakBlindBoxes.find(b => streak >= b.min) : null;
     const tagEl = document.getElementById('blindboxTag');
     let activePool = [...pool];
     if (boxTier && rate >= 80) {
-      tagEl.style.display = 'inline-block'; tagEl.textContent = boxTier.tag;
-      activePool = [...boxTier.quotes, ...pool];
-    } else { tagEl.style.display = 'none'; }
+      tagEl.style.display = 'inline-block';
+      tagEl.textContent = boxTier.tag;
+      activePool = force ? [...boxTier.quotes, ...pool] : [...boxTier.quotes];
+    } else {
+      tagEl.style.display = 'none';
+    }
 
     if (force || !currentQuote || !activePool.includes(currentQuote)) {
       currentQuote = activePool[Math.floor(Math.random() * activePool.length)];
@@ -1504,8 +1532,10 @@
       const bigStamp = document.createElement('div');
       bigStamp.className = `perfect-day-stamp ${wasJustStamped ? 'animate' : ''}`;
       bigStamp.innerHTML = `
-        <div class="perfect-stamp-trophy">🏆</div>
-        <div class="perfect-stamp-pct">100%</div>
+        <div class="perfect-stamp-center">
+          <div class="perfect-stamp-trophy">🏆</div>
+          <div class="perfect-stamp-pct">100%</div>
+        </div>
         <div class="perfect-stamp-label">ALL CLEAR!</div>
       `;
       listEl.appendChild(bigStamp);
