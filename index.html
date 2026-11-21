@@ -433,7 +433,10 @@
       </div>
     </div>
     <div class="setting-section">
-      <h4>📋 當日任務列表管理（編輯 / 計數 / 排序 / 假日休 / 刪除）</h4>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+        <h4 style="margin:0;">📋 當日任務列表管理</h4>
+        <button class="btn btn-outline btn-sm" style="flex-shrink:0;" onclick="restoreSameAsYesterday()">⏪ 同昨日</button>
+      </div>
       <div id="manageTaskList"></div>
     </div>
     <div class="setting-section">
@@ -700,7 +703,7 @@
       const now = Date.now();
       allRecords[currentDate] = fixedTemplate.map((text, idx) => {
         const isWk = Object.prototype.hasOwnProperty.call(weeklyTargets, text);
-        const tgt = isWk ? (weeklyTargets[text] || 1) : (fixedTargets[text] || detectTargetCount(text));
+        const tgt = isWk ? (weeklyTargets[text] || 1) : (fixedTargets[text] || 0);
         const item = {
           id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false,
           isWeekly: isWk, skipWeekend: isWk ? false : weekendSkipItems.includes(text),
@@ -1037,6 +1040,79 @@
     clearTimeout(noteSaveTimer);
     noteSaveTimer = setTimeout(() => saveAll(false), 350);
   }
+  function restoreSameAsYesterday() {
+    if (currentDate > getLogicalToday()) {
+      alert('⏳ 未來日期尚未產生任務，無法套用喔！');
+      return;
+    }
+    const prevDates = Object.keys(allRecords)
+      .filter(d => d < currentDate && Array.isArray(allRecords[d]) && allRecords[d].length > 0)
+      .sort();
+    if (prevDates.length === 0) {
+      alert('📭 找不到前一日的任務紀錄可以還原喔！');
+      return;
+    }
+    const refDate = prevDates[prevDates.length - 1];
+    const refList = allRecords[refDate];
+    if (!confirm(`確定要將 ${currentDate} 的任務列表還原為「${refDate}」的設定嗎？（共 ${refList.length} 項，將重置今日勾選與次數進度）`)) return;
+
+    undoSnapshot = {
+      records: JSON.parse(JSON.stringify(allRecords)),
+      template: [...fixedTemplate],
+      projects: JSON.parse(JSON.stringify(projects))
+    };
+
+    const now = Date.now();
+    const rebuilt = refList.map((item, idx) => {
+      const cloned = {
+        id: now + idx + Math.random(),
+        text: item.text,
+        note: '',
+        completed: false,
+        isFixed: Boolean(item.isFixed),
+        isMit: Boolean(item.isMit),
+        isWeekly: Boolean(item.isWeekly),
+        skipWeekend: Boolean(item.skipWeekend),
+        projectId: item.projectId || activeProjectId,
+        updatedAt: now
+      };
+      if (typeof item.origIdx === 'number') cloned.origIdx = item.origIdx;
+      if (item.targetCount && item.targetCount > 0) {
+        cloned.targetCount = item.targetCount;
+        cloned.curCount = 0;
+        if (cloned.isWeekly) {
+          const prog = getWeeklyProgressInWeek(currentDate, cloned.text, cloned.projectId);
+          cloned.curCount = Math.min(cloned.targetCount, prog.maxCur);
+          cloned.completed = prog.anyDone || cloned.curCount >= cloned.targetCount;
+        }
+      }
+      return cloned;
+    });
+
+    allRecords[currentDate] = rebuilt;
+    fixedTemplate = rebuilt.filter(t => t.isFixed).map(t => t.text);
+    getActiveProject().items = [...fixedTemplate];
+    rebuilt.forEach(t => {
+      if (t.isFixed) {
+        if (t.isWeekly) {
+          weeklyTargets[t.text] = t.targetCount || 1;
+          delete fixedTargets[t.text];
+        } else if (t.targetCount > 0) {
+          fixedTargets[t.text] = t.targetCount;
+          delete weeklyTargets[t.text];
+        } else {
+          delete fixedTargets[t.text];
+          delete weeklyTargets[t.text];
+        }
+        if (t.skipWeekend && !weekendSkipItems.includes(t.text)) weekendSkipItems.push(t.text);
+        if (!t.skipWeekend) weekendSkipItems = weekendSkipItems.filter(x => x !== t.text);
+      }
+    });
+
+    saveAll();
+    showUndoSnackbar(`⏪ 已還原為 ${refDate} 的任務清單`);
+  }
+
   function delTask(id) {
     const tasks = getTasks(), target = tasks.find(x => x.id === id);
     if (!target) return;
@@ -1102,7 +1178,14 @@
     activeProjectId = newProjId; fixedTemplate = newItems;
     const manualTasks = (allRecords[todayStr] || []).filter(t => !t.isFixed);
     allRecords[todayStr] = [
-      ...fixedTemplate.map((text, idx) => ({ id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false, projectId: newProjId, updatedAt: now })),
+      ...fixedTemplate.map((text, idx) => {
+        const tgt = detectTargetCount(text);
+        if (tgt > 0) fixedTargets[text] = tgt;
+        else delete fixedTargets[text];
+        const item = { id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false, projectId: newProjId, updatedAt: now };
+        if (tgt > 0) { item.targetCount = tgt; item.curCount = 0; }
+        return item;
+      }),
       ...manualTasks
     ];
     Object.keys(allRecords).forEach(d => { if (d > todayStr) delete allRecords[d]; });
