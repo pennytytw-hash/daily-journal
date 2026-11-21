@@ -287,6 +287,10 @@
     .manage-task-actions .btn-del { padding: 2px 5px; font-size: 1.05rem; }
     .cal-cell { height: 32px; font-size: 0.76rem; }
   }
+  .badge-weekly {
+    font-size: 0.72rem; background: #f2ecfa; color: #6a4c93;
+    padding: 2px 6px; border-radius: 8px; border: 1px solid #d9cbf0; flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -437,7 +441,7 @@
     </div>
     <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;flex-direction:column;gap:8px;font-size:0.75rem;color:var(--text-light);">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span>版本：v5.0｜<span id="storageUsageText">空間計算中...</span></span>
+        <span>版本：v5.1｜<span id="storageUsageText">空間計算中...</span></span>
         <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="archiveOldDetails()">🗜️ 壓縮前年以前明細</button>
       </div>
       <button class="btn btn-outline btn-sm" style="width:100%;font-size:0.72rem;padding:5px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
@@ -454,7 +458,7 @@
       <span style="font-size:0.85rem;font-weight:700;">🎯 篩選專案：</span>
       <select id="statsProjSelect" onchange="onStatsProjChange()" style="flex:1;min-width:140px;"></select>
       </div>
-    <div class="tab-bar" style="flex-wrap:wrap;">
+    <div class="tab-bar">
       <button class="btn btn-sm" id="tabOverviewBtn" onclick="switchTab('overview')">🗓️ 打卡月曆與排行</button>
       <button class="btn btn-outline btn-sm" id="tabTrendsBtn" onclick="switchTab('trends')">📈 週月季年曲線</button>
       <button class="btn btn-outline btn-sm" id="tabNotesBtn" onclick="switchTab('notes')">📝 紀錄查詢</button>
@@ -538,7 +542,107 @@
   let govCalendarMap = JSON.parse(localStorage.getItem('cute_journal_v4_gov_calendar') || '{}');
   let archivedStats = JSON.parse(localStorage.getItem('cute_journal_v4_archived_stats') || '{}');
   let fixedTargets = JSON.parse(localStorage.getItem('cute_journal_v5_fixed_targets') || '{}');
+  let weeklyTargets = JSON.parse(localStorage.getItem('cute_journal_v5_weekly_targets') || '{}');
   let currentDate = getLogicalToday(), currentQuote = "", undoSnapshot = null, undoTimer = null, justStampedId = null;
+
+  function getMondayOfDateStr(dStr) {
+    const d = new Date(dStr + 'T00:00:00');
+    const dow = d.getDay() === 0 ? 7 : d.getDay();
+    d.setDate(d.getDate() - dow + 1);
+    return d.toLocaleDateString('en-CA');
+  }
+
+  function getWeeklyProgressInWeek(dStr, taskText, projId) {
+    const monStr = getMondayOfDateStr(dStr);
+    const monDate = new Date(monStr + 'T00:00:00');
+    const sunDate = new Date(monDate); sunDate.setDate(monDate.getDate() + 6);
+    const sunStr = sunDate.toLocaleDateString('en-CA');
+    let maxCur = 0, anyDone = false;
+    Object.entries(allRecords).forEach(([k, list]) => {
+      if (k >= monStr && k <= sunStr && Array.isArray(list)) {
+        list.forEach(item => {
+          if (item.text === taskText && (item.projectId || '') === (projId || '') && item.isWeekly) {
+            if ((item.curCount || 0) > maxCur) maxCur = item.curCount || 0;
+            if (item.completed) anyDone = true;
+          }
+        });
+      }
+    });
+    return { maxCur, anyDone };
+  }
+
+  function syncWeeklyTaskAcrossWeek(dStr, taskText, projId, curCount, targetCount, completed) {
+    const monStr = getMondayOfDateStr(dStr);
+    const monDate = new Date(monStr + 'T00:00:00');
+    const sunDate = new Date(monDate); sunDate.setDate(monDate.getDate() + 6);
+    const sunStr = sunDate.toLocaleDateString('en-CA');
+    Object.entries(allRecords).forEach(([k, list]) => {
+      if (k >= monStr && k <= sunStr && Array.isArray(list)) {
+        list.forEach(item => {
+          if (item.text === taskText && (item.projectId || '') === (projId || '')) {
+            item.isWeekly = true;
+            item.skipWeekend = false;
+            item.targetCount = targetCount;
+            item.curCount = curCount;
+            item.completed = completed;
+          }
+        });
+      }
+    });
+  }
+
+  function detectTargetCount(text) {
+    const m = String(text || '').match(/(\d+)\s*(杯|個|組|頁|分鐘|分|下|輪|次|題|篇|公里|km|ml|cc|回|趟|本|章)/i);
+    if (!m) return 0;
+    const num = parseInt(m.at(1), 10);
+    return (num >= 2 && num <= 999) ? num : 0;
+  }
+
+  function saveAll(shouldRender = true) {
+    localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
+    localStorage.setItem('cute_journal_v3_template', JSON.stringify(fixedTemplate));
+    localStorage.setItem('cute_journal_v4_projects', JSON.stringify(projects));
+    localStorage.setItem('cute_journal_v4_active_proj', activeProjectId);
+    localStorage.setItem('cute_journal_v4_weekend_skip', JSON.stringify(weekendSkipItems));
+    localStorage.setItem('cute_journal_v4_holiday_overrides', JSON.stringify(holidayOverrides));
+    localStorage.setItem('cute_journal_v4_custom_holidays', JSON.stringify(customHolidays));
+    localStorage.setItem('cute_journal_v4_archived_stats', JSON.stringify(archivedStats));
+    localStorage.setItem('cute_journal_v5_fixed_targets', JSON.stringify(fixedTargets));
+    localStorage.setItem('cute_journal_v5_weekly_targets', JSON.stringify(weeklyTargets));
+    updateStorageUsageDisplay();
+    if (shouldRender) render();
+    if (document.getElementById('manageModal')?.classList.contains('active')) renderManageTaskList();
+  }
+
+  function getTasks() {
+    const todayStr = getLogicalToday();
+    if (currentDate > todayStr) return allRecords[currentDate] || [];
+    if (!allRecords[currentDate]) {
+      const now = Date.now();
+      allRecords[currentDate] = fixedTemplate.map((text, idx) => {
+        const isWk = Object.prototype.hasOwnProperty.call(weeklyTargets, text);
+        const tgt = isWk ? (weeklyTargets[text] || 1) : (fixedTargets[text] || detectTargetCount(text));
+        const item = {
+          id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false,
+          isWeekly: isWk, skipWeekend: isWk ? false : weekendSkipItems.includes(text),
+          projectId: activeProjectId, updatedAt: now
+        };
+        if (tgt > 0) {
+          item.targetCount = tgt;
+          if (isWk) {
+            const prog = getWeeklyProgressInWeek(currentDate, text, activeProjectId);
+            item.curCount = Math.min(tgt, prog.maxCur);
+            item.completed = prog.anyDone || item.curCount >= tgt;
+          } else {
+            item.curCount = 0;
+          }
+        }
+        return item;
+      });
+      localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
+    }
+    return allRecords[currentDate];
+  }
 
   (function initProjectsAndClean() {
     const todayStr = getLogicalToday();
@@ -630,53 +734,6 @@
   datePicker.addEventListener('change', (e) => { currentDate = e.target.value; currentQuote = ""; render(); });
   function goToday() { currentDate = getLogicalToday(); datePicker.value = currentDate; currentQuote = ""; render(); }
   function getActiveProject() { return projects.find(p => p.id === activeProjectId) || projects[projects.length - 1]; }
-
-  function saveAll(shouldRender = true) {
-    localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
-    localStorage.setItem('cute_journal_v3_template', JSON.stringify(fixedTemplate));
-    localStorage.setItem('cute_journal_v4_projects', JSON.stringify(projects));
-    localStorage.setItem('cute_journal_v4_active_proj', activeProjectId);
-    localStorage.setItem('cute_journal_v4_weekend_skip', JSON.stringify(weekendSkipItems));
-    localStorage.setItem('cute_journal_v4_holiday_overrides', JSON.stringify(holidayOverrides));
-    localStorage.setItem('cute_journal_v4_custom_holidays', JSON.stringify(customHolidays));
-    localStorage.setItem('cute_journal_v4_archived_stats', JSON.stringify(archivedStats));
-    updateStorageUsageDisplay();
-    if (shouldRender) render();
-  }
-  function saveAll(shouldRender = true) {
-    localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
-    localStorage.setItem('cute_journal_v3_template', JSON.stringify(fixedTemplate));
-    localStorage.setItem('cute_journal_v4_projects', JSON.stringify(projects));
-    localStorage.setItem('cute_journal_v4_active_proj', activeProjectId);
-    localStorage.setItem('cute_journal_v4_weekend_skip', JSON.stringify(weekendSkipItems));
-    localStorage.setItem('cute_journal_v4_holiday_overrides', JSON.stringify(holidayOverrides));
-    localStorage.setItem('cute_journal_v4_custom_holidays', JSON.stringify(customHolidays));
-    localStorage.setItem('cute_journal_v4_archived_stats', JSON.stringify(archivedStats));
-    localStorage.setItem('cute_journal_v5_fixed_targets', JSON.stringify(fixedTargets));
-    updateStorageUsageDisplay();
-    if (shouldRender) render();
-    if (document.getElementById('manageModal')?.classList.contains('active')) renderManageTaskList();
-  }
-
-  function getTasks() {
-    const todayStr = getLogicalToday();
-    if (currentDate > todayStr) return allRecords[currentDate] || [];
-    if (!allRecords[currentDate]) {
-      const now = Date.now();
-      allRecords[currentDate] = fixedTemplate.map((text, idx) => {
-        const tgt = fixedTargets[text] || detectTargetCount(text);
-        const item = {
-          id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false,
-          skipWeekend: weekendSkipItems.includes(text), projectId: activeProjectId, updatedAt: now
-        };
-        if (tgt > 0) { item.targetCount = tgt; item.curCount = 0; }
-        return item;
-      });
-      localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
-    }
-    return allRecords[currentDate];
-  }
-
   function autoResizeTa(el) {
     if (!el) return;
     el.style.height = 'auto';
@@ -704,44 +761,57 @@
     saveAll();
   }
 
-  function setTaskTargetCount(id, rawVal) {
+  function toggleTaskWeeklyMode(id) {
     const tasks = getTasks(), t = tasks.find(x => x.id === id);
     if (!t) return;
-    const trimmed = String(rawVal ?? '').trim();
-    const tgt = trimmed === '' ? 0 : (parseInt(trimmed, 10) || 0);
-    if (tgt >= 1) {
+    t.isWeekly = !t.isWeekly;
+    if (t.isWeekly) {
+      t.skipWeekend = false;
+      weekendSkipItems = weekendSkipItems.filter(x => x !== t.text);
+      const tgt = t.targetCount && t.targetCount >= 1 ? t.targetCount : (detectTargetCount(t.text) || 1);
       t.targetCount = tgt;
-      t.curCount = t.completed ? tgt : Math.min(t.curCount || 0, tgt - 1);
-      if (t.isFixed) fixedTargets[t.text] = tgt;
+      const prog = getWeeklyProgressInWeek(currentDate, t.text, t.projectId);
+      t.curCount = t.completed ? tgt : Math.min(tgt, Math.max(t.curCount || 0, prog.maxCur));
+      t.completed = t.curCount >= tgt;
+      weeklyTargets[t.text] = tgt;
+      delete fixedTargets[t.text];
+      syncWeeklyTaskAcrossWeek(currentDate, t.text, t.projectId, t.curCount, tgt, t.completed);
     } else {
-      delete t.targetCount;
-      delete t.curCount;
-      if (t.isFixed) delete fixedTargets[t.text];
+      delete weeklyTargets[t.text];
+      if (t.isFixed && t.targetCount >= 1) fixedTargets[t.text] = t.targetCount;
     }
     t.updatedAt = Date.now();
     saveAll();
   }
 
+  function isDailyCountedTask(t, dStr) {
+    return !t.isWeekly && !isTaskSkipped(t, dStr);
+  }
+
   function toggleTask(id) {
     const tasks = getTasks(), t = tasks.find(x => x.id === id);
     if (!t) return;
-    const activeBefore = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    const activeBefore = tasks.filter(x => isDailyCountedTask(x, currentDate));
     const wasAllDone = activeBefore.length > 0 && activeBefore.every(x => x.completed);
     t.completed = !t.completed;
-    if (t.targetCount > 0) {
-      t.curCount = t.completed ? t.targetCount : 0;
+    if (t.targetCount > 0) t.curCount = t.completed ? t.targetCount : 0;
+    if (t.isWeekly) {
+      const tgt = t.targetCount || 1;
+      t.targetCount = tgt;
+      t.curCount = t.completed ? tgt : 0;
+      syncWeeklyTaskAcrossWeek(currentDate, t.text, t.projectId, t.curCount, tgt, t.completed);
     }
     t.updatedAt = Date.now(); currentQuote = "";
     justStampedId = t.completed ? id : null;
     saveAll();
-    const activeAfter = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    const activeAfter = tasks.filter(x => isDailyCountedTask(x, currentDate));
     if (!wasAllDone && activeAfter.length > 0 && activeAfter.every(x => x.completed)) triggerCelebration();
   }
 
   function incrementTaskCount(id) {
     const tasks = getTasks(), t = tasks.find(x => x.id === id);
     if (!t || !t.targetCount) return;
-    const activeBefore = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    const activeBefore = tasks.filter(x => isDailyCountedTask(x, currentDate));
     const wasAllDone = activeBefore.length > 0 && activeBefore.every(x => x.completed);
     t.curCount = Math.min(t.targetCount, (t.curCount || 0) + 1);
     if (t.curCount >= t.targetCount && !t.completed) {
@@ -749,9 +819,10 @@
       justStampedId = t.id;
       currentQuote = "";
     }
+    if (t.isWeekly) syncWeeklyTaskAcrossWeek(currentDate, t.text, t.projectId, t.curCount, t.targetCount, t.completed);
     t.updatedAt = Date.now();
     saveAll();
-    const activeAfter = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    const activeAfter = tasks.filter(x => isDailyCountedTask(x, currentDate));
     if (!wasAllDone && activeAfter.length > 0 && activeAfter.every(x => x.completed)) triggerCelebration();
   }
 
@@ -761,16 +832,40 @@
     const val = prompt(`請輸入「${t.text}」目前已完成次數（目標 ${t.targetCount}，輸入 0 重置）：`, String(t.curCount || 0));
     if (val === null) return;
     const num = Math.max(0, Math.min(t.targetCount, parseInt(val, 10) || 0));
-    const activeBefore = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    const activeBefore = tasks.filter(x => isDailyCountedTask(x, currentDate));
     const wasAllDone = activeBefore.length > 0 && activeBefore.every(x => x.completed);
     t.curCount = num;
     const nowDone = num >= t.targetCount;
     if (nowDone && !t.completed) { justStampedId = t.id; currentQuote = ""; }
     t.completed = nowDone;
+    if (t.isWeekly) syncWeeklyTaskAcrossWeek(currentDate, t.text, t.projectId, t.curCount, t.targetCount, t.completed);
     t.updatedAt = Date.now();
     saveAll();
-    const activeAfter = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    const activeAfter = tasks.filter(x => isDailyCountedTask(x, currentDate));
     if (!wasAllDone && activeAfter.length > 0 && activeAfter.every(x => x.completed)) triggerCelebration();
+  }
+
+  function setTaskTargetCount(id, rawVal) {
+    const tasks = getTasks(), t = tasks.find(x => x.id === id);
+    if (!t) return;
+    const trimmed = String(rawVal ?? '').trim();
+    const tgt = trimmed === '' ? 0 : (parseInt(trimmed, 10) || 0);
+    if (tgt >= 1) {
+      t.targetCount = tgt;
+      t.curCount = t.completed ? tgt : Math.min(t.curCount || 0, tgt - 1);
+      if (t.isWeekly) {
+        weeklyTargets[t.text] = tgt;
+        syncWeeklyTaskAcrossWeek(currentDate, t.text, t.projectId, t.curCount, tgt, t.completed);
+      } else if (t.isFixed) {
+        fixedTargets[t.text] = tgt;
+      }
+    } else if (!t.isWeekly) {
+      delete t.targetCount;
+      delete t.curCount;
+      if (t.isFixed) delete fixedTargets[t.text];
+    }
+    t.updatedAt = Date.now();
+    saveAll();
   }
 
   function toggleWeekendSkip(id) {
@@ -1022,7 +1117,7 @@
     const evalDay = (dStr) => {
       const list = allRecords[dStr];
       if (!list || list.length === 0) return 'fail';
-      const active = list.filter(t => !isTaskSkipped(t, dStr));
+      const active = list.filter(t => isDailyCountedTask(t, dStr));
       if (active.length === 0) return 'freeze';
       return (active.filter(t => t.completed).length / active.length) >= 0.8 ? 'pass' : 'fail';
     };
@@ -1195,11 +1290,14 @@
           <textarea rows="1" class="auto-grow-ta" style="flex:1;" oninput="autoResizeTa(this)" onblur="editTask(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</textarea>
         </div>
         <div class="manage-task-actions">
-          <label style="font-size:0.75rem;color:var(--text-light);display:inline-flex;align-items:center;gap:3px;">
-            🔢<input type="number" min="0" max="999" value="${t.targetCount || ''}" placeholder="無" style="width:50px;padding:3px 5px;border:1px solid #dfd0c5;border-radius:6px;font-size:0.78rem;" onblur="setTaskTargetCount(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
-          </label>
           <div style="display:inline-flex;align-items:center;gap:4px;">
-            <button class="btn-weekend ${t.skipWeekend ? 'active' : ''}" onclick="toggleWeekendSkip(${t.id})">${t.skipWeekend ? '🏖️ 假日休' : '🏖️ 設假日休'}</button>
+            <button class="btn-weekend ${t.isWeekly ? 'active' : ''}" style="${t.isWeekly ? 'background:#f2ecfa;border-color:#d9cbf0;color:#6a4c93;' : ''}" onclick="toggleTaskWeeklyMode(${t.id})">${t.isWeekly ? '📆 每週' : '📅 每日'}</button>
+            <label style="font-size:0.75rem;color:var(--text-light);display:inline-flex;align-items:center;gap:2px;">
+              🔢<input type="number" min="${t.isWeekly ? 1 : 0}" max="999" value="${t.targetCount || ''}" placeholder="無" style="width:48px;padding:3px 4px;border:1px solid #dfd0c5;border-radius:6px;font-size:0.78rem;" onblur="setTaskTargetCount(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+            </label>
+          </div>
+          <div style="display:inline-flex;align-items:center;gap:4px;">
+            ${!t.isWeekly ? `<button class="btn-weekend ${t.skipWeekend ? 'active' : ''}" onclick="toggleWeekendSkip(${t.id})">${t.skipWeekend ? '🏖️ 假日休' : '🏖️ 設假日休'}</button>` : ''}
             ${t.isFixed ? '<span class="badge-fixed">固定</span>' : '<span style="font-size:0.7rem;color:#9c8980;padding:2px 4px;">臨時</span>'}
             <button class="btn-del" onclick="delTask(${t.id})" title="刪除任務">✕</button>
           </div>
@@ -1353,6 +1451,7 @@
             <div class="task-meta-group">
               ${counterHtml}
               ${skipped ? '<span class="btn-weekend active" style="cursor:default;padding:2px 5px;" title="假日休免計">🏖️</span>' : ''}
+              ${t.isWeekly ? '<span class="badge-weekly">每週</span>' : ''}
               ${t.isFixed ? '<span class="badge-fixed">固定</span>' : ''}
             </div>
           </div>
@@ -1361,7 +1460,7 @@
       });
     }
     justStampedId = null;
-    const activeTasks = tasks.filter(t => !isTaskSkipped(t, currentDate));
+    const activeTasks = tasks.filter(t => isDailyCountedTask(t, currentDate));
     const done = activeTasks.filter(t => t.completed).length, pct = activeTasks.length === 0 ? 0 : Math.round((done / activeTasks.length) * 100);
     document.getElementById('progressText').textContent = `${pct}% (${done}/${activeTasks.length})`;
     document.getElementById('progressBar').style.width = `${pct}%`;
@@ -1966,6 +2065,7 @@
       localStorage.setItem('cute_journal_vision', visionText);
     }
     if (d.fixedTargets && typeof d.fixedTargets === 'object') fixedTargets = { ...d.fixedTargets };
+    if (d.weeklyTargets && typeof d.weeklyTargets === 'object') weeklyTargets = { ...d.weeklyTargets };
     saveAll(true); return true;
   }
 
@@ -1996,7 +2096,7 @@
     try {
       const recentRecords = {};
       for (let i = 0; i < 7; i++) { const dStr = getLogicalToday(i); if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr]; }
-      const encoded = await encodeSyncData({ records: allRecords, archivedStats, fixedTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
+      const encoded = await encodeSyncData({ records: recentRecords, fixedTargets, weeklyTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
       const baseUrl = window.location.href.replace(/#.*$/, '');
       await writeClipboardSafe(`${baseUrl}#sync=${encoded}`);
       showSyncProgress('✅ 近 7 天壓縮短網址已複製！傳給自己點開即可同步', 100, 2600);
@@ -2007,7 +2107,7 @@
 
   async function copySyncCode() {
     try {
-      const code = await encodeSyncData({ records: allRecords, archivedStats, fixedTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
+      const code = await encodeSyncData({ records: allRecords, archivedStats, fixedTargets, weeklyTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
       await writeClipboardSafe(code);
       lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
       showSyncProgress(`✅ 完整同步代碼已複製（共 ${code.length} 字元）！`, 100, 2600);
@@ -2041,7 +2141,7 @@
 
   function exportJson() {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, archivedStats, fixedTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays }, null, 2)], { type: 'application/json' }));
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, archivedStats, fixedTargets, weeklyTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays }, null, 2)], { type: 'application/json' }));
     a.download = `每日目標手帳備份_${currentDate}.json`; a.click();
     lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
   }
@@ -2106,7 +2206,7 @@
   })();
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v5-0').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
+    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v5-1').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
   }
 
