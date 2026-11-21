@@ -397,7 +397,7 @@
         <div id="blindboxTag" class="blindbox-tag" style="display:none;"></div>
         <div id="quoteText">🌱 新的一天開始啦，寫下今天想完成的小目標吧！</div>
       </div>
-      <button style="background:none;border:none;cursor:pointer;font-size:1.1rem;" onclick="updateQuote(true)" title="換一句">🔄</button>
+      <button style="background:none;border:none;cursor:pointer;font-size:1.15rem;padding:2px 4px;transition:transform 0.15s;" onmousedown="this.style.transform='scale(0.85) rotate(-12deg)'" onmouseup="this.style.transform=''" onmouseleave="this.style.transform=''" onclick="updateQuote(true)" title="拍拍貓爪換一句">🐾</button>
     </div>
     <div class="summary-bar">
       <div class="summary-left-btns">
@@ -1305,10 +1305,10 @@
       if (!force && exactTier && exactTier.quotes.length > 0) {
         currentQuote = exactTier.quotes[Math.floor(Math.random() * exactTier.quotes.length)];
       } else {
-        currentQuote = activePool[Math.floor(Math.random() * activePool.length)];
+        const candidates = (force && activePool.length > 1) ? activePool.filter(q => q !== currentQuote) : activePool;
+        currentQuote = candidates[Math.floor(Math.random() * candidates.length)];
       }
     }
-
     const tagEl = document.getElementById('blindboxTag');
     if (exactTier && exactTier.quotes.includes(currentQuote)) {
       tagEl.style.display = 'inline-block';
