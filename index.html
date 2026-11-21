@@ -258,6 +258,46 @@
     font-size: 0.86rem; color: var(--text-brown);
     box-shadow: 0 3px 10px rgba(110, 181, 140, 0.1);
   }
+  .counter-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #f4ece6; border: 1.5px solid #dfd0c5; border-radius: 12px;
+    padding: 2px 6px; font-size: 0.78rem; font-weight: 700; color: var(--text-brown);
+    flex-shrink: 0; position: relative; overflow: hidden;
+  }
+  .counter-pill-bg {
+    position: absolute; left: 0; top: 0; bottom: 0; background: rgba(168, 213, 186, 0.45);
+    z-index: 0; transition: width 0.25s ease;
+  }
+  .counter-pill span, .counter-pill button { position: relative; z-index: 1; }
+  .btn-count-plus {
+    background: var(--primary-pink); color: #fff; border: none; border-radius: 8px;
+    padding: 1px 7px; font-size: 0.76rem; font-weight: 700; cursor: pointer;
+  }
+  .btn-count-plus:hover { background: var(--primary-pink-dark); }
+  .manage-task-row {
+    background: #fff; border: 1.5px solid #eadad0; border-radius: 12px;
+    padding: 9px 10px; margin-top: 8px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .manage-task-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .manage-task-input {
+    flex: 1; min-width: 140px; border: 1.5px solid #e3d5ca; border-radius: 8px;
+    padding: 5px 8px; font-size: 0.9rem; color: var(--text-brown); outline: none;
+  }
+  .manage-task-input:focus { border-color: var(--primary-pink); }
+  .manage-task-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .note-search-bar {
+    background: #fdf6ef; border: 1.5px solid #f0dfd1; border-radius: 12px;
+    padding: 10px; margin-top: 8px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .note-group-card {
+    background: #fff; border: 1.5px solid #eadad0; border-radius: 12px;
+    padding: 10px 12px; margin-top: 8px;
+  }
+  .note-entry-item {
+    padding: 6px 0 6px 9px; border-left: 3px solid var(--accent-mint);
+    margin-top: 6px; font-size: 0.84rem; line-height: 1.45;
+  }
+  .note-entry-item.is-undone { border-left-color: var(--primary-pink); }
 </style>
 </head>
 <body>
@@ -316,27 +356,33 @@
   </div>
   <div id="weeklyReviewBanner" class="weekly-review-card" style="display:none;"></div>
   <ul class="task-list" id="taskList"></ul>
-  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">☆ 設為今日焦點置頂｜✏️ 點擊文字編輯｜▲▼ 調整順序</p>
-  <div class="footer-tools">
-    <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openHistoryModal('stats')">📊 專案統計與歷史編輯</button>
-    <button class="btn btn-outline btn-sm" id="btnOpenSettings" onclick="openSettingsModal()">⚙️ 設定、新增與專案</button>
+  <p style="font-size:0.8rem;color:var(--text-light);text-align:center;margin-top:12px;">☆ 設為今日焦點置頂｜✏️ 編輯、排序與休假請點下方管理</p>
+  <div class="footer-tools" style="flex-direction:row;">
+    <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openHistoryModal('overview')">📊 專案統計與歷史</button>
+    <button class="btn btn-outline btn-sm" style="flex:1;" id="btnOpenManage" onclick="openManageModal()">🗂️ 專案與任務管理</button>
+    <button class="btn btn-outline btn-sm" style="flex:0 0 auto;padding:9px 12px;" id="btnOpenSettings" onclick="openSettingsModal()" title="系統設定與同步">⚙️</button>
   </div>
   <div style="text-align:center;margin-top:14px;font-size:0.72rem;color:#b5a49b;">
     🐾 圖示素材：png 圖片來源於 ://pngtree.com
   </div>
 </div>
-<div class="modal" id="settingsModal" onclick="if(event.target===this) closeAllModals()">
+<div class="modal" id="manageModal" onclick="if(event.target===this) closeAllModals()">
   <div class="modal-box">
     <div class="modal-header-sticky">
-      <h3 style="margin:0;">⚙️ 設定、專案與新增任務</h3>
+      <h3 style="margin:0;">🗂️ 專案與任務管理</h3>
       <button class="btn btn-outline btn-sm" onclick="closeAllModals()">✕ 關閉</button>
     </div>
     <div class="setting-section">
       <h4>➕ 新增當日臨時小目標</h4>
-      <div class="add-row">
-        <input type="text" id="newTaskInput" placeholder="輸入臨時目標... (按 Enter 新增)" onkeypress="if(event.key==='Enter') addTask()">
+      <div class="add-row" style="flex-wrap:wrap;">
+        <input type="text" id="newTaskInput" style="flex:1;min-width:160px;" placeholder="輸入臨時目標（如：喝水 8 杯）..." onkeypress="if(event.key==='Enter') addTask()">
+        <input type="number" id="newTaskTargetInput" min="0" max="999" style="width:86px;flex:none;" placeholder="目標次數">
         <button class="btn btn-sm" onclick="addTask()">＋ 新增</button>
       </div>
+    </div>
+    <div class="setting-section">
+      <h4>📋 當日任務列表管理（編輯 / 計數 / 排序 / 假日休 / 刪除）</h4>
+      <div id="manageTaskList"></div>
     </div>
     <div class="setting-section">
       <h4>⭐ 建立新目標專案（由 AI 匯入並覆蓋舊清單）</h4>
@@ -366,6 +412,14 @@
         <button class="btn btn-mint btn-sm" style="flex-shrink:0;" onclick="saveVisionBanner()">儲存</button>
       </div>
     </div>
+  </div>
+</div>
+<div class="modal" id="settingsModal" onclick="if(event.target===this) closeAllModals()">
+  <div class="modal-box">
+    <div class="modal-header-sticky">
+      <h3 style="margin:0;">⚙️ 系統設定、行事曆與同步</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeAllModals()">✕ 關閉</button>
+    </div>
     <div class="setting-section">
       <h4>📅 國定假日與補班日（自動串接政府行事曆）</h4>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px;">
@@ -391,7 +445,7 @@
     </div>
     <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;flex-direction:column;gap:8px;font-size:0.75rem;color:var(--text-light);">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span>版本：v4.9｜<span id="storageUsageText">空間計算中...</span></span>
+        <span>版本：v5.0｜<span id="storageUsageText">空間計算中...</span></span>
         <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="archiveOldDetails()">🗜️ 壓縮前年以前明細</button>
       </div>
       <button class="btn btn-outline btn-sm" style="width:100%;font-size:0.72rem;padding:5px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
@@ -408,11 +462,12 @@
       <span style="font-size:0.85rem;font-weight:700;">🎯 篩選專案：</span>
       <select id="statsProjSelect" onchange="onStatsProjChange()" style="flex:1;min-width:140px;"></select>
       </div>
-    <div class="tab-bar">
-      <button class="btn btn-sm" id="tabOverviewBtn" onclick="switchTab('overview')">🗓️ 打卡月曆與習慣排行</button>
-      <button class="btn btn-outline btn-sm" id="tabTrendsBtn" onclick="switchTab('trends')">📈 週月季年與成長曲線</button>
+    <div class="tab-bar" style="flex-wrap:wrap;">
+      <button class="btn btn-sm" id="tabOverviewBtn" onclick="switchTab('overview')">🗓️ 打卡月曆與排行</button>
+      <button class="btn btn-outline btn-sm" id="tabTrendsBtn" onclick="switchTab('trends')">📈 週月季年曲線</button>
+      <button class="btn btn-outline btn-sm" id="tabNotesBtn" onclick="switchTab('notes')">📝 紀錄查詢</button>
     </div>
-    <div id="overviewView"></div><div id="trendsView" style="display:none;"></div>
+    <div id="overviewView"></div><div id="trendsView" style="display:none;"></div><div id="notesView" style="display:none;"></div>
     <div id="statsView"></div><div id="logsView" style="display:none;"></div>
   </div>
 </div>
@@ -595,17 +650,44 @@
     updateStorageUsageDisplay();
     if (shouldRender) render();
   }
+  let fixedTargets = JSON.parse(localStorage.getItem('cute_journal_v5_fixed_targets') || '{}');
 
+  function detectTargetCount(text) {
+    const m = String(text || '').match(/(\d+)\s*(杯|個|組|頁|分鐘|分|下|輪|次|題|篇|公里|km|ml|cc|回|趟|本|章)/i);
+    if (!m) return 0;
+    const num = parseInt(m.at(1), 10);
+    return (num >= 2 && num <= 999) ? num : 0;
+  }
+
+  function saveAll(shouldRender = true) {
+    localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
+    localStorage.setItem('cute_journal_v3_template', JSON.stringify(fixedTemplate));
+    localStorage.setItem('cute_journal_v4_projects', JSON.stringify(projects));
+    localStorage.setItem('cute_journal_v4_active_proj', activeProjectId);
+    localStorage.setItem('cute_journal_v4_weekend_skip', JSON.stringify(weekendSkipItems));
+    localStorage.setItem('cute_journal_v4_holiday_overrides', JSON.stringify(holidayOverrides));
+    localStorage.setItem('cute_journal_v4_custom_holidays', JSON.stringify(customHolidays));
+    localStorage.setItem('cute_journal_v4_archived_stats', JSON.stringify(archivedStats));
+    localStorage.setItem('cute_journal_v5_fixed_targets', JSON.stringify(fixedTargets));
+    updateStorageUsageDisplay();
+    if (shouldRender) render();
+    if (document.getElementById('manageModal')?.classList.contains('active')) renderManageTaskList();
+  }
 
   function getTasks() {
     const todayStr = getLogicalToday();
     if (currentDate > todayStr) return allRecords[currentDate] || [];
     if (!allRecords[currentDate]) {
       const now = Date.now();
-      allRecords[currentDate] = fixedTemplate.map((text, idx) => ({
-        id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false,
-        skipWeekend: weekendSkipItems.includes(text), projectId: activeProjectId, updatedAt: now
-      }));
+      allRecords[currentDate] = fixedTemplate.map((text, idx) => {
+        const tgt = fixedTargets[text] || detectTargetCount(text);
+        const item = {
+          id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false,
+          skipWeekend: weekendSkipItems.includes(text), projectId: activeProjectId, updatedAt: now
+        };
+        if (tgt > 0) { item.targetCount = tgt; item.curCount = 0; }
+        return item;
+      });
       localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
     }
     return allRecords[currentDate];
@@ -613,25 +695,86 @@
 
   function addTask() {
     if (currentDate > getLogicalToday()) { alert('⏳ 尚未到達該日期，請在換日後再開始記錄喔！'); return; }
-    const input = document.getElementById('newTaskInput'), text = input.value.trim();
+    const input = document.getElementById('newTaskInput');
+    const tgtInput = document.getElementById('newTaskTargetInput');
+    const text = input.value.trim();
     if (!text) return;
-    getTasks().push({ id: Date.now() + Math.random(), text, note: '', completed: false, isFixed: false, isMit: false, projectId: activeProjectId, updatedAt: Date.now() });
+    const manualTgt = parseInt(tgtInput?.value || '0', 10) || 0;
+    const tgt = manualTgt >= 2 ? manualTgt : detectTargetCount(text);
+    const newItem = { id: Date.now() + Math.random(), text, note: '', completed: false, isFixed: false, isMit: false, projectId: activeProjectId, updatedAt: Date.now() };
+    if (tgt >= 2) { newItem.targetCount = tgt; newItem.curCount = 0; }
+    getTasks().push(newItem);
     input.value = '';
-    closeAllModals();
+    if (tgtInput) tgtInput.value = '';
     saveAll();
   }
 
-    function toggleTask(id) {
+  function toggleTask(id) {
     const tasks = getTasks(), t = tasks.find(x => x.id === id);
-    if (t) {
-      const activeBefore = tasks.filter(x => !isTaskSkipped(x, currentDate));
-      const wasAllDone = activeBefore.length > 0 && activeBefore.every(x => x.completed);
-      t.completed = !t.completed; t.updatedAt = Date.now(); currentQuote = "";
-      justStampedId = t.completed ? id : null;
-      saveAll();
-      const activeAfter = tasks.filter(x => !isTaskSkipped(x, currentDate));
-      if (!wasAllDone && activeAfter.length > 0 && activeAfter.every(x => x.completed)) triggerCelebration();
+    if (!t) return;
+    const activeBefore = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    const wasAllDone = activeBefore.length > 0 && activeBefore.every(x => x.completed);
+    t.completed = !t.completed;
+    if (t.targetCount > 0) {
+      t.curCount = t.completed ? t.targetCount : 0;
     }
+    t.updatedAt = Date.now(); currentQuote = "";
+    justStampedId = t.completed ? id : null;
+    saveAll();
+    const activeAfter = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    if (!wasAllDone && activeAfter.length > 0 && activeAfter.every(x => x.completed)) triggerCelebration();
+  }
+
+  function incrementTaskCount(id) {
+    const tasks = getTasks(), t = tasks.find(x => x.id === id);
+    if (!t || !t.targetCount) return;
+    const activeBefore = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    const wasAllDone = activeBefore.length > 0 && activeBefore.every(x => x.completed);
+    t.curCount = Math.min(t.targetCount, (t.curCount || 0) + 1);
+    if (t.curCount >= t.targetCount && !t.completed) {
+      t.completed = true;
+      justStampedId = t.id;
+      currentQuote = "";
+    }
+    t.updatedAt = Date.now();
+    saveAll();
+    const activeAfter = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    if (!wasAllDone && activeAfter.length > 0 && activeAfter.every(x => x.completed)) triggerCelebration();
+  }
+
+  function adjustTaskCountManual(id) {
+    const tasks = getTasks(), t = tasks.find(x => x.id === id);
+    if (!t || !t.targetCount) return;
+    const val = prompt(`請輸入「${t.text}」目前已完成次數（目標 ${t.targetCount}，輸入 0 重置）：`, String(t.curCount || 0));
+    if (val === null) return;
+    const num = Math.max(0, Math.min(t.targetCount, parseInt(val, 10) || 0));
+    const activeBefore = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    const wasAllDone = activeBefore.length > 0 && activeBefore.every(x => x.completed);
+    t.curCount = num;
+    const nowDone = num >= t.targetCount;
+    if (nowDone && !t.completed) { justStampedId = t.id; currentQuote = ""; }
+    t.completed = nowDone;
+    t.updatedAt = Date.now();
+    saveAll();
+    const activeAfter = tasks.filter(x => !isTaskSkipped(x, currentDate));
+    if (!wasAllDone && activeAfter.length > 0 && activeAfter.every(x => x.completed)) triggerCelebration();
+  }
+
+  function setTaskTargetCount(id, rawVal) {
+    const tasks = getTasks(), t = tasks.find(x => x.id === id);
+    if (!t) return;
+    const tgt = parseInt(rawVal, 10) || 0;
+    if (tgt >= 2) {
+      t.targetCount = tgt;
+      t.curCount = t.completed ? tgt : Math.min(t.curCount || 0, tgt - 1);
+      if (t.isFixed) fixedTargets[t.text] = tgt;
+    } else {
+      delete t.targetCount;
+      delete t.curCount;
+      if (t.isFixed) delete fixedTargets[t.text];
+    }
+    t.updatedAt = Date.now();
+    saveAll();
   }
 
   function toggleWeekendSkip(id) {
@@ -939,9 +1082,9 @@
   }
   function closeAllModals(fromPopState = false) {
     document.getElementById('settingsModal').classList.remove('active');
+    document.getElementById('manageModal')?.classList.remove('active');
     document.getElementById('historyModal').classList.remove('active');
-    const spm = document.getElementById('syncPasteModal');
-    if (spm) spm.classList.remove('active');
+    document.getElementById('syncPasteModal')?.classList.remove('active');
     if (modalHistoryPushed) {
       modalHistoryPushed = false;
       if (!fromPopState) history.back();
@@ -951,6 +1094,54 @@
     if (modalHistoryPushed) closeAllModals(true);
   });
 
+  function renderManageTaskList() {
+    const box = document.getElementById('manageTaskList');
+    if (!box) return;
+    const todayStr = getLogicalToday();
+    if (currentDate > todayStr) {
+      box.innerHTML = `<div style="font-size:0.84rem;color:var(--text-light);padding:8px;">⏳ ${currentDate} 為未來日期，尚未產生任務列表。</div>`;
+      return;
+    }
+    const tasks = getTasks();
+    if (tasks.length === 0) {
+      box.innerHTML = `<div style="font-size:0.84rem;color:var(--text-light);padding:8px;">目前尚無任務，可從上方新增或匯入專案清單。</div>`;
+      return;
+    }
+    box.innerHTML = tasks.map((t, idx) => `
+      <div class="manage-task-row">
+        <div class="manage-task-top">
+          <input type="text" class="manage-task-input" value="${t.text.replace(/"/g, '&quot;')}" onblur="editTask(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          ${t.isFixed ? '<span class="badge-fixed">固定</span>' : '<span style="font-size:0.7rem;color:#9c8980;">臨時</span>'}
+        </div>
+        <div class="manage-task-actions">
+          <label style="font-size:0.76rem;color:var(--text-light);display:inline-flex;align-items:center;gap:4px;margin-right:auto;">
+            🔢 次數：
+            <input type="number" min="0" max="999" value="${t.targetCount || ''}" placeholder="無" style="width:54px;padding:3px 5px;border:1px solid #dfd0c5;border-radius:6px;font-size:0.78rem;" onchange="setTaskTargetCount(${t.id}, this.value)">
+          </label>
+          <button class="btn-weekend ${t.skipWeekend ? 'active' : ''}" onclick="toggleWeekendSkip(${t.id})">${t.skipWeekend ? '🏖️ 假日休' : '🏖️ 設假日休'}</button>
+          <button class="btn-sort" onclick="moveTask(${idx}, -1)">▲</button>
+          <button class="btn-sort" onclick="moveTask(${idx}, 1)">▼</button>
+          <button class="btn-del" onclick="delTask(${t.id})" title="刪除任務">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openManageModal() {
+    document.getElementById('visionInput').value = visionText;
+    renderManageTaskList();
+    renderProjManageList();
+    document.getElementById('manageModal').classList.add('active');
+    pushModalState();
+  }
+
+  function openSettingsModal() {
+    document.getElementById('customHolidaysInput').value = customHolidays.join(', ');
+    updateLastHolidayDisplay();
+    updateStorageUsageDisplay();
+    document.getElementById('settingsModal').classList.add('active');
+    pushModalState();
+  }
   function updateStorageUsageDisplay() {
     const el = document.getElementById('storageUsageText');
     if (!el) return;
@@ -1001,16 +1192,6 @@
     showSyncProgress(`🗜️ 已壓縮 ${oldDates.length} 天舊明細並完整保留統計！`, 100, 2800);
   }
 
-  function openSettingsModal() {
-    document.getElementById('visionInput').value = visionText;
-    document.getElementById('customHolidaysInput').value = customHolidays.join(', ');
-    updateLastHolidayDisplay();
-    updateStorageUsageDisplay();
-    renderProjManageList();
-    document.getElementById('settingsModal').classList.add('active');
-    pushModalState();
-  }
-
   function saveVisionBanner() {
     visionText = document.getElementById('visionInput').value.trim();
     localStorage.setItem('cute_journal_vision', visionText);
@@ -1031,10 +1212,10 @@
     const needBackup = Object.keys(allRecords).length > 0 && (!lastBackupTime || daysSinceBackup > 7);
     if (needBackup) {
       if (btnExport) { btnExport.classList.add('btn-warn'); btnExport.textContent = '⚠️ 建議匯出備份'; }
-      btnSettings.classList.add('btn-warn'); btnSettings.textContent = '⚙️ 設定與專案 ⚠️';
+      btnSettings.classList.add('btn-warn'); btnSettings.textContent = '⚙️⚠️';
     } else {
       if (btnExport) { btnExport.classList.remove('btn-warn'); btnExport.textContent = '📤 匯出備份檔'; }
-      btnSettings.classList.remove('btn-warn'); btnSettings.textContent = '⚙️ 設定、新增與專案';
+      btnSettings.classList.remove('btn-warn'); btnSettings.textContent = '⚙️';
     }
 
     const todayStr = getLogicalToday(), isToday = currentDate === todayStr, isFuture = currentDate > todayStr;
@@ -1052,22 +1233,36 @@
       listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.95rem;">⏳ <b>${currentDate}</b> 尚未到來喔！<br>等該日凌晨 05:00 換日後，系統會自動帶入目前專案的每日固定清單。</li>`;
     } else {
       const displayList = tasks
-        .map((t, idx) => ({ t, idx, skipped: isTaskSkipped(t, currentDate) }))
-        .sort((a, b) => Number(a.skipped) - Number(b.skipped));
-      displayList.forEach(({ t, idx, skipped }) => {
+        .map((t, idx) => {
+          const skipped = isTaskSkipped(t, currentDate);
+          const tier = skipped ? 2 : (t.completed ? 1 : 0);
+          return { t, idx, skipped, tier };
+        })
+        .sort((a, b) => a.tier - b.tier || a.idx - b.idx);
+
+      displayList.forEach(({ t, skipped }) => {
         const li = document.createElement('li');
         li.className = `task-item ${t.completed ? 'completed' : ''} ${t.isMit ? 'is-mit' : ''} ${skipped ? 'skipped-holiday' : ''}`;
         const stampHtml = (t.completed && !skipped) ? `<span class="stamp-badge ${justStampedId === t.id ? 'animate' : ''}">DONE! 🐾</span>` : '';
+        let counterHtml = '';
+        if (t.targetCount && t.targetCount > 0 && !skipped) {
+          const cur = Math.min(t.targetCount, t.curCount || 0);
+          const pctFill = Math.round((cur / t.targetCount) * 100);
+          counterHtml = `<div class="counter-pill">
+            <div class="counter-pill-bg" style="width:${pctFill}%"></div>
+            <span onclick="adjustTaskCountManual(${t.id})" style="cursor:pointer;padding:0 3px;" title="點擊自訂次數">${cur}/${t.targetCount}</span>
+            ${!t.completed ? `<button class="btn-count-plus" onclick="incrementTaskCount(${t.id})">＋1</button>` : ''}
+          </div>`;
+        }
         li.innerHTML = `${stampHtml}
           <div class="task-main-row">
             <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} ${skipped ? 'disabled' : ''} onchange="toggleTask(${t.id})">
             <button class="btn-mit ${t.isMit ? 'active' : ''}" onclick="toggleMit(${t.id})" title="設為今日焦點置頂">${t.isMit ? '⭐' : '☆'}</button>
             ${t.isMit ? '<span class="badge-mit">焦點</span>' : ''}
-            <div class="task-text" contenteditable="true" onblur="editTask(${t.id}, this.innerText)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</div>
-            <button class="btn-weekend ${t.skipWeekend ? 'active' : ''}" onclick="toggleWeekendSkip(${t.id})" title="點擊設定假日自動跳過不計入">${t.skipWeekend ? '🏖️ 假日休' : '🏖️'}</button>
+            <div class="task-text">${t.text.replace(/</g, '&lt;')}</div>
+            ${counterHtml}
+            ${skipped ? '<span class="btn-weekend active" style="cursor:default;">🏖️ 假日休</span>' : ''}
             ${t.isFixed ? '<span class="badge-fixed">固定</span>' : ''}
-            <div class="sort-btns"><button class="btn-sort" onclick="moveTask(${idx}, -1)">▲</button><button class="btn-sort" onclick="moveTask(${idx}, 1)">▼</button></div>
-            <button class="btn-del" onclick="delTask(${t.id})">✕</button>
           </div>
           <div class="task-note-row"><input type="text" class="task-note-input" value="${(t.note || '').replace(/"/g, '&quot;')}" placeholder="📝 記錄執行狀況或心得..." oninput="editNote(${t.id}, this.value)"></div>`;
         listEl.appendChild(li);
@@ -1081,6 +1276,28 @@
     updateQuote(false);
     renderWeeklyReviewBanner();
   }
+
+  function copyDailySummary() {
+    const tasks = getTasks();
+    if (tasks.length === 0) { alert('該日期沒有任務可以總結喔！'); return; }
+    const activeTasks = tasks.filter(t => !isTaskSkipped(t, currentDate));
+    const skippedCnt = tasks.length - activeTasks.length;
+    const done = activeTasks.filter(t => t.completed).length;
+    const pct = activeTasks.length === 0 ? 100 : Math.round((done / activeTasks.length) * 100);
+    const isHol = isHolidayDate(currentDate);
+
+    let text = `📅 日期：${currentDate}${isHol ? '（🌴 休假／國定假日）' : ''}（專案：${getActiveProject().name}）\n`;
+    text += `📊 當日應執行達成率：${pct}% (${done}/${activeTasks.length})${skippedCnt > 0 ? `｜已自動排除 ${skippedCnt} 項休假免計目標` : ''}\n\n【目標執行狀況與筆記】\n`;
+    tasks.forEach(t => {
+      const skipped = isTaskSkipped(t, currentDate);
+      const statusTag = skipped ? '🏖️ 休假免計' : (t.completed ? '✅ 已完成' : '⬜ 未完成');
+      const countStr = (t.targetCount && t.targetCount > 0) ? `（進度：${t.curCount || 0}/${t.targetCount}）` : '';
+      text += `- [${statusTag}] ${t.isMit ? '⭐[今日焦點] ' : ''}${t.text}${countStr}${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`;
+    });
+    text += `\n請根據我這天的完成狀況與筆記紀錄，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供具體小建議！`;
+    navigator.clipboard.writeText(text).then(() => alert(`📋 ${currentDate} 總結已複製！直接貼上給 AI 即可取得覆盤回饋！`));
+  }
+
   function dismissWeeklyReview(mondayKey) {
     localStorage.setItem('cute_journal_weekly_review_seen', mondayKey);
     const el = document.getElementById('weeklyReviewBanner');
@@ -1144,27 +1361,6 @@
     `;
     el.style.display = 'flex';
   }
-  function copyDailySummary() {
-    const tasks = getTasks();
-    if (tasks.length === 0) { alert('該日期沒有任務可以總結喔！'); return; }
-    const activeTasks = tasks.filter(t => !isTaskSkipped(t, currentDate));
-    const skippedCnt = tasks.length - activeTasks.length;
-    const done = activeTasks.filter(t => t.completed).length;
-    const pct = activeTasks.length === 0 ? 100 : Math.round((done / activeTasks.length) * 100);
-    const isHol = isHolidayDate(currentDate);
-
-    let text = `📅 日期：${currentDate}${isHol ? '（🌴 休假／國定假日）' : ''}（專案：${getActiveProject().name}）\n`;
-    text += `📊 當日應執行達成率：${pct}% (${done}/${activeTasks.length})${skippedCnt > 0 ? `｜已自動排除 ${skippedCnt} 項休假免計目標` : ''}\n\n【目標執行狀況與筆記】\n`;
-    tasks.forEach(t => {
-      const skipped = isTaskSkipped(t, currentDate);
-      const statusTag = skipped ? '🏖️ 休假免計' : (t.completed ? '✅ 已完成' : '⬜ 未完成');
-      text += `- [${statusTag}] ${t.isMit ? '⭐[今日焦點] ' : ''}${t.text}${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`;
-    });
-    text += `\n請根據我這天的完成狀況與筆記紀錄，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供具體小建議！`;
-    navigator.clipboard.writeText(text).then(() => alert(`📋 ${currentDate} 總結已複製！直接貼上給 AI 即可取得覆盤回饋！`));
-  }
-
-
   let selectedStatsProj = 'ALL', selectedCurveDim = 'week', periodReportCache = {}, calViewYear = 0, calViewMonth = 0;
   function getFilteredRecords() {
     const res = {};
@@ -1434,26 +1630,97 @@
       projects.map(p => `<option value="${p.id}" ${p.id === selectedStatsProj ? 'selected' : ''}>🎯 ${p.name.replace(/</g,'&lt;')}</option>`).join('');
   }
   
+  let notesGroupMode = 'time', notesStatusFilter = 'all', notesKeyword = '';
+
+  function renderNotesQueryView() {
+    const box = document.getElementById('notesView');
+    if (!box) return;
+    const records = getFilteredRecords();
+    const entries = [];
+    Object.keys(records).sort().reverse().forEach(dStr => {
+      records[dStr].forEach(t => {
+        if (!t.note || !t.note.trim()) return;
+        if (notesStatusFilter === 'done' && !t.completed) return;
+        if (notesStatusFilter === 'undone' && t.completed) return;
+        if (notesKeyword && !t.text.toLowerCase().includes(notesKeyword) && !t.note.toLowerCase().includes(notesKeyword)) return;
+        entries.push({ dateStr: dStr, text: t.text, note: t.note.trim(), completed: Boolean(t.completed) });
+      });
+    });
+
+    const controlsHtml = `
+      <div class="note-search-bar">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-sm ${notesGroupMode === 'time' ? '' : 'btn-outline'}" onclick="notesGroupMode='time';renderNotesQueryView()">🕒 依時間由近到遠</button>
+          <button class="btn btn-sm ${notesGroupMode === 'task' ? '' : 'btn-outline'}" onclick="notesGroupMode='task';renderNotesQueryView()">📌 依任務項目彙整</button>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-sm ${notesStatusFilter === 'all' ? 'btn-mint' : 'btn-outline'}" onclick="notesStatusFilter='all';renderNotesQueryView()">全部 (${entries.length})</button>
+          <button class="btn btn-sm ${notesStatusFilter === 'done' ? 'btn-mint' : 'btn-outline'}" onclick="notesStatusFilter='done';renderNotesQueryView()">✅ 已完成</button>
+          <button class="btn btn-sm ${notesStatusFilter === 'undone' ? 'btn-mint' : 'btn-outline'}" onclick="notesStatusFilter='undone';renderNotesQueryView()">⬜ 未完成</button>
+          <input type="text" value="${notesKeyword.replace(/"/g, '&quot;')}" placeholder="🔍 搜尋任務或筆記關鍵字..." style="flex:1;min-width:140px;padding:5px 9px;border:1.5px solid #dfd0c5;border-radius:10px;font-size:0.82rem;" oninput="notesKeyword=this.value.trim().toLowerCase();renderNotesQueryView()">
+        </div>
+      </div>
+    `;
+
+    if (entries.length === 0) {
+      box.innerHTML = controlsHtml + `<div style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.86rem;">📭 沒有符合條件的筆記紀錄喔！</div>`;
+      return;
+    }
+
+    let listHtml = '';
+    if (notesGroupMode === 'time') {
+      listHtml = entries.map(e => `
+        <div class="note-group-card" onclick="jumpToDate('${e.dateStr}')" style="cursor:pointer;">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.8rem;color:var(--text-light);">
+            <span>📅 <b>${e.dateStr}</b></span>
+            <span>${e.completed ? '✅ 已完成' : '⬜ 未完成'}</span>
+          </div>
+          <div style="font-weight:700;font-size:0.9rem;margin-top:3px;">${e.text.replace(/</g, '&lt;')}</div>
+          <div class="note-entry-item ${e.completed ? '' : 'is-undone'}">${e.note.replace(/</g, '&lt;')}</div>
+        </div>
+      `).join('');
+    } else {
+      const grouped = new Map();
+      entries.forEach(e => {
+        if (!grouped.has(e.text)) grouped.set(e.text, []);
+        grouped.get(e.text).push(e);
+      });
+      listHtml = Array.from(grouped.entries()).map(([taskTitle, items]) => `
+        <div class="note-group-card">
+          <div style="font-weight:700;font-size:0.92rem;color:var(--text-brown);border-bottom:1px dashed var(--border-dashed);padding-bottom:5px;">
+            🎯 ${taskTitle.replace(/</g, '&lt;')} <span style="font-size:0.76rem;color:var(--text-light);">（共 ${items.length} 則筆記）</span>
+          </div>
+          ${items.map(it => `
+            <div class="note-entry-item ${it.completed ? '' : 'is-undone'}" onclick="jumpToDate('${it.dateStr}')" style="cursor:pointer;">
+              <div style="font-size:0.76rem;color:var(--text-light);margin-bottom:2px;">📅 ${it.dateStr}｜${it.completed ? '✅ 已完成' : '⬜ 未完成'}</div>
+              <div>${it.note.replace(/</g, '&lt;')}</div>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+    box.innerHTML = controlsHtml + listHtml;
+  }
+
   function onStatsProjChange() {
     selectedStatsProj = document.getElementById('statsProjSelect').value;
     renderStatsDashboard();
+    renderNotesQueryView();
   }
 
-  function renameSelectedProject() {
-    const proj = projects.find(p => p.id === selectedStatsProj);
-    if (!proj) return;
-    const newName = prompt('修改此歷史／進行中專案的名稱：', proj.name);
-    if (newName && newName.trim()) { proj.name = newName.trim(); saveAll(); refreshProjSelect(); }
-  }
   function switchTab(tab) {
     document.getElementById('overviewView').style.display = tab === 'overview' ? 'block' : 'none';
     document.getElementById('trendsView').style.display = tab === 'trends' ? 'block' : 'none';
+    document.getElementById('notesView').style.display = tab === 'notes' ? 'block' : 'none';
     document.getElementById('tabOverviewBtn').className = tab === 'overview' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
     document.getElementById('tabTrendsBtn').className = tab === 'trends' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
+    document.getElementById('tabNotesBtn').className = tab === 'notes' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
+    if (tab === 'notes') renderNotesQueryView();
   }
+
   function openHistoryModal(defaultTab) {
-    selectedStatsProj = 'ALL'; refreshProjSelect(); renderStatsDashboard();
-    switchTab(defaultTab === 'trends' ? 'trends' : 'overview');
+    selectedStatsProj = 'ALL'; refreshProjSelect(); renderStatsDashboard(); renderNotesQueryView();
+    switchTab(defaultTab === 'trends' ? 'trends' : (defaultTab === 'notes' ? 'notes' : 'overview'));
     document.getElementById('historyModal').classList.add('active');
     pushModalState();
   }
@@ -1579,6 +1846,7 @@
       visionText = d.vision;
       localStorage.setItem('cute_journal_vision', visionText);
     }
+    if (d.fixedTargets && typeof d.fixedTargets === 'object') fixedTargets = { ...d.fixedTargets };
     saveAll(true); return true;
   }
 
@@ -1609,7 +1877,7 @@
     try {
       const recentRecords = {};
       for (let i = 0; i < 7; i++) { const dStr = getLogicalToday(i); if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr]; }
-      const encoded = await encodeSyncData({ records: recentRecords, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
+      const encoded = await encodeSyncData({ records: allRecords, archivedStats, fixedTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
       const baseUrl = window.location.href.replace(/#.*$/, '');
       await writeClipboardSafe(`${baseUrl}#sync=${encoded}`);
       showSyncProgress('✅ 近 7 天壓縮短網址已複製！傳給自己點開即可同步', 100, 2600);
@@ -1620,7 +1888,7 @@
 
   async function copySyncCode() {
     try {
-      const code = await encodeSyncData({ records: allRecords, archivedStats, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
+      const code = await encodeSyncData({ records: allRecords, archivedStats, fixedTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
       await writeClipboardSafe(code);
       lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
       showSyncProgress(`✅ 完整同步代碼已複製（共 ${code.length} 字元）！`, 100, 2600);
@@ -1654,7 +1922,7 @@
 
   function exportJson() {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, archivedStats, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays }, null, 2)], { type: 'application/json' }));
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, archivedStats, fixedTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays }, null, 2)], { type: 'application/json' }));
     a.download = `每日目標手帳備份_${currentDate}.json`; a.click();
     lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
   }
@@ -1719,9 +1987,10 @@
   })();
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v4-9').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
+    const swCode = `self.addEventListener('fetch', e => { if (!e.request.url.startsWith(self.location.origin)) return; e.respondWith(caches.open('journal-v5-0').then(c => c.match(e.request).then(r => r || fetch(e.request).then(res => { c.put(e.request, res.clone()); return res; })))); });`;
     navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }))).catch(() => {});
   }
+
   window.addEventListener('hashchange', checkUrlSync);
   checkUrlSync();
   render();
