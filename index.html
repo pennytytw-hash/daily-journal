@@ -763,7 +763,24 @@
       .sort();
   }
 
+  function isDefaultWeekendCompact(k) {
+    const dow = new Date(`${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}T00:00:00`).getDay();
+    return dow === 0 || dow === 6;
+  }
+
   async function syncGovCalendar(isManual = false) {
+    let pruned = false;
+    Object.entries(govCalendarMap).forEach(([k, isHol]) => {
+      if (!/^\d{8}$/.test(k) || Boolean(isHol) === isDefaultWeekendCompact(k)) {
+        delete govCalendarMap[k];
+        pruned = true;
+      }
+    });
+    if (pruned) {
+      localStorage.setItem('cute_journal_v4_gov_calendar', JSON.stringify(govCalendarMap));
+      updateStorageUsageDisplay();
+    }
+
     const govDates = getCachedGovHolidays();
     const lastCachedStr = govDates.length > 0 ? govDates[govDates.length - 1] : '';
     if (!isManual && lastCachedStr) {
@@ -786,7 +803,11 @@
           if (Array.isArray(arr) && arr.length > 0) {
             arr.forEach(item => {
               const cleanDate = String(item?.date || '').trim().replace(/-/g, '');
-              if (/^\d{8}$/.test(cleanDate)) govCalendarMap[cleanDate] = Boolean(item.isHoliday);
+              if (/^\d{8}$/.test(cleanDate)) {
+                const isHol = Boolean(item.isHoliday);
+                if (isHol !== isDefaultWeekendCompact(cleanDate)) govCalendarMap[cleanDate] = isHol;
+                else delete govCalendarMap[cleanDate];
+              }
             });
             updated = true;
             break;
