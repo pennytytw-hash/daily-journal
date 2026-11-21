@@ -758,6 +758,22 @@
   function isTaskSkipped(t, dStr) { return Boolean(t && t.skipWeekend && isHolidayDate(dStr)); }
 
   async function syncGovCalendar(isManual = false) {
+    const govDates = Object.entries(govCalendarMap)
+      .filter(([, isHol]) => isHol)
+      .map(([k]) => `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}`)
+      .sort();
+    const lastCachedStr = govDates.length > 0 ? govDates[govDates.length - 1] : '';
+
+    if (!isManual && lastCachedStr) {
+      const todayMs = new Date(getLogicalToday() + 'T00:00:00').getTime();
+      const lastMs = new Date(lastCachedStr + 'T00:00:00').getTime();
+      const diffDays = (lastMs - todayMs) / 86400000;
+      if (diffDays >= 365) {
+        updateLastHolidayDisplay();
+        return;
+      }
+    }
+
     if (isManual) showSyncProgress('🔄 正在連線 TaiwanCalendar 資料庫...', 45);
     const curYear = new Date().getFullYear();
     const targetYears = [curYear, curYear + 1];
@@ -787,29 +803,20 @@
         } catch (e) { lastErr = e.message || String(e); }
       }
     }
-    const minKeepPrefix = String(curYear - 1);
-    let prunedCount = 0;
-    Object.keys(govCalendarMap).forEach(k => {
-      if (k.slice(0, 4) < minKeepPrefix) {
-        delete govCalendarMap[k];
-        prunedCount++;
-      }
-    });
-    if (updated || prunedCount > 0) {
+    if (updated) {
       localStorage.setItem('cute_journal_v4_gov_calendar', JSON.stringify(govCalendarMap));
       updateStorageUsageDisplay();
       render();
     }
-   updateLastHolidayDisplay();
+    updateLastHolidayDisplay();
     if (isManual) {
       showSyncProgress(
-        updated ? '✅ 2026～2027 政府行事曆同步成功！' : `⚠️ 失敗原因：${lastErr || '無資料'}`,
+        updated ? `✅ ${curYear}～${curYear + 1} 政府行事曆同步成功！` : `⚠️ 失敗原因：${lastErr || '無資料'}`,
         100,
         3500
       );
     }
   }
-
 
   const datePicker = document.getElementById('datePicker');
   datePicker.value = currentDate;
