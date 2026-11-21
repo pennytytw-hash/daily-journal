@@ -308,6 +308,40 @@
     .footer-tools button:nth-child(2) { flex: 1 1 calc(100% - 54px) !important; }
     .footer-tools button:nth-child(3) { flex: 0 0 46px !important; padding: 10px 0 !important; }
   }
+  .stamp-badge { z-index: 5; }
+  .tab-bar {
+    flex-wrap: nowrap !important; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; gap: 6px;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-bar .btn { flex-shrink: 0; white-space: nowrap; }
+  textarea.auto-grow-ta {
+    width: 100%; min-height: 36px; height: auto; resize: none; overflow: hidden;
+    line-height: 1.45; font-family: inherit; border: 1.5px solid #e3d5ca;
+    border-radius: 10px; padding: 7px 10px; font-size: 0.9rem; color: var(--text-brown); background: #fff; outline: none;
+  }
+  textarea.auto-grow-ta:focus { border-color: var(--primary-pink); }
+  .drag-handle {
+    cursor: grab; font-size: 1.05rem; color: #a8968c; padding: 2px 6px;
+    user-select: none; touch-action: none; flex-shrink: 0;
+  }
+  .drag-handle:active { cursor: grabbing; color: var(--primary-pink-dark); }
+  .manage-task-row.dragging { opacity: 0.45; border: 2px dashed var(--primary-pink); background: #fff8f6; }
+  .manage-task-actions {
+    display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; justify-content: space-between;
+  }
+  @media (max-width: 520px) {
+    .task-main-row { flex-wrap: nowrap !important; gap: 6px; align-items: flex-start; }
+    .task-checkbox { margin-top: 2px; }
+    .btn-mit { margin-top: 1px; }
+    .task-text { flex: 1 1 auto !important; min-width: 0; font-size: 0.96rem; line-height: 1.42; padding: 1px 2px; }
+    .task-meta-group { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; margin-top: 1px; }
+    .task-note-row { padding-left: 30px; margin-top: 2px; }
+    .stamp-badge { right: 10px; top: 6px; bottom: auto !important; }
+    .manage-task-actions { gap: 4px; }
+    .manage-task-actions .btn-weekend { padding: 3px 6px; font-size: 0.72rem; white-space: nowrap; }
+    .manage-task-actions .btn-del { padding: 2px 5px; font-size: 1.05rem; }
+  }
 </style>
 </head>
 <body>
@@ -384,10 +418,12 @@
     </div>
     <div class="setting-section">
       <h4>➕ 新增當日臨時小目標</h4>
-      <div class="add-row" style="flex-wrap:wrap;">
-        <input type="text" id="newTaskInput" style="flex:1;min-width:160px;" placeholder="輸入臨時目標（如：喝水 8 杯）..." onkeypress="if(event.key==='Enter') addTask()">
-        <input type="number" id="newTaskTargetInput" min="0" max="999" style="width:86px;flex:none;" placeholder="目標次數">
-        <button class="btn btn-sm" onclick="addTask()">＋ 新增</button>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <textarea id="newTaskInput" rows="1" class="auto-grow-ta" placeholder="輸入臨時目標（如：喝水 8 杯）..." oninput="autoResizeTa(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addTask();}"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;">
+          <input type="number" id="newTaskTargetInput" min="0" max="999" style="width:96px;padding:6px 10px;border:1.5px solid #eedfd3;border-radius:10px;font-size:0.86rem;" placeholder="目標次數">
+          <button class="btn btn-sm" onclick="addTask()">＋ 新增任務</button>
+        </div>
       </div>
     </div>
     <div class="setting-section">
@@ -695,19 +731,48 @@
     return allRecords[currentDate];
   }
 
+  function autoResizeTa(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    if (el.scrollHeight > 0) el.style.height = el.scrollHeight + 'px';
+  }
+
+  function resizeAllTextareas(root = document) {
+    root.querySelectorAll('textarea.auto-grow-ta').forEach(autoResizeTa);
+  }
+
   function addTask() {
     if (currentDate > getLogicalToday()) { alert('⏳ 尚未到達該日期，請在換日後再開始記錄喔！'); return; }
     const input = document.getElementById('newTaskInput');
     const tgtInput = document.getElementById('newTaskTargetInput');
-    const text = input.value.trim();
+    const text = String(input.value || '').replace(/[\r\n]+/g, ' ').trim();
     if (!text) return;
     const manualTgt = parseInt(tgtInput?.value || '0', 10) || 0;
-    const tgt = manualTgt >= 2 ? manualTgt : detectTargetCount(text);
+    const tgt = manualTgt >= 1 ? manualTgt : detectTargetCount(text);
     const newItem = { id: Date.now() + Math.random(), text, note: '', completed: false, isFixed: false, isMit: false, projectId: activeProjectId, updatedAt: Date.now() };
-    if (tgt >= 2) { newItem.targetCount = tgt; newItem.curCount = 0; }
+    if (tgt >= 1) { newItem.targetCount = tgt; newItem.curCount = 0; }
     getTasks().push(newItem);
     input.value = '';
+    autoResizeTa(input);
     if (tgtInput) tgtInput.value = '';
+    saveAll();
+  }
+
+  function setTaskTargetCount(id, rawVal) {
+    const tasks = getTasks(), t = tasks.find(x => x.id === id);
+    if (!t) return;
+    const trimmed = String(rawVal ?? '').trim();
+    const tgt = trimmed === '' ? 0 : (parseInt(trimmed, 10) || 0);
+    if (tgt >= 1) {
+      t.targetCount = tgt;
+      t.curCount = t.completed ? tgt : Math.min(t.curCount || 0, tgt - 1);
+      if (t.isFixed) fixedTargets[t.text] = tgt;
+    } else {
+      delete t.targetCount;
+      delete t.curCount;
+      if (t.isFixed) delete fixedTargets[t.text];
+    }
+    t.updatedAt = Date.now();
     saveAll();
   }
 
@@ -760,23 +825,6 @@
     saveAll();
     const activeAfter = tasks.filter(x => !isTaskSkipped(x, currentDate));
     if (!wasAllDone && activeAfter.length > 0 && activeAfter.every(x => x.completed)) triggerCelebration();
-  }
-
-  function setTaskTargetCount(id, rawVal) {
-    const tasks = getTasks(), t = tasks.find(x => x.id === id);
-    if (!t) return;
-    const tgt = parseInt(rawVal, 10) || 0;
-    if (tgt >= 2) {
-      t.targetCount = tgt;
-      t.curCount = t.completed ? tgt : Math.min(t.curCount || 0, tgt - 1);
-      if (t.isFixed) fixedTargets[t.text] = tgt;
-    } else {
-      delete t.targetCount;
-      delete t.curCount;
-      if (t.isFixed) delete fixedTargets[t.text];
-    }
-    t.updatedAt = Date.now();
-    saveAll();
   }
 
   function toggleWeekendSkip(id) {
@@ -1096,6 +1144,63 @@
     if (modalHistoryPushed) closeAllModals(true);
   });
 
+  function reorderTaskByIndex(fromIdx, toIdx) {
+    const tasks = getTasks();
+    if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= tasks.length || toIdx >= tasks.length) return;
+    const [moved] = tasks.splice(fromIdx, 1);
+    tasks.splice(toIdx, 0, moved);
+    fixedTemplate = tasks.filter(t => t.isFixed).map(t => t.text);
+    getActiveProject().items = [...fixedTemplate];
+    saveAll();
+  }
+
+  function bindDragSortEvents(box) {
+    let dragSrcIdx = null;
+    const rows = Array.from(box.querySelectorAll('.manage-task-row'));
+    rows.forEach((row, idx) => {
+      const handle = row.querySelector('.drag-handle');
+      if (!handle) return;
+      // 電腦滑鼠拖曳
+      handle.addEventListener('mousedown', () => { row.setAttribute('draggable', 'true'); });
+      row.addEventListener('dragstart', e => {
+        dragSrcIdx = idx;
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('dragging');
+        row.removeAttribute('draggable');
+      });
+      row.addEventListener('dragover', e => { e.preventDefault(); });
+      row.addEventListener('drop', e => {
+        e.preventDefault();
+        if (dragSrcIdx !== null && dragSrcIdx !== idx) reorderTaskByIndex(dragSrcIdx, idx);
+      });
+      // 手機觸控拖曳
+      handle.addEventListener('touchstart', () => {
+        dragSrcIdx = idx;
+        row.classList.add('dragging');
+      }, { passive: true });
+      handle.addEventListener('touchmove', e => {
+        if (dragSrcIdx === null) return;
+        e.preventDefault();
+        const touch = e.touches.item(0);
+        const targetEl = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.manage-task-row');
+        if (targetEl && targetEl !== row) {
+          const targetIdx = rows.indexOf(targetEl);
+          if (targetIdx !== -1 && targetIdx !== dragSrcIdx) {
+            reorderTaskByIndex(dragSrcIdx, targetIdx);
+            dragSrcIdx = targetIdx;
+          }
+        }
+      }, { passive: false });
+      handle.addEventListener('touchend', () => {
+        row.classList.remove('dragging');
+        dragSrcIdx = null;
+      });
+    });
+  }
+
   function renderManageTaskList() {
     const box = document.getElementById('manageTaskList');
     if (!box) return;
@@ -1109,36 +1214,36 @@
       box.innerHTML = `<div style="font-size:0.84rem;color:var(--text-light);padding:8px;">目前尚無任務，可從上方新增或匯入專案清單。</div>`;
       return;
     }
-    box.innerHTML = tasks.map((t, idx) => `
+    box.innerHTML = tasks.map(t => `
       <div class="manage-task-row">
-        <div class="manage-task-top">
-          <textarea rows="1" class="manage-task-input" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onblur="editTask(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</textarea>
-          ${t.isFixed ? '<span class="badge-fixed">固定</span>' : '<span style="font-size:0.7rem;color:#9c8980;">臨時</span>'}
+        <div class="manage-task-top" style="align-items:flex-start;">
+          <span class="drag-handle" title="按住上下拖曳排序">☰</span>
+          <textarea rows="1" class="auto-grow-ta" style="flex:1;" oninput="autoResizeTa(this)" onblur="editTask(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${t.text.replace(/</g, '&lt;')}</textarea>
+          ${t.isFixed ? '<span class="badge-fixed" style="margin-top:6px;">固定</span>' : '<span style="font-size:0.7rem;color:#9c8980;margin-top:6px;">臨時</span>'}
         </div>
         <div class="manage-task-actions">
-          <label style="font-size:0.76rem;color:var(--text-light);display:inline-flex;align-items:center;gap:4px;margin-right:auto;">
-            🔢 次數：
-            <input type="number" min="0" max="999" value="${t.targetCount || ''}" placeholder="無" style="width:54px;padding:3px 5px;border:1px solid #dfd0c5;border-radius:6px;font-size:0.78rem;" onchange="setTaskTargetCount(${t.id}, this.value)">
+          <label style="font-size:0.75rem;color:var(--text-light);display:inline-flex;align-items:center;gap:3px;">
+            🔢<input type="number" min="0" max="999" value="${t.targetCount || ''}" placeholder="無" style="width:52px;padding:3px 5px;border:1px solid #dfd0c5;border-radius:6px;font-size:0.78rem;" onblur="setTaskTargetCount(${t.id}, this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
           </label>
-          <button class="btn-weekend ${t.skipWeekend ? 'active' : ''}" onclick="toggleWeekendSkip(${t.id})">${t.skipWeekend ? '🏖️ 假日休' : '🏖️ 設假日休'}</button>
-          <button class="btn-sort" onclick="moveTask(${idx}, -1)">▲</button>
-          <button class="btn-sort" onclick="moveTask(${idx}, 1)">▼</button>
-          <button class="btn-del" onclick="delTask(${t.id})" title="刪除任務">✕</button>
+          <div style="display:inline-flex;align-items:center;gap:4px;">
+            <button class="btn-weekend ${t.skipWeekend ? 'active' : ''}" onclick="toggleWeekendSkip(${t.id})">${t.skipWeekend ? '🏖️ 假日休' : '🏖️ 設假日休'}</button>
+            <button class="btn-del" onclick="delTask(${t.id})" title="刪除任務">✕</button>
+          </div>
         </div>
       </div>
     `).join('');
-      box.querySelectorAll('textarea.manage-task-input').forEach(ta => {
-      ta.style.height = 'auto';
-      ta.style.height = ta.scrollHeight + 'px';
-    });
-}
+    resizeAllTextareas(box);
+    bindDragSortEvents(box);
+  }
 
   function openManageModal() {
     document.getElementById('visionInput').value = visionText;
     renderManageTaskList();
     renderProjManageList();
-    document.getElementById('manageModal').classList.add('active');
+    const modal = document.getElementById('manageModal');
+    modal.classList.add('active');
     pushModalState();
+    requestAnimationFrame(() => resizeAllTextareas(modal));
   }
 
   function openSettingsModal() {
@@ -1266,9 +1371,11 @@
             <button class="btn-mit ${t.isMit ? 'active' : ''}" onclick="toggleMit(${t.id})" title="設為今日焦點置頂">${t.isMit ? '⭐' : '☆'}</button>
             ${t.isMit ? '<span class="badge-mit">焦點</span>' : ''}
             <div class="task-text">${t.text.replace(/</g, '&lt;')}</div>
-            ${counterHtml}
-            ${skipped ? '<span class="btn-weekend active" style="cursor:default;">🏖️ 假日休</span>' : ''}
-            ${t.isFixed ? '<span class="badge-fixed">固定</span>' : ''}
+            <div class="task-meta-group">
+              ${counterHtml}
+              ${skipped ? '<span class="btn-weekend active" style="cursor:default;padding:2px 5px;" title="假日休免計">🏖️</span>' : ''}
+              ${t.isFixed ? '<span class="badge-fixed">固定</span>' : ''}
+            </div>
           </div>
           <div class="task-note-row"><input type="text" class="task-note-input" value="${(t.note || '').replace(/"/g, '&quot;')}" placeholder="📝 記錄執行狀況或心得..." oninput="editNote(${t.id}, this.value)"></div>`;
         listEl.appendChild(li);
