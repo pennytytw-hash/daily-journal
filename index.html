@@ -298,7 +298,7 @@
   .task-list { position: relative; min-height: 240px; }
   .perfect-day-stamp {
     position: absolute !important;
-    top: 50% !important; left: 50% !important; right: auto !important; bottom: auto !important;
+    top: 38px; left: 50% !important; right: auto !important; bottom: auto !important;
     z-index: 20 !important; pointer-events: none !important;
     width: clamp(230px, 60vw, 310px) !important;
     height: clamp(230px, 60vw, 310px) !important;
@@ -308,7 +308,7 @@
     color: rgba(217, 107, 39, 0.88) !important;
     display: flex !important; flex-direction: column; align-items: center; justify-content: center;
     box-shadow: inset 0 0 0 5px rgba(217, 107, 39, 0.16), 0 8px 24px rgba(217, 107, 39, 0.12);
-    transform: translate(-50%, -50%) rotate(-12deg) scale(1);
+    transform: translate(-50%, 0) rotate(-12deg) scale(1);
     user-select: none;
   }
   .perfect-stamp-center {
@@ -335,10 +335,10 @@
     animation: perfectStampDrop 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
   @keyframes perfectStampDrop {
-    0% { opacity: 0; transform: translate(-50%, -50%) rotate(-24deg) scale(2.1); }
-    45% { opacity: 1; transform: translate(-50%, -50%) rotate(-8deg) scale(0.92); }
-    75% { opacity: 0.96; transform: translate(-50%, -50%) rotate(-13deg) scale(1.03); }
-    100% { opacity: 1; transform: translate(-50%, -50%) rotate(-12deg) scale(1); }
+    0% { opacity: 0; transform: translate(-50%, 0) rotate(-24deg) scale(2.1); }
+    45% { opacity: 1; transform: translate(-50%, 0) rotate(-8deg) scale(0.92); }
+    75% { opacity: 0.96; transform: translate(-50%, 0) rotate(-13deg) scale(1.03); }
+    100% { opacity: 1; transform: translate(-50%, 0) rotate(-12deg) scale(1); }
   }
 </style>
 </head>
@@ -825,11 +825,13 @@
     const tgtInput = document.getElementById('newTaskTargetInput');
     const text = String(input.value || '').replace(/[\r\n]+/g, ' ').trim();
     if (!text) return;
+    if (!Array.isArray(allRecords[currentDate])) getTasks();
+    if (!Array.isArray(allRecords[currentDate])) allRecords[currentDate] = [];
     const manualTgt = parseInt(tgtInput?.value || '0', 10) || 0;
     const tgt = manualTgt >= 1 ? manualTgt : detectTargetCount(text);
     const newItem = { id: Date.now() + Math.random(), text, note: '', completed: false, isFixed: false, isMit: false, projectId: activeProjectId, updatedAt: Date.now() };
     if (tgt >= 1) { newItem.targetCount = tgt; newItem.curCount = 0; }
-    getTasks().push(newItem);
+    allRecords[currentDate].push(newItem);
     input.value = '';
     autoResizeTa(input);
     if (tgtInput) tgtInput.value = '';
@@ -1539,6 +1541,13 @@
         <div class="perfect-stamp-label">ALL CLEAR!</div>
       `;
       listEl.appendChild(bigStamp);
+      const firstCompletedNote = listEl.querySelector('.task-item.completed .task-note-input');
+      if (firstCompletedNote) {
+        const listRect = listEl.getBoundingClientRect();
+        const noteRect = firstCompletedNote.getBoundingClientRect();
+        const alignTop = Math.max(0, Math.round(noteRect.top - listRect.top));
+        bigStamp.style.setProperty('top', `${alignTop}px`, 'important');
+      }
     }
     document.getElementById('progressText').textContent = `${pct}% (${done}/${activeTasks.length})`;
     document.getElementById('progressBar').style.width = `${pct}%`;
