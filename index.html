@@ -347,6 +347,37 @@
   .progress-card.holiday-freeze .progress-bar-fill {
     background: linear-gradient(90deg, #9ecce0, #a8d5ba);
   }
+  .btn-mood-pill {
+    background: #fffdf9; border: 1.5px solid #e6d5c5; color: var(--text-brown);
+    padding: 5px 8px; font-size: 0.76rem; border-radius: 10px; font-weight: 700;
+    cursor: pointer; transition: 0.2s; white-space: nowrap;
+  }
+  .btn-mood-pill.has-mood { background: #fff4d8; border-color: #f0c975; color: #785214; }
+  .daily-reflection-box {
+    margin-top: 12px; background: #fcf8f3; border: 1.5px dashed #e3d5ca;
+    border-radius: 14px; padding: 9px 11px; display: flex; flex-direction: column; gap: 5px;
+  }
+  .daily-reflection-box textarea {
+    width: 100%; min-height: 34px; height: auto; resize: none; overflow: hidden;
+    border: none; background: transparent; padding: 2px 4px; font-size: 0.86rem;
+    color: var(--text-brown); line-height: 1.45; outline: none;
+  }
+  .badge-wall-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 8px;
+  }
+  .ach-badge-card {
+    background: #f5efe9; border: 1.5px dashed #d8c8bc; border-radius: 12px;
+    padding: 8px 6px; text-align: center; opacity: 0.52; filter: grayscale(0.85);
+    transition: 0.2s;
+  }
+  .ach-badge-card.unlocked {
+    background: linear-gradient(135deg, #fffdf5, #fff3e6);
+    border: 1.5px solid #f2c47c; opacity: 1; filter: none;
+    box-shadow: 0 3px 8px rgba(234, 184, 77, 0.16);
+  }
+  .ach-badge-icon { font-size: 1.35rem; line-height: 1.2; }
+  .ach-badge-name { font-size: 0.76rem; font-weight: 800; color: var(--text-brown); margin-top: 2px; }
+  .ach-badge-desc { font-size: 0.66rem; color: var(--text-light); margin-top: 2px; line-height: 1.25; }
 </style>
 </head>
 <body>
@@ -379,7 +410,10 @@
   </header>
   <div class="progress-card">
     <div class="progress-header">
-      <span id="progressLabel">今日完成度</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span id="progressLabel">完成度</span>
+        <button class="btn-mood-pill" id="btnDailyMood" onclick="cycleDailyMood()" title="點擊記錄今日能量狀態">⚡ 狀態</button>
+      </div>
       <div style="display:flex;align-items:center;gap:6px;">
         <select id="quoteStyleSelect" onchange="changeQuoteStyle()" style="padding:2px 6px;font-size:0.78rem;border-radius:8px;border:1.5px solid var(--primary-pink);">
           <option value="warm">🧸 溫暖療癒</option>
@@ -412,6 +446,10 @@
   </div>
   <div id="weeklyReviewBanner" class="weekly-review-card" style="display:none;"></div>
   <ul class="task-list" id="taskList"></ul>
+  <div class="daily-reflection-box" id="dailyReflectionBox">
+    <div style="font-size:0.76rem;font-weight:700;color:var(--text-light);">🌙 今日一句話小結（選填，隨複製與報告一起帶給 AI）</div>
+    <textarea id="dailyReflectionInput" rows="1" class="auto-grow-ta" placeholder="寫下今天最開心的小事、感恩瞬間，或給明天的提醒..." oninput="autoResizeTa(this);editDailyReflection(this.value)"></textarea>
+  </div>
   <div style="text-align:center;margin-top:14px;font-size:0.72rem;color:#b5a49b;">
     🐾 圖示素材：png 圖片來源於 ://pngtree.com
   </div>
@@ -499,8 +537,9 @@
       <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJson(event)">
     </div>
     <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;flex-direction:column;gap:8px;font-size:0.75rem;color:var(--text-light);">
+      <button class="btn btn-mint btn-sm" style="width:100%;font-size:0.8rem;padding:7px 10px;" onclick="openGuideModal()">📖 操作手冊（快速上手指南）</button>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span>版本：v5.1｜<span id="storageUsageText">空間計算中...</span></span>
+        <span>版本：v5.2｜<span id="storageUsageText">空間計算中...</span></span>
         <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="archiveOldDetails()">🗜️ 壓縮前年以前明細</button>
       </div>
       <button class="btn btn-outline btn-sm" style="width:100%;font-size:0.72rem;padding:5px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
@@ -537,6 +576,40 @@
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
       <button class="btn btn-outline btn-sm" onclick="closeAllModals()">取消</button>
       <button class="btn btn-mint btn-sm" onclick="confirmPasteSyncCode()">✅ 確認合併還原</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="guideModal" onclick="if(event.target===this) closeAllModals()">
+  <div class="modal-box">
+    <div class="modal-header-sticky">
+      <h3 style="margin:0;">📖 小手帳快速上手指南</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeAllModals()">✕ 關閉</button>
+    </div>
+    <div class="setting-section" style="line-height:1.65;font-size:0.84rem;">
+      <h4>☀️ 每日打卡與首頁操作</h4>
+      <ul style="margin:4px 0 0;padding-left:18px;">
+        <li><b>自動換日：</b>每天<b>凌晨 05:00</b> 自動帶入進行中專案的固定清單，熬夜夜貓族也能安心補打卡。</li>
+        <li><b>焦點置頂：</b>點擊任務左側 <b>☆</b> 可設為「今日焦點」置頂高亮，再點一次即可歸回原位。</li>
+        <li><b>次數計數：</b>有設定目標次數的項目，點 <b>＋1</b> 累計進度，點擊數字（如 <code>1/3</code>）可手動輸入或歸零。</li>
+        <li><b>能量與小結：</b>完成度旁可切換今日能量狀態（滿血／平穩／低電量）；清單最下方可寫下今日一句話小結。</li>
+      </ul>
+    </div>
+    <div class="setting-section" style="line-height:1.65;font-size:0.84rem;">
+      <h4>🗂️ 任務與專案管理</h4>
+      <ul style="margin:4px 0 0;padding-left:18px;">
+        <li><b>編輯與排序：</b>點進「🗂️ 管理」可新增臨時目標、修改文字、按住左側 <b>☰</b> 上下拖曳調整順序，或設定目標次數。</li>
+        <li><b>每週彈性任務：</b>將任務切換為「📆 每週」後，同週（週一至週日）次數跨日同步累積，且不計入單日達成率壓力。</li>
+        <li><b>不小心改亂了：</b>管理列表右上角點 <b>⏪ 同昨日</b>，可一鍵恢復前一日的任務清單設定。</li>
+        <li><b>AI 建立專案：</b>在管理抽屜複製專用指令請 AI 生成清單，貼上即可建立新目標專案（舊專案紀錄會完整保留）。</li>
+      </ul>
+    </div>
+    <div class="setting-section" style="line-height:1.65;font-size:0.84rem;">
+      <h4>🌴 休假規則與 📊 統計覆盤</h4>
+      <ul style="margin:4px 0 0;padding-left:18px;">
+        <li><b>智慧休假：</b>自動同步台灣政府行事曆，首頁日期旁亦可手動切換「🌴 設為休假」；標記 <b>🏖️ 假日休</b> 的任務在休假日免計。</li>
+        <li><b>一鍵給 AI 覆盤：</b>點擊「📋 複製給AI」會自動整理當日進度、能量狀態與筆記，直接貼給 AI 就能獲得專屬建議。</li>
+        <li><b>跨裝置與備份：</b>所有資料皆存於本機瀏覽器，建議定期至設定匯出備份檔或使用同步代碼跨裝置轉移。</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -602,6 +675,8 @@
   let archivedStats = JSON.parse(localStorage.getItem('cute_journal_v4_archived_stats') || '{}');
   let fixedTargets = JSON.parse(localStorage.getItem('cute_journal_v5_fixed_targets') || '{}');
   let weeklyTargets = JSON.parse(localStorage.getItem('cute_journal_v5_weekly_targets') || '{}');
+  let dailyMoods = JSON.parse(localStorage.getItem('cute_journal_v5_daily_mood') || '{}');
+  let dailyReflections = JSON.parse(localStorage.getItem('cute_journal_v5_daily_reflection') || '{}');
   let currentDate = getLogicalToday(), currentQuote = "", undoSnapshot = null, undoTimer = null, justStampedId = null;
 
   function getMondayOfDateStr(dStr) {
@@ -692,6 +767,9 @@
     localStorage.setItem('cute_journal_v4_archived_stats', JSON.stringify(archivedStats));
     localStorage.setItem('cute_journal_v5_fixed_targets', JSON.stringify(fixedTargets));
     localStorage.setItem('cute_journal_v5_weekly_targets', JSON.stringify(weeklyTargets));
+    localStorage.setItem('cute_journal_v5_daily_mood', JSON.stringify(dailyMoods));
+    localStorage.setItem('cute_journal_v5_daily_reflection', JSON.stringify(dailyReflections));
+    updateStorageUsageDisplay();
     updateStorageUsageDisplay();
     if (shouldRender) render();
     if (document.getElementById('manageModal')?.classList.contains('active')) renderManageTaskList();
@@ -1041,6 +1119,55 @@
     clearTimeout(noteSaveTimer);
     noteSaveTimer = setTimeout(() => saveAll(false), 350);
   }
+
+  const moodOptions = [
+    { key: '', label: '⚡ 狀態' },
+    { key: 'high', label: '☀️ 滿血' },
+    { key: 'mid', label: '⛅ 平穩' },
+    { key: 'low', label: '🌧️ 低電量' }
+  ];
+
+  function getMoodLabel(key) {
+    return moodOptions.find(m => m.key === key)?.label || '⚡ 狀態';
+  }
+
+  function cycleDailyMood() {
+    if (currentDate > getLogicalToday()) { alert('⏳ 尚未到達該日期喔！'); return; }
+    const cur = dailyMoods[currentDate] || '';
+    const idx = moodOptions.findIndex(m => m.key === cur);
+    const next = moodOptions[(idx + 1) % moodOptions.length];
+    if (next.key) dailyMoods[currentDate] = next.key;
+    else delete dailyMoods[currentDate];
+    saveAll();
+  }
+
+  let reflectionSaveTimer = null;
+  function editDailyReflection(val) {
+    if (currentDate > getLogicalToday()) return;
+    const trimmed = String(val || '').trim();
+    if ((dailyReflections[currentDate] || '') === trimmed) return;
+    if (trimmed) dailyReflections[currentDate] = trimmed;
+    else delete dailyReflections[currentDate];
+    clearTimeout(reflectionSaveTimer);
+    reflectionSaveTimer = setTimeout(() => saveAll(false), 350);
+  }
+
+  function getTimeCapsuleFlashback() {
+    const pastNotes = [];
+    Object.entries(allRecords).forEach(([dStr, list]) => {
+      if (dStr >= currentDate || !Array.isArray(list)) return;
+      list.forEach(t => {
+        if (t.completed && t.note && t.note.trim().length >= 2) {
+          pastNotes.push({ dStr, note: t.note.trim().replace(/\s+/g, ' ') });
+        }
+      });
+    });
+    if (pastNotes.length === 0) return '';
+    const seed = currentDate.split('-').reduce((s, n) => s + Number(n), 0);
+    const pick = pastNotes[seed % pastNotes.length];
+    const shortNote = pick.note.length > 26 ? pick.note.slice(0, 26) + '…' : pick.note;
+    return `💭 ${pick.dStr} 的你曾寫下：「${shortNote}」`;
+  }
   function restoreSameAsYesterday() {
     if (currentDate > getLogicalToday()) {
       alert('⏳ 未來日期尚未產生任務，無法套用喔！');
@@ -1329,11 +1456,17 @@
       modalHistoryPushed = true;
     }
   }
+  function openGuideModal() {
+    document.getElementById('settingsModal').classList.remove('active');
+    document.getElementById('guideModal')?.classList.add('active');
+    pushModalState();
+  }
   function closeAllModals(fromPopState = false) {
     document.getElementById('settingsModal').classList.remove('active');
     document.getElementById('manageModal')?.classList.remove('active');
     document.getElementById('historyModal').classList.remove('active');
     document.getElementById('syncPasteModal')?.classList.remove('active');
+    document.getElementById('guideModal')?.classList.remove('active');
     document.documentElement.classList.remove('modal-open-lock');
     document.body.classList.remove('modal-open-lock');
     if (modalHistoryPushed) {
@@ -1554,14 +1687,23 @@
       btnHol.className = isHol ? 'btn btn-mint btn-sm' : 'btn btn-outline btn-sm';
       btnHol.textContent = isHol ? '🌴 休假中' : '🌴 設為休假';
     }
-    document.getElementById('progressLabel').textContent = isToday ? '今日完成度' : (isFuture ? '未來完成度' : '歷史完成度');
+    document.getElementById('progressLabel').textContent = '完成度';
+    const moodBtn = document.getElementById('btnDailyMood');
+    if (moodBtn) {
+      const mKey = dailyMoods[currentDate] || '';
+      moodBtn.textContent = getMoodLabel(mKey);
+      moodBtn.classList.toggle('has-mood', Boolean(mKey));
+    }
     const statusStr = isToday ? '🌙 凌晨 05:00 自動換日（目前為今日進度）' : (isFuture ? '⏳ 尚未到達該日期（將於換日後自動產生任務）' : '✏️ 目前正在檢視／編輯歷史日期');
-    updateMarqueeMessages([
+    const flashbackStr = getTimeCapsuleFlashback();
+    const marqueeList = [
       statusStr,
       '☆ 點擊任務左側星星可設為「今日焦點」置頂高亮',
       '✏️ 編輯文字、次數設定、排序與假日休請點「🗂️ 管理」',
       '📝 每項任務下方皆可隨手記錄執行狀況或心得筆記'
-    ]);
+    ];
+    if (flashbackStr) marqueeList.splice(1, 0, flashbackStr);
+    updateMarqueeMessages(marqueeList);
     const tasks = getTasks(), listEl = document.getElementById('taskList'); listEl.innerHTML = '';
     if (tasks.length === 0 && !isToday) {
       if (isFuture) {
@@ -1638,6 +1780,15 @@
     }
     document.getElementById('progressText').textContent = isFreezeDay ? '🌴 休假凍結中' : `${pct}% (${done}/${activeTasks.length})`;
     document.getElementById('progressBar').style.width = isFreezeDay ? '100%' : `${pct}%`;
+    const refBox = document.getElementById('dailyReflectionBox');
+    const refInput = document.getElementById('dailyReflectionInput');
+    if (refBox && refInput) {
+      refBox.style.display = isFuture ? 'none' : 'flex';
+      if (document.activeElement !== refInput) {
+        refInput.value = dailyReflections[currentDate] || '';
+        autoResizeTa(refInput);
+      }
+    }
     updateQuote(false);
     renderWeeklyReviewBanner();
   }
@@ -1678,7 +1829,8 @@
     const pct = activeTasks.length === 0 ? 100 : Math.round((done / activeTasks.length) * 100);
     const isHol = isHolidayDate(currentDate);
 
-    let text = `📅 日期：${currentDate}${isHol ? '（🌴 休假／國定假日）' : ''}（專案：${getActiveProject().name}）\n`;
+    const moodStr = dailyMoods[currentDate] ? `｜能量狀態：${getMoodLabel(dailyMoods[currentDate])}` : '';
+    let text = `📅 日期：${currentDate}${isHol ? '（🌴 休假／國定假日）' : ''}（專案：${getActiveProject().name}）${moodStr}\n`;
     text += `📊 當日應執行達成率：${pct}% (${done}/${activeTasks.length})${skippedCnt > 0 ? `｜已自動排除 ${skippedCnt} 項休假免計目標` : ''}\n\n【目標執行狀況與筆記】\n`;
     tasks.forEach(t => {
       const skipped = isTaskSkipped(t, currentDate);
@@ -1686,7 +1838,8 @@
       const countStr = (t.targetCount && t.targetCount > 0) ? `（進度：${t.curCount || 0}/${t.targetCount}）` : '';
       text += `- [${statusTag}] ${t.isMit ? '⭐[今日焦點] ' : ''}${t.text}${countStr}${t.note ? `（狀況紀錄：${t.note}）` : ''}\n`;
     });
-    text += `\n請根據我這天的完成狀況與筆記紀錄，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供具體小建議！`;
+    if (dailyReflections[currentDate]) text += `\n🌙 【今日一句話小結】\n${dailyReflections[currentDate]}\n`;
+    text += `\n請根據我這天的完成狀況、能量狀態與筆記小結，給予溫暖的鼓勵回饋，並針對未完成或卡關的部分提供具體小建議！`;
     navigator.clipboard.writeText(text).then(() => alert(`📋 ${currentDate} 總結已複製！直接貼上給 AI 即可取得覆盤回饋！`));
   }
 
@@ -1977,7 +2130,31 @@
         (low2.length ? `<div style="margin-top:6px;color:#b85d58;">⚠️ <b>最常卡關待調整：</b>` + low2.map(h => `${h.name.replace(/</g,'&lt;')} (${h.rate}%)`).join('、') + `</div>` : '') + `</div></div>`;
     }
 
-        document.getElementById('overviewView').innerHTML = html;
+    const allDaysArr = Object.values(dayMap).filter(x => x && x.total > 0);
+    const totalDoneTasks = allDaysArr.reduce((s, x) => s + x.done, 0);
+    const perfectDaysCnt = allDaysArr.filter(x => x.done === x.total).length;
+    let totalNotesCnt = Object.keys(dailyReflections).filter(k => dailyReflections[k]).length;
+    Object.values(records).forEach(list => {
+      if (Array.isArray(list)) list.forEach(t => { if (t.note && t.note.trim()) totalNotesCnt++; });
+    });
+    const badgesList = [
+      { icon: '🌱', name: '破蛋首勝', desc: '完成第 1 項任務', ok: totalDoneTasks >= 1 },
+      { icon: '🔥', name: '三日新星', desc: '最高連勝 ≥ 3 天', ok: bestStreak >= 3 },
+      { icon: '🎁', name: '七日達人', desc: '最高連勝 ≥ 7 天', ok: bestStreak >= 7 },
+      { icon: '👑', name: '十四日大師', desc: '最高連勝 ≥ 14 天', ok: bestStreak >= 14 },
+      { icon: '🏆', name: '滿分收集家', desc: `100% 滿分 (${perfectDaysCnt}/10天)`, ok: perfectDaysCnt >= 10 },
+      { icon: '📝', name: '筆記作家', desc: `累積心得 (${totalNotesCnt}/10則)`, ok: totalNotesCnt >= 10 }
+    ];
+    html += `<div class="panel-box"><b>🏅 成就貼紙收集牆（已點亮 ${badgesList.filter(b => b.ok).length}/${badgesList.length}）</b>
+      <div class="badge-wall-grid">${badgesList.map(b => `
+        <div class="ach-badge-card ${b.ok ? 'unlocked' : ''}">
+          <div class="ach-badge-icon">${b.icon}</div>
+          <div class="ach-badge-name">${b.name}</div>
+          <div class="ach-badge-desc">${b.desc}</div>
+        </div>`).join('')}
+      </div></div>`;
+
+    document.getElementById('overviewView').innerHTML = html;
 
     let trendsHtml = `<div class="stat-grid" style="margin-top:6px;">` + Object.entries(periods).map(([key, p]) => {
       const rate = p.total === 0 ? 0 : Math.round((p.done / p.total) * 100);
@@ -2015,7 +2192,8 @@
     p.logs.forEach(item => {
       const dayPct = Math.round((item.doneCnt / (item.totCnt || item.list.length)) * 100);
       const notes = item.list.filter(t => t.note).map(t => `${t.text}(${t.note})`).join('；');
-      text += `- ${item.dateStr}：達成 ${dayPct}% (${item.doneCnt}/${item.list.length})${notes ? `｜筆記：${notes}` : ''}\n`;
+      const refStr = dailyReflections[item.dateStr] ? `｜小結：${dailyReflections[item.dateStr]}` : '';
+      text += `- ${item.dateStr}：達成 ${dayPct}% (${item.doneCnt}/${item.list.length})${notes ? `｜筆記：${notes}` : ''}${refStr}\n`;
     });
     text += `\n請根據這份專案統計、執行穩定度與筆記內容，給予深度覆盤回饋與下一階段目標調整建議！`;
     navigator.clipboard.writeText(text).then(() => alert(`📋 已複製「${projTitle} - ${p.label}」完整報告！`));
@@ -2243,6 +2421,8 @@
     }
     if (d.fixedTargets && typeof d.fixedTargets === 'object') fixedTargets = { ...d.fixedTargets };
     if (d.weeklyTargets && typeof d.weeklyTargets === 'object') weeklyTargets = { ...d.weeklyTargets };
+    if (d.dailyMoods && typeof d.dailyMoods === 'object') dailyMoods = { ...dailyMoods, ...d.dailyMoods };
+    if (d.dailyReflections && typeof d.dailyReflections === 'object') dailyReflections = { ...dailyReflections, ...d.dailyReflections };
     saveAll(true); return true;
   }
 
@@ -2273,7 +2453,7 @@
     try {
       const recentRecords = {};
       for (let i = 0; i < 7; i++) { const dStr = getLogicalToday(i); if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr]; }
-      const encoded = await encodeSyncData({ records: recentRecords, fixedTargets, weeklyTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
+      const encoded = await encodeSyncData({ records: recentRecords, fixedTargets, weeklyTargets, dailyMoods, dailyReflections, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
       const baseUrl = window.location.href.replace(/#.*$/, '');
       await writeClipboardSafe(`${baseUrl}#sync=${encoded}`);
       showSyncProgress('✅ 近 7 天壓縮短網址已複製！傳給自己點開即可同步', 100, 2600);
@@ -2284,7 +2464,7 @@
 
   async function copySyncCode() {
     try {
-      const code = await encodeSyncData({ records: allRecords, archivedStats, fixedTargets, weeklyTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
+      const code = await encodeSyncData({ records: allRecords, archivedStats, fixedTargets, weeklyTargets, dailyMoods, dailyReflections, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
       await writeClipboardSafe(code);
       lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
       showSyncProgress(`✅ 完整同步代碼已複製（共 ${code.length} 字元）！`, 100, 2600);
@@ -2318,7 +2498,7 @@
 
   function exportJson() {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, archivedStats, fixedTargets, weeklyTargets, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays }, null, 2)], { type: 'application/json' }));
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ records: allRecords, archivedStats, fixedTargets, weeklyTargets, dailyMoods, dailyReflections, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays }, null, 2)], { type: 'application/json' }));
     a.download = `每日目標手帳備份_${currentDate}.json`; a.click();
     lastBackupTime = Date.now(); localStorage.setItem('cute_journal_last_backup', String(lastBackupTime)); render();
   }
@@ -2383,7 +2563,7 @@
   })();
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch',e=>{if(!e.request.url.startsWith(self.location.origin))return;e.respondWith(caches.open('journal-v5-1').then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(res=>{c.put(e.request,res.clone());return res;}))));});`;
+    const swCode = `self.addEventListener('fetch',e=>{if(!e.request.url.startsWith(self.location.origin))return;e.respondWith(caches.open('journal-v5-2').then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(res=>{c.put(e.request,res.clone());return res;}))));});`;
     const swUrl = URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }));
     navigator.serviceWorker.register(swUrl).finally(() => URL.revokeObjectURL(swUrl)).catch(() => {});
   }
