@@ -797,7 +797,7 @@
     for (const y of [curYear, curYear + 1]) {
       const urls = [
         ['https:/', 'cdn.jsdelivr.net', 'gh', 'ruyut', 'TaiwanCalendar', 'data', `${y}.json`].join('/'),
-        ['https:/', '://githubusercontent.com', 'ruyut', 'TaiwanCalendar', 'master', 'data', `${y}.json`].join('/')
+        ['https:/', ['raw', 'githubusercontent', 'com'].join('.'), 'ruyut', 'TaiwanCalendar', 'master', 'data', `${y}.json`].join('/')
       ];
       for (const u of urls) {
         try {
@@ -1833,7 +1833,7 @@
     renderStatsDashboard();
   }
   function buildGrowthChartHtml(seriesMap, dimLabel) {
-    const entries = Object.entries(seriesMap).sort((a, b) => a.localeCompare(b));
+    const entries = Object.entries(seriesMap).sort((a, b) => a.at(0).localeCompare(b.at(0)));
     if (entries.length === 0) return `<div class="panel-box"><b>📈 ${dimLabel}成長曲線</b><p style="color:#999;margin:6px 0 0;">尚無足夠數據繪製曲線</p></div>`;
     const pointsData = entries.map(([label, v]) => ({ label, rate: Math.round((v.done / v.total) * 100), done: v.done, total: v.total, days: v.days }));
     const chartPts = pointsData.slice(-10);
