@@ -607,6 +607,7 @@
       <h4>🌴 休假規則與 📊 統計覆盤</h4>
       <ul style="margin:4px 0 0;padding-left:18px;">
         <li><b>智慧休假：</b>自動同步台灣政府行事曆，首頁日期旁亦可手動切換「🌴 設為休假」；標記 <b>🏖️ 假日休</b> 的任務在休假日免計。</li>
+        <li><b>統計與紀錄查詢：</b>點進「📊 統計」可檢視月曆與成長曲線，切換至「📝 紀錄查詢」則能依時間、任務或結語回顧歷史筆記與每日小結。</li>
         <li><b>一鍵給 AI 覆盤：</b>點擊「📋 複製給AI」會自動整理當日進度、能量狀態與筆記，直接貼給 AI 就能獲得專屬建議。</li>
         <li><b>跨裝置與備份：</b>所有資料皆存於本機瀏覽器，建議定期至設定匯出備份檔或使用同步代碼跨裝置轉移。</li>
       </ul>
@@ -2207,10 +2208,65 @@
   
   let notesGroupMode = 'time', notesStatusFilter = 'all', notesKeyword = '';
 
+  function getDaySummaryMeta(dStr) {
+    const rawList = Array.isArray(allRecords[dStr]) ? allRecords[dStr] : [];
+    const active = rawList.filter(t => isDailyCountedTask(t, dStr));
+    const isFreeze = isHolidayDate(dStr) && active.length === 0;
+    const done = active.filter(t => t.completed).length;
+    const pctText = isFreeze ? '🌴 休假凍結' : (active.length === 0 ? '無應計任務' : `${Math.round((done / active.length) * 100)}% (${done}/${active.length})`);
+    const moodText = dailyMoods[dStr] ? getMoodLabel(dailyMoods[dStr]) : '';
+    return { pctText, moodText };
+  }
+
   function renderNotesQueryView() {
     const box = document.getElementById('notesView');
     if (!box) return;
     const records = getFilteredRecords();
+
+    const modeTabsHtml = `
+      <div style="display:flex;gap:6px;flex-wrap:nowrap;">
+        <button class="btn btn-sm ${notesGroupMode === 'time' ? '' : 'btn-outline'}" style="flex:1;" onclick="notesGroupMode='time';renderNotesQueryView()">🕒 依時間</button>
+        <button class="btn btn-sm ${notesGroupMode === 'task' ? '' : 'btn-outline'}" style="flex:1;" onclick="notesGroupMode='task';renderNotesQueryView()">📌 依任務</button>
+        <button class="btn btn-sm ${notesGroupMode === 'reflection' ? '' : 'btn-outline'}" style="flex:1;" onclick="notesGroupMode='reflection';renderNotesQueryView()">🌙 結語</button>
+      </div>
+    `;
+
+    if (notesGroupMode === 'reflection') {
+      const refDates = Object.keys(dailyReflections)
+        .filter(dStr => {
+          const txt = String(dailyReflections[dStr] || '').trim();
+          if (!txt) return false;
+          if (selectedStatsProj === 'ALL') return true;
+          const dayList = allRecords[dStr];
+          return Array.isArray(dayList) && dayList.some(t => t.projectId === selectedStatsProj);
+        })
+        .sort()
+        .reverse();
+
+      const headerHtml = `<div class="note-search-bar">${modeTabsHtml}</div>`;
+      if (refDates.length === 0) {
+        box.innerHTML = headerHtml + `<div style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.86rem;">🌙 目前還沒有填寫過今日一句話小結喔！</div>`;
+        return;
+      }
+
+      const refListHtml = refDates.map(dStr => {
+        const { pctText, moodText } = getDaySummaryMeta(dStr);
+        const refText = String(dailyReflections[dStr] || '').trim();
+        return `
+          <div class="note-group-card" onclick="jumpToDate('${dStr}')" style="cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:0.8rem;color:var(--text-light);border-bottom:1px dashed var(--border-dashed);padding-bottom:5px;">
+              <span>📅 <b>${dStr}</b>${moodText ? `｜${moodText}` : ''}</span>
+              <span style="font-weight:700;color:var(--primary-pink-dark);">完成度 ${pctText}</span>
+            </div>
+            <div class="note-entry-item" style="margin-top:7px;">${refText.replace(/</g, '&lt;')}</div>
+          </div>
+        `;
+      }).join('');
+
+      box.innerHTML = headerHtml + refListHtml;
+      return;
+    }
+
     const entries = [];
     Object.keys(records).sort().reverse().forEach(dStr => {
       records[dStr].forEach(t => {
@@ -2224,10 +2280,7 @@
 
     const controlsHtml = `
       <div class="note-search-bar">
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn btn-sm ${notesGroupMode === 'time' ? '' : 'btn-outline'}" onclick="notesGroupMode='time';renderNotesQueryView()">🕒 依時間由近到遠</button>
-          <button class="btn btn-sm ${notesGroupMode === 'task' ? '' : 'btn-outline'}" onclick="notesGroupMode='task';renderNotesQueryView()">📌 依任務項目彙整</button>
-        </div>
+        ${modeTabsHtml}
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <button class="btn btn-sm ${notesStatusFilter === 'all' ? 'btn-mint' : 'btn-outline'}" onclick="notesStatusFilter='all';renderNotesQueryView()">全部 (${entries.length})</button>
           <button class="btn btn-sm ${notesStatusFilter === 'done' ? 'btn-mint' : 'btn-outline'}" onclick="notesStatusFilter='done';renderNotesQueryView()">✅ 已完成</button>
@@ -2244,16 +2297,30 @@
 
     let listHtml = '';
     if (notesGroupMode === 'time') {
-      listHtml = entries.map(e => `
-        <div class="note-group-card" onclick="jumpToDate('${e.dateStr}')" style="cursor:pointer;">
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.8rem;color:var(--text-light);">
-            <span>📅 <b>${e.dateStr}</b></span>
-            <span>${e.completed ? '✅ 已完成' : '⬜ 未完成'}</span>
+      const byDate = new Map();
+      entries.forEach(e => {
+        if (!byDate.has(e.dateStr)) byDate.set(e.dateStr, []);
+        byDate.get(e.dateStr).push(e);
+      });
+      listHtml = Array.from(byDate.entries()).map(([dStr, items]) => {
+        const { pctText, moodText } = getDaySummaryMeta(dStr);
+        return `
+          <div class="note-group-card" onclick="jumpToDate('${dStr}')" style="cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:0.8rem;color:var(--text-light);border-bottom:1px dashed var(--border-dashed);padding-bottom:5px;">
+              <span>📅 <b>${dStr}</b>${moodText ? `｜${moodText}` : ''}</span>
+              <span>完成度 ${pctText}</span>
+            </div>
+            ${items.map(it => `
+              <div class="note-entry-item ${it.completed ? '' : 'is-undone'}" style="margin-top:7px;">
+                <div style="font-weight:700;font-size:0.88rem;color:var(--text-brown);margin-bottom:2px;">
+                  ${it.completed ? '✅' : '⬜'} ${it.text.replace(/</g, '&lt;')}
+                </div>
+                <div>${it.note.replace(/</g, '&lt;')}</div>
+              </div>
+            `).join('')}
           </div>
-          <div style="font-weight:700;font-size:0.9rem;margin-top:3px;">${e.text.replace(/</g, '&lt;')}</div>
-          <div class="note-entry-item ${e.completed ? '' : 'is-undone'}">${e.note.replace(/</g, '&lt;')}</div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     } else {
       const grouped = new Map();
       entries.forEach(e => {
