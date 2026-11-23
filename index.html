@@ -836,7 +836,7 @@
   (function initProjectsAndClean() {
     const todayStr = getLogicalToday();
     Object.keys(allRecords).forEach(d => {
-      if (d !== todayStr && Array.isArray(allRecords[d]) && allRecords[d].every(t => !t.completed && !t.note && !(t.curCount > 0))) {
+      if (d < todayStr && Array.isArray(allRecords[d]) && allRecords[d].every(t => !t.completed && !t.note && !(t.curCount > 0))) {
         delete allRecords[d];
       }
     });
@@ -1357,9 +1357,14 @@
   }
 
   function copyPrompt() {
-    const cmd = '請將我們剛剛討論的目標整理成純文字清單，並依照一日從早到晚（晨間→白天→晚間）的執行流程順序排列。第一行請固定輸出建議執行週期（依目標性質建議 14～30 天，格式如：[週期:21天]），第二行起每行一項任務，每項請極度精鍊（控制在 12 字以內，只寫核心行動與量化數字，如「喝水 8 杯」、「背單字 20 個」），不要加任何編號、符號、標題、括號補充或額外說明文字。';
+    const cmd = '請將我們剛剛討論的目標整理成純文字清單，並依照一日從早到晚（晨間→白天→晚間）的執行流程順序排列。第一行請固定輸出你認為最適合的執行週期天數（格式如：[週期:21天]），第二行起每行一項任務，每項請極度精鍊（控制在 12 字以內，只寫核心行動與量化數字，如「喝水 8 杯」、「背單字 20 個」），不要加任何編號、符號、標題、括號補充或額外說明文字。';
     navigator.clipboard.writeText(cmd)
-      .then(() => alert('已複製新版 AI 指令！包含一日流程排序與建議週期規劃。'));
+      .then(() => alert('已複製新版 AI 指令！包含一日流程排序與週期格式。'));
+  }
+
+  function hasExecutedTasksOnDate(dStr) {
+    const list = allRecords[dStr];
+    return Array.isArray(list) && list.some(t => t.completed || (t.curCount && t.curCount > 0));
   }
 
   function importAiList() {
@@ -1374,40 +1379,59 @@
       if (!trimmed) return;
       const cycleMatch = trimmed.match(/^\[?\s*(?:週期|周期|天數)\s*[:：]\s*(\d+)\s*天?\s*\]?$/i);
       if (cycleMatch) {
-        if (!parsedDays) parsedDays = Math.min(365, Math.max(1, parseInt(cycleMatch.at(1), 10) || 0));
+        if (!parsedDays) parsedDays = Math.min(3650, Math.max(1, parseInt(cycleMatch.at(1), 10) || 0));
         return;
       }
       const cleaned = trimmed.replace(/^[\s\-\*\•\d\.\)\[\]xX✓✔]+/, '').trim();
       if (cleaned) newItems.push(cleaned);
     });
     if (newItems.length === 0) { alert('沒有偵測到有效的目標文字喔！'); return; }
-    const todayStr = getLogicalToday(), now = Date.now();
-    const projName = nameInput.value.trim() || `目標專案 #${projects.length + 1} (${todayStr.slice(5)}起)`;
+
+    const todayStr = getLogicalToday();
+    const tomorrowStr = getLogicalToday(-1);
+    const deferToTomorrow = hasExecutedTasksOnDate(todayStr);
+    const applyDateStr = deferToTomorrow ? tomorrowStr : todayStr;
+    const now = Date.now();
+
+    const projName = nameInput.value.trim() || `目標專案 #${projects.length + 1} (${applyDateStr.slice(5)}起)`;
     const newProjId = 'proj_' + now;
-    const newProjObj = { id: newProjId, name: projName, startDate: todayStr, items: [...newItems] };
+    const newProjObj = { id: newProjId, name: projName, startDate: applyDateStr, items: [...newItems] };
     if (parsedDays > 0) newProjObj.targetDays = parsedDays;
     projects.push(newProjObj);
-    activeProjectId = newProjId; fixedTemplate = newItems;
-    const manualTasks = (allRecords[todayStr] || []).filter(t => !t.isFixed);
-    allRecords[todayStr] = [
-      ...fixedTemplate.map((text, idx) => {
-        const tgt = detectTargetCount(text);
-        if (tgt > 0) fixedTargets[text] = tgt;
-        else delete fixedTargets[text];
-        const item = { id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false, projectId: newProjId, updatedAt: now };
-        if (tgt > 0) { item.targetCount = tgt; item.curCount = 0; }
-        return item;
-      }),
-      ...manualTasks
-    ];
-    Object.keys(allRecords).forEach(d => { if (d > todayStr) delete allRecords[d]; });
-    currentDate = todayStr; datePicker.value = todayStr;
+    activeProjectId = newProjId;
+    fixedTemplate = newItems;
+
+    const newFixedTasks = fixedTemplate.map((text, idx) => {
+      const tgt = detectTargetCount(text);
+      if (tgt > 0) fixedTargets[text] = tgt;
+      else delete fixedTargets[text];
+      const item = { id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false, projectId: newProjId, updatedAt: now };
+      if (tgt > 0) { item.targetCount = tgt; item.curCount = 0; }
+      return item;
+    });
+
+    if (deferToTomorrow) {
+      Object.keys(allRecords).forEach(d => { if (d > todayStr) delete allRecords[d]; });
+      allRecords[tomorrowStr] = newFixedTasks;
+      currentDate = todayStr;
+      datePicker.value = todayStr;
+    } else {
+      const manualTasks = (allRecords[todayStr] || []).filter(t => !t.isFixed);
+      allRecords[todayStr] = [...newFixedTasks, ...manualTasks];
+      Object.keys(allRecords).forEach(d => { if (d > todayStr) delete allRecords[d]; });
+      currentDate = todayStr;
+      datePicker.value = todayStr;
+    }
+
     area.value = ''; nameInput.value = ''; if (daysInput) daysInput.value = '';
     currentQuote = "";
     closeAllModals();
     saveAll();
     const cycleHint = parsedDays > 0 ? `\n⏳ 設定階段週期：實際執行 ${parsedDays} 天` : '\n♾️ 模式：長期維持專案';
-    alert(`🚀 已建立新專案「${projName}」（共 ${newItems.length} 項）並套用至今日！${cycleHint}`);
+    const timeHint = deferToTomorrow
+      ? `📅 偵測到今日已有打卡紀錄，為保留今日戰果，新專案已自動排程於「明日 (${tomorrowStr})」凌晨 05:00 換日生效！`
+      : `🚀 已建立新專案並立即套用至今日！`;
+    alert(`${timeHint}\n🎯 專案名稱：「${projName}」（共 ${newItems.length} 項）${cycleHint}`);
   }
 
   function getProjectExecutionStats(pid) {
@@ -1505,20 +1529,38 @@
   function switchActiveProject(pid) {
     const target = projects.find(p => p.id === pid);
     if (!target) return;
-    activeProjectId = pid; fixedTemplate = [...(target.items || [])];
-    const todayStr = getLogicalToday(), now = Date.now();
-    const manualTasks = (allRecords[todayStr] || []).filter(t => !t.isFixed);
-    allRecords[todayStr] = [
-      ...fixedTemplate.map((text, idx) => ({
+    activeProjectId = pid;
+    fixedTemplate = [...(target.items || [])];
+    const todayStr = getLogicalToday();
+    const tomorrowStr = getLogicalToday(-1);
+    const deferToTomorrow = hasExecutedTasksOnDate(todayStr);
+    const applyDateStr = deferToTomorrow ? tomorrowStr : todayStr;
+    const now = Date.now();
+
+    const newFixedTasks = fixedTemplate.map((text, idx) => {
+      const isWk = Object.prototype.hasOwnProperty.call(weeklyTargets, text);
+      const tgt = isWk ? (weeklyTargets[text] || 1) : (fixedTargets[text] || 0);
+      const item = {
         id: now + idx + Math.random(), text, note: '', completed: false, isFixed: true, isMit: false,
-        skipWeekend: weekendSkipItems.includes(text), projectId: pid, updatedAt: now
-      })),
-      ...manualTasks
-    ];
-    saveAll(); renderProjManageList();
+        isWeekly: isWk, skipWeekend: isWk ? false : weekendSkipItems.includes(text), projectId: pid, updatedAt: now
+      };
+      if (tgt > 0) {
+        item.targetCount = tgt;
+        item.curCount = 0;
+      }
+      return item;
+    });
+
+    if (deferToTomorrow) {
+      allRecords[tomorrowStr] = newFixedTasks;
+      showSyncProgress(`📅 今日已有打卡紀錄，「${target.name}」將於明日 (${tomorrowStr}) 自動生效！`, 100, 3000);
+    } else {
+      const manualTasks = (allRecords[todayStr] || []).filter(t => !t.isFixed);
+      allRecords[todayStr] = [...newFixedTasks, ...manualTasks];
+    }
+    saveAll();
+    renderProjManageList();
   }
-
-
   function renameProjectById(pid) {
     const p = projects.find(x => x.id === pid);
     if (!p) return;
@@ -1900,6 +1942,9 @@
       '✏️ 編輯文字、次數設定、排序與假日休請點「🗂️ 管理」',
       '📝 每項任務下方皆可隨手記錄執行狀況或心得筆記'
     ];
+    if (actProj && actProj.targetDays >= 14 && actStats.activeDays === Math.floor(actProj.targetDays / 2)) {
+      marqueeList.splice(1, 0, `⛽ 賽程過半加油站！已完成 ${actStats.activeDays}/${actProj.targetDays} 天（平均達成率 ${actStats.avgRate}%）`);
+    }
     if (flashbackStr) marqueeList.splice(1, 0, flashbackStr);
     updateMarqueeMessages(marqueeList);
     const tasks = getTasks(), listEl = document.getElementById('taskList'); listEl.innerHTML = '';
@@ -2400,9 +2445,15 @@
       if (Array.isArray(list)) list.forEach(t => { if (t.note && t.note.trim()) totalNotesCnt++; });
     });
 
+    const filterProjObj = selectedStatsProj !== 'ALL' ? projects.find(p => p.id === selectedStatsProj) : null;
+    const projCycleCap = (filterProjObj && filterProjObj.targetDays > 0) ? filterProjObj.targetDays : Infinity;
+
+    const targetProjects = selectedStatsProj === 'ALL' ? projects : projects.filter(p => p.id === selectedStatsProj);
+    const completedProjCnt = targetProjects.filter(p => p.targetDays > 0 && getProjectExecutionStats(p.id).activeDays >= p.targetDays).length;
+
     const achTracks = [
       {
-        cur: bestStreak, unit: '天', condLabel: '最高連勝',
+        cur: bestStreak, unit: '天', condLabel: '最高連勝', isDayMetric: true,
         tiers: [
           { icon: '🔥', name: '三日新星', target: 3 },
           { icon: '🎁', name: '七日達人', target: 7 },
@@ -2413,7 +2464,7 @@
         ]
       },
       {
-        cur: perfectDaysCnt, unit: '天', condLabel: '100% 滿分',
+        cur: perfectDaysCnt, unit: '天', condLabel: '100% 滿分', isDayMetric: true,
         tiers: [
           { icon: '🌟', name: '完美初體驗', target: 1 },
           { icon: '🏆', name: '滿分達人', target: 5 },
@@ -2424,7 +2475,7 @@
         ]
       },
       {
-        cur: activeDaysCnt, unit: '天', condLabel: '累計執行',
+        cur: activeDaysCnt, unit: '天', condLabel: '累計執行', isDayMetric: true,
         tiers: [
           { icon: '🌱', name: '起步一週', target: 7 },
           { icon: '🌿', name: '習慣養成', target: 21 },
@@ -2434,7 +2485,7 @@
         ]
       },
       {
-        cur: totalDoneTasks, unit: '項', condLabel: '完成任務',
+        cur: totalDoneTasks, unit: '項', condLabel: '完成任務', isDayMetric: false,
         tiers: [
           { icon: '⚡', name: '行動派新手', target: 10 },
           { icon: '🚀', name: '效率推進器', target: 50 },
@@ -2444,7 +2495,7 @@
         ]
       },
       {
-        cur: totalNotesCnt, unit: '則', condLabel: '隨手筆記',
+        cur: totalNotesCnt, unit: '則', condLabel: '隨手筆記', isDayMetric: false,
         tiers: [
           { icon: '✏️', name: '隨手筆記', target: 5 },
           { icon: '📝', name: '筆記作家', target: 15 },
@@ -2452,11 +2503,20 @@
         ]
       },
       {
-        cur: refDaysCnt, unit: '天', condLabel: '今日小結',
+        cur: refDaysCnt, unit: '天', condLabel: '今日小結', isDayMetric: true,
         tiers: [
           { icon: '🌙', name: '星夜低語', target: 3 },
           { icon: '🕯️', name: '睡前覆盤師', target: 10 },
           { icon: '🌠', name: '月光記錄者', target: 21 }
+        ]
+      },
+      {
+        cur: completedProjCnt, unit: '個', condLabel: '完成專案', isDayMetric: false, secretTrack: true,
+        tiers: [
+          { icon: '🎯', name: '專案破關手', target: 1 },
+          { icon: '🚀', name: '多棲實踐家', target: 3 },
+          { icon: '🏅', name: '目標收割機', target: 5 },
+          { icon: '👑', name: '專案制霸王', target: 10 }
         ]
       }
     ];
@@ -2466,9 +2526,13 @@
     const nextGoalCards = [];
 
     achTracks.forEach(track => {
-      totalAllTiers += track.tiers.length;
-      track.tiers.forEach(t => {
+      const visibleTiers = (track.isDayMetric && Number.isFinite(projCycleCap))
+        ? track.tiers.filter(t => t.target <= projCycleCap)
+        : track.tiers;
+      if (!track.secretTrack) totalAllTiers += visibleTiers.length;
+      visibleTiers.forEach(t => {
         if (track.cur >= t.target) {
+          if (track.secretTrack) totalAllTiers++;
           unlockedCards.push({
             icon: t.icon,
             name: t.name,
@@ -2477,14 +2541,16 @@
           });
         }
       });
-      const nextTier = track.tiers.find(t => track.cur < t.target);
-      if (nextTier) {
-        nextGoalCards.push({
-          icon: '🔒',
-          name: '？？？',
-          desc: `${track.condLabel} ${track.cur}/${nextTier.target}${track.unit}`,
-          ok: false
-        });
+      if (!track.secretTrack) {
+        const nextTier = visibleTiers.find(t => track.cur < t.target);
+        if (nextTier) {
+          nextGoalCards.push({
+            icon: '🔒',
+            name: '？？？',
+            desc: `${track.condLabel} ${track.cur}/${nextTier.target}${track.unit}`,
+            ok: false
+          });
+        }
       }
     });
 
@@ -2696,7 +2762,8 @@
       <div style="display:flex;flex-direction:column;gap:8px;">
         <button class="btn btn-mint" style="width:100%;" onclick="copyMilestoneReportForAi('${proj.id}')">${aiBtnText}</button>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <button class="btn btn-yellow btn-sm" onclick="extendProjectCycle('${proj.id}', 14)">🔄 延長本專案 14 天</button>
+          const extDays = Math.max(7, Math.round((proj.targetDays / 2) / 7) * 7);
+          <button class="btn btn-yellow btn-sm" onclick="extendProjectCycle('${proj.id}', ${extDays})">🔄 延長本專案 ${extDays} 天</button>
           <button class="btn btn-outline btn-sm" onclick="convertProjectToLongTerm('${proj.id}')">♾️ 轉為長期維持</button>
         </div>
       </div>
