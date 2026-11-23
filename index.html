@@ -206,7 +206,9 @@
   .drag-handle { cursor: grab; font-size: 1.05rem; color: #a8968c; padding: 4px 6px; user-select: none; touch-action: none; flex-shrink: 0; }
   .drag-handle:active { cursor: grabbing; color: var(--primary-pink-dark); }
   .manage-task-actions { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; justify-content: space-between; }
-  .proj-manage-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 7px 8px; background: #fff; border: 1px solid #eadad0; border-radius: 10px; margin-top: 6px; font-size: 0.84rem; }
+  .proj-manage-row { display: flex; flex-direction: column; gap: 6px; padding: 9px 10px; background: #fff; border: 1.5px solid #eadad0; border-radius: 12px; margin-top: 7px; font-size: 0.86rem; }
+  .proj-manage-top { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; line-height: 1.45; word-break: break-word; }
+  .proj-manage-actions { display: flex; justify-content: flex-end; align-items: center; gap: 5px; flex-wrap: wrap; }
   .proj-filter-bar { background: #fdf6ef; padding: 10px; border-radius: 12px; border: 1.5px solid #f0dfd1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
   .tab-bar { display: flex; gap: 6px; margin: 10px 0; border-bottom: 2px solid #f2e6dc; padding-bottom: 8px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .tab-bar::-webkit-scrollbar { display: none; }
@@ -512,7 +514,7 @@
       </div>
     </div>
     <div class="setting-section">
-      <h4>🗂️ 目標專案管理（切換 / 改名 / 刪除）</h4>
+      <h4>🗂️ 目標專案管理</h4>
       <div id="projManageList"></div>
     </div>
     <div class="setting-section">
@@ -647,9 +649,9 @@
 </div>
 <div class="modal" id="milestoneModal" onclick="if(event.target===this) closeAllModals()">
   <div class="modal-box">
-    <div class="modal-header-sticky">
-      <h3 style="margin:0;" id="milestoneModalTitle">🎉 階段目標週期達成！</h3>
-      <button class="btn btn-outline btn-sm" onclick="closeAllModals()">✕ 稍後決定</button>
+    <div class="modal-header-sticky" style="gap:8px;">
+      <h3 style="margin:0;font-size:1.05rem;line-height:1.35;" id="milestoneModalTitle">🎉 階段目標週期達成！</h3>
+      <button class="btn btn-outline btn-sm" style="flex-shrink:0;white-space:nowrap;" onclick="closeAllModals()">✕ 稍後</button>
     </div>
     <div id="milestoneModalBody" style="margin-top:10px;line-height:1.6;font-size:0.88rem;"></div>
   </div>
@@ -1582,20 +1584,20 @@
       const stats = getProjectExecutionStats(p.id);
       const isReached = p.targetDays > 0 && stats.activeDays >= p.targetDays;
       const cycleBadge = p.targetDays > 0
-        ? `<span style="font-size:0.72rem;color:${isReached ? '#3d7a56' : '#d96b27'};background:${isReached ? '#eef7f1' : '#fff0e6'};padding:1px 6px;border-radius:8px;margin-left:4px;">${isReached ? '✅' : '⏳'} ${stats.activeDays}/${p.targetDays}天</span>`
-        : `<span style="font-size:0.72rem;color:#6c7a72;background:#eef3f0;padding:1px 6px;border-radius:8px;margin-left:4px;">♾️ 長期</span>`;
+        ? `<span style="font-size:0.72rem;color:${isReached ? '#3d7a56' : '#d96b27'};background:${isReached ? '#eef7f1' : '#fff0e6'};padding:1px 6px;border-radius:8px;white-space:nowrap;">${isReached ? '✅' : '⏳'} ${stats.activeDays}/${p.targetDays}天</span>`
+        : `<span style="font-size:0.72rem;color:#6c7a72;background:#eef3f0;padding:1px 6px;border-radius:8px;white-space:nowrap;">♾️ 長期</span>`;
       const statusTag = isPending
-        ? `<span style="font-size:0.7rem;color:#2d6f8a;background:#e3f4f8;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:700;">📅 明日生效</span>`
+        ? `<span style="font-size:0.7rem;color:#2d6f8a;background:#e3f4f8;padding:1px 6px;border-radius:8px;font-weight:700;white-space:nowrap;">📅 明日生效</span>`
         : '';
       return `<div class="proj-manage-row">
-        <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-          ${isAct ? '<b>🎯 ' : ''}${p.name.replace(/</g, '&lt;')}${isAct ? '</b>' : ''}${cycleBadge}${statusTag}
+        <div class="proj-manage-top">
+          <span>${isAct ? '<b>🎯 ' : ''}${p.name.replace(/</g, '&lt;')}${isAct ? '</b>' : ''}</span>${cycleBadge}${statusTag}
         </div>
-        <div style="display:flex;gap:4px;flex-shrink:0;">
-          <button class="btn btn-outline btn-sm" onclick="editProjectCycleById('${p.id}')" title="設定階段週期天數">⏳</button>
+        <div class="proj-manage-actions">
+          <button class="btn btn-outline btn-sm" onclick="editProjectCycleById('${p.id}')" title="設定階段週期天數">⏳ 週期</button>
           ${(!isAct && !isPending) ? `<button class="btn btn-mint btn-sm" onclick="switchActiveProject('${p.id}')">切換</button>` : ''}
-          <button class="btn btn-outline btn-sm" onclick="renameProjectById('${p.id}')">✏️</button>
-          ${projects.length > 1 ? `<button class="btn btn-danger btn-sm" onclick="deleteProjectById('${p.id}')">🗑️</button>` : ''}
+          <button class="btn btn-outline btn-sm" onclick="renameProjectById('${p.id}')" title="重新命名">✏️</button>
+          ${projects.length > 1 ? `<button class="btn btn-danger btn-sm" onclick="deleteProjectById('${p.id}')" title="刪除專案">🗑️</button>` : ''}
         </div>
       </div>`;
     }).join('');
