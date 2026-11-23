@@ -2710,14 +2710,16 @@
   function checkMilestoneCompletion() {
     if (milestoneCheckLock) return;
     const proj = getActiveProject();
-    if (!proj || !proj.targetDays || proj.targetDays <= 0 || proj.milestonePrompted) return;
-    if (document.querySelector('.modal.active')) return;
+    if (!proj || !proj.targetDays || proj.targetDays <= 0) return;
 
     const stats = getProjectExecutionStats(proj.id);
     if (stats.activeDays < proj.targetDays) {
       if (proj.milestonePrompted) { delete proj.milestonePrompted; saveAll(false); }
       return;
     }
+
+    if (proj.milestonePrompted) return;
+    if (document.querySelector('.modal.active')) return;
 
     const todayStr = getLogicalToday();
     const todayTasks = (allRecords[todayStr] || []).filter(t => t.projectId === proj.id && isDailyCountedTask(t, todayStr));
