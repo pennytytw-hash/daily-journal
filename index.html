@@ -2714,7 +2714,10 @@
     if (document.querySelector('.modal.active')) return;
 
     const stats = getProjectExecutionStats(proj.id);
-    if (stats.activeDays < proj.targetDays) return;
+    if (stats.activeDays < proj.targetDays) {
+      if (proj.milestonePrompted) { delete proj.milestonePrompted; saveAll(false); }
+      return;
+    }
 
     const todayStr = getLogicalToday();
     const todayTasks = (allRecords[todayStr] || []).filter(t => t.projectId === proj.id && isDailyCountedTask(t, todayStr));
