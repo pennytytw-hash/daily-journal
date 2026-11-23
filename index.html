@@ -2146,19 +2146,104 @@
     const allDaysArr = Object.values(dayMap).filter(x => x && x.total > 0);
     const totalDoneTasks = allDaysArr.reduce((s, x) => s + x.done, 0);
     const perfectDaysCnt = allDaysArr.filter(x => x.done === x.total).length;
-    let totalNotesCnt = Object.keys(dailyReflections).filter(k => dailyReflections[k]).length;
+    const activeDaysCnt = allDaysArr.length;
+    const refDaysCnt = Object.values(dailyReflections).filter(v => String(v || '').trim()).length;
+    let totalNotesCnt = refDaysCnt;
     Object.values(records).forEach(list => {
       if (Array.isArray(list)) list.forEach(t => { if (t.note && t.note.trim()) totalNotesCnt++; });
     });
-    const badgesList = [
-      { icon: '🌱', name: '破蛋首勝', desc: '完成第 1 項任務', ok: totalDoneTasks >= 1 },
-      { icon: '🔥', name: '三日新星', desc: '最高連勝 ≥ 3 天', ok: bestStreak >= 3 },
-      { icon: '🎁', name: '七日達人', desc: '最高連勝 ≥ 7 天', ok: bestStreak >= 7 },
-      { icon: '👑', name: '十四日大師', desc: '最高連勝 ≥ 14 天', ok: bestStreak >= 14 },
-      { icon: '🏆', name: '滿分收集家', desc: `100% 滿分 (${perfectDaysCnt}/10天)`, ok: perfectDaysCnt >= 10 },
-      { icon: '📝', name: '筆記作家', desc: `累積心得 (${totalNotesCnt}/10則)`, ok: totalNotesCnt >= 10 }
+
+    const achTracks = [
+      {
+        cur: bestStreak, unit: '天', condLabel: '最高連勝',
+        tiers: [
+          { icon: '🔥', name: '三日新星', target: 3 },
+          { icon: '🎁', name: '七日達人', target: 7 },
+          { icon: '👑', name: '十四日大師', target: 14 },
+          { icon: '💎', name: '月度傳奇', target: 30 },
+          { icon: '🌌', name: '雙月宗師', target: 60 },
+          { icon: '🏛️', name: '三個月王者', target: 90 }
+        ]
+      },
+      {
+        cur: perfectDaysCnt, unit: '天', condLabel: '100% 滿分',
+        tiers: [
+          { icon: '🌟', name: '完美初體驗', target: 1 },
+          { icon: '🏆', name: '滿分達人', target: 5 },
+          { icon: '🎖️', name: '滿分高手', target: 15 },
+          { icon: '🥇', name: '月度滿分王', target: 30 },
+          { icon: '💫', name: '雙月零失誤', target: 60 },
+          { icon: '👑', name: '百日滿分殿堂', target: 90 }
+        ]
+      },
+      {
+        cur: activeDaysCnt, unit: '天', condLabel: '累計執行',
+        tiers: [
+          { icon: '🌱', name: '起步一週', target: 7 },
+          { icon: '🌿', name: '習慣養成', target: 21 },
+          { icon: '🌳', name: '穩健前行', target: 45 },
+          { icon: '🏔️', name: '雙月足跡', target: 60 },
+          { icon: '🌏', name: '一季耕耘', target: 90 }
+        ]
+      },
+      {
+        cur: totalDoneTasks, unit: '項', condLabel: '完成任務',
+        tiers: [
+          { icon: '⚡', name: '行動派新手', target: 10 },
+          { icon: '🚀', name: '效率推進器', target: 50 },
+          { icon: '🎯', name: '百項達陣', target: 150 },
+          { icon: '⚔️', name: '三百斬將', target: 300 },
+          { icon: '🛸', name: '六百里程碑', target: 600 }
+        ]
+      },
+      {
+        cur: totalNotesCnt, unit: '則', condLabel: '隨手筆記',
+        tiers: [
+          { icon: '✏️', name: '隨手筆記', target: 5 },
+          { icon: '📝', name: '筆記作家', target: 15 },
+          { icon: '📖', name: '反思觀察家', target: 30 }
+        ]
+      },
+      {
+        cur: refDaysCnt, unit: '天', condLabel: '今日小結',
+        tiers: [
+          { icon: '🌙', name: '星夜低語', target: 3 },
+          { icon: '🕯️', name: '睡前覆盤師', target: 10 },
+          { icon: '🌠', name: '月光記錄者', target: 21 }
+        ]
+      }
     ];
-    html += `<div class="panel-box"><b>🏅 成就貼紙收集牆（已點亮 ${badgesList.filter(b => b.ok).length}/${badgesList.length}）</b>
+
+    let totalAllTiers = 0;
+    const unlockedCards = [];
+    const nextGoalCards = [];
+
+    achTracks.forEach(track => {
+      totalAllTiers += track.tiers.length;
+      track.tiers.forEach(t => {
+        if (track.cur >= t.target) {
+          unlockedCards.push({
+            icon: t.icon,
+            name: t.name,
+            desc: `${track.condLabel} ${t.target}${track.unit}`,
+            ok: true
+          });
+        }
+      });
+      const nextTier = track.tiers.find(t => track.cur < t.target);
+      if (nextTier) {
+        nextGoalCards.push({
+          icon: '🔒',
+          name: '？？？',
+          desc: `${track.condLabel} ${track.cur}/${nextTier.target}${track.unit}`,
+          ok: false
+        });
+      }
+    });
+
+    const badgesList = [...unlockedCards, ...nextGoalCards];
+
+    html += `<div class="panel-box"><b>🏅 成就貼紙收集牆（已解鎖 ${unlockedCards.length}/${totalAllTiers} 枚）</b>
       <div class="badge-wall-grid">${badgesList.map(b => `
         <div class="ach-badge-card ${b.ok ? 'unlocked' : ''}">
           <div class="ach-badge-icon">${b.icon}</div>
