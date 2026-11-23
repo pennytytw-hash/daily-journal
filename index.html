@@ -2849,7 +2849,7 @@
       const raw = allRecords[dStr];
       if (!Array.isArray(raw) || raw.length === 0) return true;
       const list = raw.filter(t => (!t.projectId || t.projectId === proj.id) && !isTaskSkipped(t, dStr));
-      if (list.length === 0) return true;
+      if (list.length === 0) return false;
       return list.every(t => t.completed);
     };
 
