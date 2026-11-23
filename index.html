@@ -2461,14 +2461,18 @@
     });
 
     const filterProjObj = selectedStatsProj !== 'ALL' ? projects.find(p => p.id === selectedStatsProj) : null;
-    const projCycleCap = (filterProjObj && filterProjObj.targetDays > 0) ? filterProjObj.targetDays : Infinity;
+    const hasProjCycle = Boolean(filterProjObj && filterProjObj.targetDays > 0);
+    const projDaysCap = hasProjCycle ? (filterProjObj.targetDays * 0.8) : Infinity;
+    const projDailyCount = hasProjCycle ? Math.max(1, (filterProjObj.items || []).length) : 1;
+    const projTasksCap = hasProjCycle ? (projDailyCount * filterProjObj.targetDays * 0.8) : Infinity;
+    const projLightCap = hasProjCycle ? (filterProjObj.targetDays * 0.2) : Infinity;
 
     const targetProjects = selectedStatsProj === 'ALL' ? projects : projects.filter(p => p.id === selectedStatsProj);
     const completedProjCnt = targetProjects.filter(p => p.targetDays > 0 && getProjectExecutionStats(p.id).activeDays >= p.targetDays).length;
 
     const achTracks = [
       {
-        cur: bestStreak, unit: '天', condLabel: '最高連勝', isDayMetric: true,
+        cur: bestStreak, unit: '天', condLabel: '最高連勝', cap: projDaysCap,
         tiers: [
           { icon: '🔥', name: '三日新星', target: 3 },
           { icon: '🎁', name: '七日達人', target: 7 },
@@ -2479,7 +2483,7 @@
         ]
       },
       {
-        cur: perfectDaysCnt, unit: '天', condLabel: '100% 滿分', isDayMetric: true,
+        cur: perfectDaysCnt, unit: '天', condLabel: '100% 滿分', cap: projDaysCap,
         tiers: [
           { icon: '🌟', name: '完美初體驗', target: 1 },
           { icon: '🏆', name: '滿分達人', target: 5 },
@@ -2490,7 +2494,7 @@
         ]
       },
       {
-        cur: activeDaysCnt, unit: '天', condLabel: '累計執行', isDayMetric: true,
+        cur: activeDaysCnt, unit: '天', condLabel: '累計執行', cap: projDaysCap,
         tiers: [
           { icon: '🌱', name: '起步一週', target: 7 },
           { icon: '🌿', name: '習慣養成', target: 21 },
@@ -2500,7 +2504,7 @@
         ]
       },
       {
-        cur: totalDoneTasks, unit: '項', condLabel: '完成任務', isDayMetric: false,
+        cur: totalDoneTasks, unit: '項', condLabel: '完成任務', cap: projTasksCap,
         tiers: [
           { icon: '⚡', name: '行動派新手', target: 10 },
           { icon: '🚀', name: '效率推進器', target: 50 },
@@ -2510,7 +2514,7 @@
         ]
       },
       {
-        cur: totalNotesCnt, unit: '則', condLabel: '隨手筆記', isDayMetric: false,
+        cur: totalNotesCnt, unit: '則', condLabel: '隨手筆記', cap: projLightCap,
         tiers: [
           { icon: '✏️', name: '隨手筆記', target: 5 },
           { icon: '📝', name: '筆記作家', target: 15 },
@@ -2518,7 +2522,7 @@
         ]
       },
       {
-        cur: refDaysCnt, unit: '天', condLabel: '今日小結', isDayMetric: true,
+        cur: refDaysCnt, unit: '天', condLabel: '今日小結', cap: projLightCap,
         tiers: [
           { icon: '🌙', name: '星夜低語', target: 3 },
           { icon: '🕯️', name: '睡前覆盤師', target: 10 },
@@ -2526,7 +2530,7 @@
         ]
       },
       {
-        cur: completedProjCnt, unit: '個', condLabel: '完成專案', isDayMetric: false, secretTrack: true,
+        cur: completedProjCnt, unit: '個', condLabel: '完成專案', cap: Infinity, secretTrack: true,
         tiers: [
           { icon: '🎯', name: '專案破關手', target: 1 },
           { icon: '🚀', name: '多棲實踐家', target: 3 },
@@ -2541,8 +2545,8 @@
     const nextGoalCards = [];
 
     achTracks.forEach(track => {
-      const visibleTiers = (track.isDayMetric && Number.isFinite(projCycleCap))
-        ? track.tiers.filter(t => t.target <= projCycleCap)
+      const visibleTiers = Number.isFinite(track.cap)
+        ? track.tiers.filter(t => t.target <= track.cap)
         : track.tiers;
       if (!track.secretTrack) totalAllTiers += visibleTiers.length;
       visibleTiers.forEach(t => {
