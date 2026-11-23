@@ -2845,18 +2845,12 @@
     const stats = getProjectExecutionStats(proj.id);
     if (stats.activeDays < proj.targetDays) return false;
 
-    const checkDayAllDone = (dStr) => {
-      const raw = allRecords[dStr];
-      if (!Array.isArray(raw) || raw.length === 0) return true;
-      const list = raw.filter(t => (!t.projectId || t.projectId === proj.id) && !isTaskSkipped(t, dStr));
-      if (list.length === 0) return true;
-      return list.every(t => t.completed);
-    };
-
-    const todayStr = getLogicalToday();
-    if (allRecords[todayStr] && !checkDayAllDone(todayStr)) return false;
-    if (currentDate && allRecords[currentDate] && !checkDayAllDone(currentDate)) return false;
-    return true;
+    const targetCheckDate = currentDate || getLogicalToday();
+    const raw = allRecords[targetCheckDate];
+    if (!Array.isArray(raw) || raw.length === 0) return true;
+    const list = raw.filter(t => (!t.projectId || t.projectId === proj.id) && (!isTaskSkipped(t, targetCheckDate) || t.completed));
+    if (list.length === 0) return true;
+    return list.every(t => t.completed);
   }
 
   function checkMilestoneCompletion() {
