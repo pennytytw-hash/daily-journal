@@ -51,6 +51,12 @@
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(234, 184, 77, 0.28);
   }
+  .active-proj-bar.proj-completed-today {
+    background: #f2f0fa;
+    border-color: #d6cff0;
+    color: #5d518a;
+    cursor: default;
+  }
   .streak-badge {
     display: inline-block; background: #fff0e6; border: 1.5px solid #f7c59f;
     color: #d96b27; font-size: 0.8rem; font-weight: 700; padding: 3px 10px;
@@ -701,6 +707,7 @@
   let fixedTemplate = JSON.parse(localStorage.getItem('cute_journal_v3_template') || '[]');
   let projects = JSON.parse(localStorage.getItem('cute_journal_v4_projects') || '[]');
   let activeProjectId = localStorage.getItem('cute_journal_v4_active_proj') || '';
+  let pendingNextProjectId = localStorage.getItem('cute_journal_v4_pending_proj') || '';
   let lastBackupTime = Number(localStorage.getItem('cute_journal_last_backup') || 0);
   let visionText = localStorage.getItem('cute_journal_vision') || '';
   let weekendSkipItems = JSON.parse(localStorage.getItem('cute_journal_v4_weekend_skip') || '[]');
@@ -796,6 +803,7 @@
     localStorage.setItem('cute_journal_v3_template', JSON.stringify(fixedTemplate));
     localStorage.setItem('cute_journal_v4_projects', JSON.stringify(projects));
     localStorage.setItem('cute_journal_v4_active_proj', activeProjectId);
+    localStorage.setItem('cute_journal_v4_pending_proj', pendingNextProjectId);
     localStorage.setItem('cute_journal_v4_weekend_skip', JSON.stringify(weekendSkipItems));
     localStorage.setItem('cute_journal_v4_holiday_overrides', JSON.stringify(holidayOverrides));
     localStorage.setItem('cute_journal_v4_custom_holidays', JSON.stringify(customHolidays));
@@ -812,6 +820,19 @@
 
   function getTasks() {
     const todayStr = getLogicalToday();
+    if (pendingNextProjectId) {
+      const pendProj = projects.find(p => p.id === pendingNextProjectId);
+      if (!pendProj) {
+        pendingNextProjectId = '';
+        localStorage.setItem('cute_journal_v4_pending_proj', '');
+      } else if (!pendProj.startDate || pendProj.startDate <= todayStr) {
+        activeProjectId = pendProj.id;
+        fixedTemplate = [...(pendProj.items || [])];
+        pendingNextProjectId = '';
+        localStorage.setItem('cute_journal_v4_active_proj', activeProjectId);
+        localStorage.setItem('cute_journal_v4_pending_proj', '');
+      }
+    }
     if (currentDate !== todayStr) return allRecords[currentDate] || [];
     if (!allRecords[currentDate]) {
       const now = Date.now();
@@ -1405,10 +1426,8 @@
     const newProjObj = { id: newProjId, name: projName, startDate: applyDateStr, items: [...newItems] };
     if (parsedDays > 0) newProjObj.targetDays = parsedDays;
     projects.push(newProjObj);
-    activeProjectId = newProjId;
-    fixedTemplate = newItems;
 
-    const newFixedTasks = fixedTemplate.map((text, idx) => {
+    const newFixedTasks = newItems.map((text, idx) => {
       const tgt = detectTargetCount(text);
       if (tgt > 0) fixedTargets[text] = tgt;
       else delete fixedTargets[text];
@@ -1418,18 +1437,20 @@
     });
 
     if (deferToTomorrow) {
+      pendingNextProjectId = newProjId;
       Object.keys(allRecords).forEach(d => { if (d > todayStr) delete allRecords[d]; });
       allRecords[tomorrowStr] = newFixedTasks;
-      currentDate = todayStr;
-      datePicker.value = todayStr;
     } else {
+      pendingNextProjectId = '';
+      activeProjectId = newProjId;
+      fixedTemplate = newItems;
       const manualTasks = (allRecords[todayStr] || []).filter(t => !t.isFixed);
       allRecords[todayStr] = [...newFixedTasks, ...manualTasks];
       Object.keys(allRecords).forEach(d => { if (d > todayStr) delete allRecords[d]; });
-      currentDate = todayStr;
-      datePicker.value = todayStr;
     }
 
+    currentDate = todayStr;
+    datePicker.value = todayStr;
     area.value = ''; nameInput.value = ''; if (daysInput) daysInput.value = '';
     currentQuote = "";
     closeAllModals();
@@ -1510,42 +1531,15 @@
     renderProjManageList();
   }
 
-  function renderProjManageList() {
-    const box = document.getElementById('projManageList');
-    if (!box) return;
-    box.innerHTML = projects.map(p => {
-      const isAct = p.id === activeProjectId;
-      const stats = getProjectExecutionStats(p.id);
-      const isReached = p.targetDays > 0 && stats.activeDays >= p.targetDays;
-      const cycleBadge = p.targetDays > 0
-        ? `<span style="font-size:0.72rem;color:${isReached ? '#3d7a56' : '#d96b27'};background:${isReached ? '#eef7f1' : '#fff0e6'};padding:1px 6px;border-radius:8px;margin-left:4px;">${isReached ? '✅' : '⏳'} ${stats.activeDays}/${p.targetDays}天</span>`
-        : `<span style="font-size:0.72rem;color:#6c7a72;background:#eef3f0;padding:1px 6px;border-radius:8px;margin-left:4px;">♾️ 長期</span>`;
-      return `<div class="proj-manage-row">
-        <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-          ${isAct ? '<b>🎯 ' : ''}${p.name.replace(/</g, '&lt;')}${isAct ? '</b>' : ''}${cycleBadge}
-        </div>
-        <div style="display:flex;gap:4px;flex-shrink:0;">
-          <button class="btn btn-outline btn-sm" onclick="editProjectCycleById('${p.id}')" title="設定階段週期天數">⏳</button>
-          ${!isAct ? `<button class="btn btn-mint btn-sm" onclick="switchActiveProject('${p.id}')">切換</button>` : ''}
-          <button class="btn btn-outline btn-sm" onclick="renameProjectById('${p.id}')">✏️</button>
-          ${projects.length > 1 ? `<button class="btn btn-danger btn-sm" onclick="deleteProjectById('${p.id}')">🗑️</button>` : ''}
-        </div>
-      </div>`;
-    }).join('');
-  }
-
   function switchActiveProject(pid) {
     const target = projects.find(p => p.id === pid);
     if (!target) return;
-    activeProjectId = pid;
-    fixedTemplate = [...(target.items || [])];
     const todayStr = getLogicalToday();
     const tomorrowStr = getLogicalToday(-1);
     const deferToTomorrow = hasExecutedTasksOnDate(todayStr);
-    const applyDateStr = deferToTomorrow ? tomorrowStr : todayStr;
     const now = Date.now();
 
-    const newFixedTasks = fixedTemplate.map((text, idx) => {
+    const newFixedTasks = (target.items || []).map((text, idx) => {
       const isWk = Object.prototype.hasOwnProperty.call(weeklyTargets, text);
       const tgt = isWk ? (weeklyTargets[text] || 1) : (fixedTargets[text] || 0);
       const item = {
@@ -1560,15 +1554,49 @@
     });
 
     if (deferToTomorrow) {
+      target.startDate = tomorrowStr;
+      pendingNextProjectId = pid;
       allRecords[tomorrowStr] = newFixedTasks;
       showSyncProgress(`📅 今日已有打卡紀錄，「${target.name}」將於明日 (${tomorrowStr}) 自動生效！`, 100, 3000);
     } else {
+      pendingNextProjectId = '';
+      activeProjectId = pid;
+      fixedTemplate = [...(target.items || [])];
       const manualTasks = (allRecords[todayStr] || []).filter(t => !t.isFixed);
       allRecords[todayStr] = [...newFixedTasks, ...manualTasks];
     }
     saveAll();
     renderProjManageList();
   }
+
+  function renderProjManageList() {
+    const box = document.getElementById('projManageList');
+    if (!box) return;
+    box.innerHTML = projects.map(p => {
+      const isAct = p.id === activeProjectId;
+      const isPending = p.id === pendingNextProjectId;
+      const stats = getProjectExecutionStats(p.id);
+      const isReached = p.targetDays > 0 && stats.activeDays >= p.targetDays;
+      const cycleBadge = p.targetDays > 0
+        ? `<span style="font-size:0.72rem;color:${isReached ? '#3d7a56' : '#d96b27'};background:${isReached ? '#eef7f1' : '#fff0e6'};padding:1px 6px;border-radius:8px;margin-left:4px;">${isReached ? '✅' : '⏳'} ${stats.activeDays}/${p.targetDays}天</span>`
+        : `<span style="font-size:0.72rem;color:#6c7a72;background:#eef3f0;padding:1px 6px;border-radius:8px;margin-left:4px;">♾️ 長期</span>`;
+      const statusTag = isPending
+        ? `<span style="font-size:0.7rem;color:#2d6f8a;background:#e3f4f8;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:700;">📅 明日生效</span>`
+        : '';
+      return `<div class="proj-manage-row">
+        <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          ${isAct ? '<b>🎯 ' : ''}${p.name.replace(/</g, '&lt;')}${isAct ? '</b>' : ''}${cycleBadge}${statusTag}
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0;">
+          <button class="btn btn-outline btn-sm" onclick="editProjectCycleById('${p.id}')" title="設定階段週期天數">⏳</button>
+          ${(!isAct && !isPending) ? `<button class="btn btn-mint btn-sm" onclick="switchActiveProject('${p.id}')">切換</button>` : ''}
+          <button class="btn btn-outline btn-sm" onclick="renameProjectById('${p.id}')">✏️</button>
+          ${projects.length > 1 ? `<button class="btn btn-danger btn-sm" onclick="deleteProjectById('${p.id}')">🗑️</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
   function renameProjectById(pid) {
     const p = projects.find(x => x.id === pid);
     if (!p) return;
@@ -1581,6 +1609,13 @@
     const p = projects.find(x => x.id === pid);
     if (!p || !confirm(`確定要刪除專案「${p.name}」及其所有歷史打卡紀錄嗎？（此動作無法復原）`)) return;
     projects = projects.filter(x => x.id !== pid);
+    if (pendingNextProjectId === pid) {
+      pendingNextProjectId = '';
+      const tomorrowStr = getLogicalToday(-1);
+      if (Array.isArray(allRecords[tomorrowStr]) && allRecords[tomorrowStr].every(t => t.projectId === pid && !t.completed)) {
+        delete allRecords[tomorrowStr];
+      }
+    }
     Object.keys(allRecords).forEach(d => {
       if (Array.isArray(allRecords[d])) {
         allRecords[d] = allRecords[d].filter(t => t.projectId !== pid);
@@ -1905,14 +1940,28 @@
   function render() {
     const actProj = getActiveProject();
     const actStats = actProj ? getProjectExecutionStats(actProj.id) : { activeDays: 0 };
-    const dayTag = (actProj && actProj.targetDays > 0) ? ` (Day ${actStats.activeDays}/${actProj.targetDays})` : '';
-    document.getElementById('activeProjName').textContent = `${actProj.name}${dayTag}`;
+    const hasPendingNext = Boolean(pendingNextProjectId && projects.some(p => p.id === pendingNextProjectId));
+    let dayTag = '';
+    if (actProj && actProj.targetDays > 0) {
+      dayTag = actStats.activeDays > actProj.targetDays
+        ? ` (已達標 ${actProj.targetDays}天 +${actStats.activeDays - actProj.targetDays})`
+        : ` (Day ${actStats.activeDays}/${actProj.targetDays})`;
+    }
+    document.getElementById('activeProjName').textContent = `${actProj.name}${dayTag}${hasPendingNext ? ' ✓' : ''}`;
     const projBarEl = document.getElementById('activeProjBar');
     if (projBarEl) {
-      const ready = isProjectMilestoneReady(actProj);
-      projBarEl.classList.toggle('milestone-ready', ready);
-      projBarEl.title = ready ? '🎉 階段週期已達成！點擊開啟結算與規劃' : '';
-      projBarEl.onclick = ready ? () => openMilestoneModalForProject(actProj.id) : null;
+      if (hasPendingNext) {
+        projBarEl.classList.remove('milestone-ready');
+        projBarEl.classList.add('proj-completed-today');
+        projBarEl.title = '✨ 本專案已完成階段任務，明日將自動切換為新專案';
+        projBarEl.onclick = null;
+      } else {
+        projBarEl.classList.remove('proj-completed-today');
+        const ready = isProjectMilestoneReady(actProj);
+        projBarEl.classList.toggle('milestone-ready', ready);
+        projBarEl.title = ready ? '🎉 階段週期已達成！點擊開啟結算與規劃' : '';
+        projBarEl.onclick = ready ? () => openMilestoneModalForProject(actProj.id) : null;
+      }
     }
     document.getElementById('templateCountText').textContent = `目前專案固定清單：${fixedTemplate.length} 項`;
     const stInfo = calcStreakInfo();
@@ -2454,7 +2503,9 @@
     const totalDoneTasks = allDaysArr.reduce((s, x) => s + x.done, 0);
     const perfectDaysCnt = allDaysArr.filter(x => x.done === x.total).length;
     const activeDaysCnt = allDaysArr.length;
-    const refDaysCnt = Object.values(dailyReflections).filter(v => String(v || '').trim()).length;
+    const refDaysCnt = Object.keys(dailyReflections).filter(dStr =>
+      String(dailyReflections[dStr] || '').trim() && (selectedStatsProj === 'ALL' || dayMap[dStr])
+    ).length;
     let totalNotesCnt = refDaysCnt;
     Object.values(records).forEach(list => {
       if (Array.isArray(list)) list.forEach(t => { if (t.note && t.note.trim()) totalNotesCnt++; });
@@ -2638,7 +2689,8 @@
     ctx.strokeStyle = '#f2e6dc';
     ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.roundRect(44, 48, 632, 624, 36);
+    if (typeof ctx.roundRect === 'function') ctx.roundRect(44, 48, 632, 624, 36);
+    else ctx.rect(44, 48, 632, 624);
     ctx.fill();
     ctx.stroke();
 
@@ -2791,7 +2843,7 @@
   }
 
   function checkMilestoneCompletion() {
-    if (milestoneCheckLock) return;
+    if (milestoneCheckLock || pendingNextProjectId) return;
     const proj = getActiveProject();
     if (!proj || !proj.targetDays || proj.targetDays <= 0) return;
 
@@ -3206,7 +3258,7 @@
   async function copySyncLink() {
     try {
       const recentRecords = {};
-      for (let i = 0; i < 7; i++) { const dStr = getLogicalToday(i); if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr]; }
+      for (let i = -1; i < 7; i++) { const dStr = getLogicalToday(i); if (allRecords[dStr]) recentRecords[dStr] = allRecords[dStr]; }
       const encoded = await encodeSyncData({ records: recentRecords, fixedTargets, weeklyTargets, dailyMoods, dailyReflections, template: fixedTemplate, projects, activeProjectId, vision: visionText, weekendSkip: weekendSkipItems, holidayOverrides, customHolidays });
       const baseUrl = window.location.href.replace(/#.*$/, '');
       await writeClipboardSafe(`${baseUrl}#sync=${encoded}`);
@@ -3287,9 +3339,9 @@
   async function autoCheckHeaderUpdate() {
     try {
       lastUpdateCheckTs = Date.now();
-      if (!location.protocol.startsWith('http') || !('caches' in window)) return;
+      if (!location.protocol.startsWith('http')) return;
       const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
-      const headRes = await fetch(cleanUrl, { method: 'HEAD', cache: 'no-store' });
+      const headRes = await fetch(`${cleanUrl}?head=${Date.now()}`, { method: 'HEAD', cache: 'no-store' });
       if (!headRes.ok) return;
       const sig = [
         headRes.headers.get('etag'),
@@ -3316,15 +3368,19 @@
           localStorage.setItem('cute_journal_remote_sig', sig);
           if (isSameContent) return;
 
-          const cache = await caches.open('journal-v5-3');
-          const respObj = () => new Response(htmlText, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-          await cache.put(cleanUrl, respObj());
-          await cache.put(new URL('./', cleanUrl).href, respObj());
           showSyncProgress('🎉 發現小手帳新版本，正在為您自動更新...', 100, 0);
+          if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            for (const r of regs) await r.unregister();
+          }
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            for (const k of keys) await caches.delete(k);
+          }
           setTimeout(() => {
             flushPendingEdits();
             window.location.reload();
-          }, 900);
+          }, 800);
         }
       }
     } catch (e) {}
