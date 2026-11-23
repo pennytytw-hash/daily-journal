@@ -488,7 +488,10 @@
         <span>💡 <b>匯入新專案：</b>會自動歸檔舊專案紀錄，並覆蓋今日與未來固定清單。</span>
         <button class="btn btn-mint btn-sm" style="flex-shrink:0;" onclick="copyPrompt()">📋 複製 AI 指令</button>
       </div>
-      <input type="text" id="newProjNameInput" class="proj-name-input" placeholder="輸入新目標專案名稱（選填，例如：多益衝刺計畫）">
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <input type="text" id="newProjNameInput" class="proj-name-input" style="margin:0;flex:1;" placeholder="新專案名稱（選填，如：多益衝刺）">
+        <input type="number" id="newProjDaysInput" class="proj-name-input" style="margin:0;width:105px;" min="0" max="365" placeholder="週期天數">
+      </div>
       <textarea id="aiPasteArea" placeholder="將 AI 回覆的清單貼在這裡（每行一項）..."></textarea>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
         <span id="templateCountText" style="font-size:0.8rem;color:#4a7c5f;">目前固定清單：0 項</span>
@@ -602,7 +605,7 @@
         <li><b>編輯與排序：</b>點進「🗂️ 管理」可新增臨時目標、修改文字、按住左側 <b>☰</b> 上下拖曳調整順序，或設定目標次數。</li>
         <li><b>每週彈性任務：</b>將任務切換為「📆 每週」後，同週（週一至週日）次數跨日同步累積，且不計入單日達成率壓力。</li>
         <li><b>不小心改亂了：</b>管理列表右上角點 <b>⏪ 同昨日</b>，可一鍵恢復前一日的任務清單設定。</li>
-        <li><b>AI 建立專案：</b>在管理抽屜複製專用指令請 AI 生成清單，貼上即可建立新目標專案（舊專案紀錄會完整保留）。</li>
+        <li><b>AI 建立專案與週期：</b>在管理抽屜複製專用指令請 AI 生成清單，貼上即可建立新專案並自動套用建議執行天數（亦可隨時在專案列表點擊 <b>⏳</b> 修改天數，或留空作為長期維持專案）。</li>
       </ul>
     </div>
     <div class="setting-section" style="line-height:1.65;font-size:0.84rem;">
@@ -627,6 +630,15 @@
     <div style="display:flex;justify-content:center;gap:8px;margin-top:10px;">
       <button class="btn btn-mint btn-sm" onclick="downloadShareCard()">💾 下載紀念圖片</button>
     </div>
+  </div>
+</div>
+<div class="modal" id="milestoneModal" onclick="if(event.target===this) closeAllModals()">
+  <div class="modal-box">
+    <div class="modal-header-sticky">
+      <h3 style="margin:0;" id="milestoneModalTitle">🎉 階段目標週期達成！</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeAllModals()">✕ 稍後決定</button>
+    </div>
+    <div id="milestoneModalBody" style="margin-top:10px;line-height:1.6;font-size:0.88rem;"></div>
   </div>
 </div>
 
@@ -1345,23 +1357,36 @@
   }
 
   function copyPrompt() {
-    const cmd = '請將我們剛剛討論的目標整理成純文字清單，每行一項任務。每項請極度精鍊（控制在 12 字以內，只寫核心行動與量化數字，如「喝水 8 杯」、「背單字 20 個」），不要加任何編號、符號、標題、括號補充或額外說明文字。';
+    const cmd = '請將我們剛剛討論的目標整理成純文字清單，並依照一日從早到晚（晨間→白天→晚間）的執行流程順序排列。第一行請固定輸出建議執行週期（依目標性質建議 14～30 天，格式如：[週期:21天]），第二行起每行一項任務，每項請極度精鍊（控制在 12 字以內，只寫核心行動與量化數字，如「喝水 8 杯」、「背單字 20 個」），不要加任何編號、符號、標題、括號補充或額外說明文字。';
     navigator.clipboard.writeText(cmd)
-      .then(() => alert('已複製精鍊版指令！直接貼到 AI 對話框即可。'));
+      .then(() => alert('已複製新版 AI 指令！包含一日流程排序與建議週期規劃。'));
   }
 
   function importAiList() {
-    const area = document.getElementById('aiPasteArea'), nameInput = document.getElementById('newProjNameInput');
+    const area = document.getElementById('aiPasteArea');
+    const nameInput = document.getElementById('newProjNameInput');
+    const daysInput = document.getElementById('newProjDaysInput');
     const newItems = [];
+    let parsedDays = parseInt(daysInput?.value || '0', 10) || 0;
+
     area.value.split('\n').forEach(line => {
-      const cleaned = line.replace(/^[\s\-\*\•\d\.\)\[\]xX✓✔]+/, '').trim();
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      const cycleMatch = trimmed.match(/^\[?\s*(?:週期|周期|天數)\s*[:：]\s*(\d+)\s*天?\s*\]?$/i);
+      if (cycleMatch) {
+        if (!parsedDays) parsedDays = Math.min(365, Math.max(1, parseInt(cycleMatch.at(1), 10) || 0));
+        return;
+      }
+      const cleaned = trimmed.replace(/^[\s\-\*\•\d\.\)\[\]xX✓✔]+/, '').trim();
       if (cleaned) newItems.push(cleaned);
     });
     if (newItems.length === 0) { alert('沒有偵測到有效的目標文字喔！'); return; }
     const todayStr = getLogicalToday(), now = Date.now();
     const projName = nameInput.value.trim() || `目標專案 #${projects.length + 1} (${todayStr.slice(5)}起)`;
     const newProjId = 'proj_' + now;
-    projects.push({ id: newProjId, name: projName, startDate: todayStr, items: [...newItems] });
+    const newProjObj = { id: newProjId, name: projName, startDate: todayStr, items: [...newItems] };
+    if (parsedDays > 0) newProjObj.targetDays = parsedDays;
+    projects.push(newProjObj);
     activeProjectId = newProjId; fixedTemplate = newItems;
     const manualTasks = (allRecords[todayStr] || []).filter(t => !t.isFixed);
     allRecords[todayStr] = [
@@ -1377,10 +1402,81 @@
     ];
     Object.keys(allRecords).forEach(d => { if (d > todayStr) delete allRecords[d]; });
     currentDate = todayStr; datePicker.value = todayStr;
-    area.value = ''; nameInput.value = ''; currentQuote = "";
+    area.value = ''; nameInput.value = ''; if (daysInput) daysInput.value = '';
+    currentQuote = "";
     closeAllModals();
     saveAll();
-    alert(`🚀 已建立新專案「${projName}」（共 ${newItems.length} 項）並套用至今日！`);
+    const cycleHint = parsedDays > 0 ? `\n⏳ 設定階段週期：實際執行 ${parsedDays} 天` : '\n♾️ 模式：長期維持專案';
+    alert(`🚀 已建立新專案「${projName}」（共 ${newItems.length} 項）並套用至今日！${cycleHint}`);
+  }
+
+  function getProjectExecutionStats(pid) {
+    let activeDays = 0, sumRate = 0, totalDone = 0, totalTasks = 0;
+    const taskPerf = {};
+    const projNotes = [];
+    const projRefs = [];
+
+    const checkDayList = (dStr, list) => {
+      if (!Array.isArray(list)) return;
+      const pList = list.filter(t => t.projectId === pid && isDailyCountedTask(t, dStr));
+      if (pList.length === 0) return;
+      const doneCnt = pList.filter(t => t.completed).length;
+      if (doneCnt > 0) {
+        activeDays++;
+        sumRate += (doneCnt / pList.length) * 100;
+        totalDone += doneCnt;
+        totalTasks += pList.length;
+      }
+      pList.forEach(t => {
+        if (!taskPerf[t.text]) taskPerf[t.text] = { total: 0, done: 0 };
+        taskPerf[t.text].total++;
+        if (t.completed) taskPerf[t.text].done++;
+        if (t.note && t.note.trim()) {
+          projNotes.push(`${dStr} [${t.text}]：${t.note.trim()}`);
+        }
+      });
+      if (dailyReflections[dStr] && String(dailyReflections[dStr]).trim()) {
+        projRefs.push(`${dStr}：${String(dailyReflections[dStr]).trim()}`);
+      }
+    };
+
+    Object.entries(archivedStats).forEach(([dStr, arr]) => {
+      if (!Array.isArray(arr)) return;
+      const hit = arr.find(x => x.p === pid);
+      if (hit && hit.t > 0 && hit.c > 0) {
+        activeDays++;
+        sumRate += (hit.c / hit.t) * 100;
+        totalDone += hit.c;
+        totalTasks += hit.t;
+      }
+    });
+
+    Object.keys(allRecords).sort().forEach(dStr => checkDayList(dStr, allRecords[dStr]));
+
+    const avgRate = activeDays > 0 ? Math.round(sumRate / activeDays) : 0;
+    return { activeDays, avgRate, totalDone, totalTasks, taskPerf, projNotes, projRefs };
+  }
+
+  function editProjectCycleById(pid) {
+    const p = projects.find(x => x.id === pid);
+    if (!p) return;
+    const stats = getProjectExecutionStats(pid);
+    const curVal = p.targetDays || 0;
+    const input = prompt(
+      `設定「${p.name}」的階段目標天數（目前已實際執行 ${stats.activeDays} 天）：\n• 輸入正整數（如 14、21、30）設定階段挑戰天數\n• 輸入 0 或留白則設為「♾️ 長期維持（無期限）」`,
+      curVal > 0 ? String(curVal) : ''
+    );
+    if (input === null) return;
+    const num = Math.max(0, Math.min(365, parseInt(input.trim(), 10) || 0));
+    if (num > 0) {
+      p.targetDays = num;
+      delete p.milestonePrompted;
+    } else {
+      delete p.targetDays;
+      delete p.milestonePrompted;
+    }
+    saveAll();
+    renderProjManageList();
   }
 
   function renderProjManageList() {
@@ -1388,11 +1484,16 @@
     if (!box) return;
     box.innerHTML = projects.map(p => {
       const isAct = p.id === activeProjectId;
+      const stats = getProjectExecutionStats(p.id);
+      const cycleBadge = p.targetDays > 0
+        ? `<span style="font-size:0.72rem;color:#d96b27;background:#fff0e6;padding:1px 6px;border-radius:8px;margin-left:4px;">⏳ ${stats.activeDays}/${p.targetDays}天</span>`
+        : `<span style="font-size:0.72rem;color:#6c7a72;background:#eef3f0;padding:1px 6px;border-radius:8px;margin-left:4px;">♾️ 長期</span>`;
       return `<div class="proj-manage-row">
         <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-          ${isAct ? '<b>🎯 ' : ''}${p.name.replace(/</g, '&lt;')}${isAct ? ' (進行中)</b>' : ''}
+          ${isAct ? '<b>🎯 ' : ''}${p.name.replace(/</g, '&lt;')}${isAct ? '</b>' : ''}${cycleBadge}
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0;">
+          <button class="btn btn-outline btn-sm" onclick="editProjectCycleById('${p.id}')" title="設定階段週期天數">⏳</button>
           ${!isAct ? `<button class="btn btn-mint btn-sm" onclick="switchActiveProject('${p.id}')">切換</button>` : ''}
           <button class="btn btn-outline btn-sm" onclick="renameProjectById('${p.id}')">✏️</button>
           ${projects.length > 1 ? `<button class="btn btn-danger btn-sm" onclick="deleteProjectById('${p.id}')">🗑️</button>` : ''}
@@ -1557,6 +1658,7 @@
     document.getElementById('syncPasteModal')?.classList.remove('active');
     document.getElementById('guideModal')?.classList.remove('active');
     document.getElementById('shareCardModal')?.classList.remove('active');
+    document.getElementById('milestoneModal')?.classList.remove('active');
     document.documentElement.classList.remove('modal-open-lock');
     document.body.classList.remove('modal-open-lock');
     if (modalHistoryPushed) {
@@ -1751,7 +1853,10 @@
     showSyncProgress(visionText ? '✨ 目標願景板已更新顯示！' : '🫧 已清空並隱藏願景板', 100, 1800);
   }
   function render() {
-    document.getElementById('activeProjName').textContent = getActiveProject().name;
+    const actProj = getActiveProject();
+    const actStats = actProj ? getProjectExecutionStats(actProj.id) : { activeDays: 0 };
+    const dayTag = (actProj && actProj.targetDays > 0) ? ` (Day ${actStats.activeDays}/${actProj.targetDays})` : '';
+    document.getElementById('activeProjName').textContent = `${actProj.name}${dayTag}`;
     document.getElementById('templateCountText').textContent = `目前專案固定清單：${fixedTemplate.length} 項`;
     const stInfo = calcStreakInfo();
     const shieldStr = stInfo.shields > 0 ? `｜🛡️×${stInfo.shields}` : '';
@@ -1884,6 +1989,7 @@
     }
     updateQuote(false);
     renderWeeklyReviewBanner();
+    checkMilestoneCompletion();
   }
   let marqueeMsgs = [], marqueeIdx = 0, marqueeTimer = null;
 
@@ -2532,6 +2638,131 @@
     a.href = lastShareCardDataUrl;
     a.download = `每日目標小手帳_成就卡_${currentDate}.png`;
     a.click();
+  }
+  let milestoneCheckLock = false;
+
+  function checkMilestoneCompletion() {
+    if (milestoneCheckLock) return;
+    const proj = getActiveProject();
+    if (!proj || !proj.targetDays || proj.targetDays <= 0 || proj.milestonePrompted) return;
+    if (document.querySelector('.modal.active')) return;
+
+    const stats = getProjectExecutionStats(proj.id);
+    if (stats.activeDays < proj.targetDays) return;
+
+    const todayStr = getLogicalToday();
+    const todayTasks = (allRecords[todayStr] || []).filter(t => t.projectId === proj.id && isDailyCountedTask(t, todayStr));
+    const todayDone = todayTasks.filter(t => t.completed).length;
+    const todayRate = todayTasks.length > 0 ? Math.round((todayDone / todayTasks.length) * 100) : 0;
+
+    // 判斷是否為剛達成第 N 天的「今天」：若是今天，需等達標 (>=80%) 才即時彈出；若是隔日開啟則直接彈出
+    const allProjDates = Object.keys(allRecords).filter(dStr => {
+      const list = allRecords[dStr] || [];
+      const pList = list.filter(t => t.projectId === proj.id && isDailyCountedTask(t, dStr));
+      return pList.some(t => t.completed);
+    }).sort();
+    const lastActiveDate = allProjDates.length > 0 ? allProjDates[allProjDates.length - 1] : '';
+    if (lastActiveDate === todayStr && todayRate < 80) return;
+
+    milestoneCheckLock = true;
+    proj.milestonePrompted = true;
+    saveAll(false);
+
+    const rate = stats.avgRate;
+    let tierTitle = '', tierBadge = '', tierMsg = '', aiBtnText = '';
+    if (rate >= 80) {
+      tierTitle = '🏆 高標制霸！階段週期圓滿達成';
+      tierBadge = 'background:#eef7f1;color:#3d7a56;border:1px solid #cce3d4;';
+      tierMsg = `太強了！你已經紮實完成為期 <b>${proj.targetDays} 天</b>（實際執行 ${stats.activeDays} 天）的「<b>${proj.name.replace(/</g, '&lt;')}</b>」挑戰，平均達成率高達 <b>${rate}%</b>！這些習慣已經穩穩內化，準備好升級下一階段了嗎？`;
+      aiBtnText = '🚀 複製進階報告給 AI（規劃下一階段）';
+    } else if (rate >= 50) {
+      tierTitle = '🌟 穩健前行！階段探索達成';
+      tierBadge = 'background:#fff9e6;color:#8a6214;border:1px solid #f2c97d;';
+      tierMsg = `恭喜完成 <b>${proj.targetDays} 天</b>（實際執行 ${stats.activeDays} 天）的「<b>${proj.name.replace(/</g, '&lt;')}</b>」階段挑戰！平均達成率為 <b>${rate}%</b>，已經建立起不錯的基礎節奏，現在正是微調配速或優化難度的最佳時機！`;
+      aiBtnText = '🔧 複製微調報告給 AI（優化下一階段）';
+    } else {
+      tierTitle = '🌱 階段檢視！減壓重整再出發';
+      tierBadge = 'background:#eef7fb;color:#2d6f8a;border:1px solid #b6d8e8;';
+      tierMsg = `這 <b>${stats.activeDays} 天</b>的「<b>${proj.name.replace(/</g, '&lt;')}</b>」辛苦了！目前平均達成率為 <b>${rate}%</b>，這通常代表一開始把目標設得太硬，不代表你不夠努力。我們一起把門檻調成輕鬆無痛的版本吧！`;
+      aiBtnText = '🌱 複製報告給 AI（降低難度重新出發）';
+    }
+
+    document.getElementById('milestoneModalTitle').textContent = tierTitle;
+    document.getElementById('milestoneModalBody').innerHTML = `
+      <div style="${tierBadge}padding:8px 12px;border-radius:12px;font-weight:700;margin-bottom:10px;">
+        🎯 專案：${proj.name.replace(/</g, '&lt;')}｜平均達成率：${rate}%（${stats.totalDone}/${stats.totalTasks} 項）
+      </div>
+      <p style="margin:0 0 12px;color:var(--text-brown);">${tierMsg}</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-mint" style="width:100%;" onclick="copyMilestoneReportForAi('${proj.id}')">${aiBtnText}</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="btn btn-yellow btn-sm" onclick="extendProjectCycle('${proj.id}', 14)">🔄 延長本專案 14 天</button>
+          <button class="btn btn-outline btn-sm" onclick="convertProjectToLongTerm('${proj.id}')">♾️ 轉為長期維持</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('milestoneModal').classList.add('active');
+    pushModalState();
+    setTimeout(() => { milestoneCheckLock = false; }, 500);
+  }
+
+  function extendProjectCycle(pid, addDays = 14) {
+    const proj = projects.find(p => p.id === pid);
+    if (!proj) return;
+    proj.targetDays = (proj.targetDays || 0) + addDays;
+    delete proj.milestonePrompted;
+    closeAllModals();
+    saveAll();
+    showSyncProgress(`🔄 已將「${proj.name}」目標週期延長至 ${proj.targetDays} 天！`, 100, 2400);
+  }
+
+  function convertProjectToLongTerm(pid) {
+    const proj = projects.find(p => p.id === pid);
+    if (!proj) return;
+    delete proj.targetDays;
+    delete proj.milestonePrompted;
+    closeAllModals();
+    saveAll();
+    showSyncProgress(`♾️「${proj.name}」已轉為長期維持專案（無期限）！`, 100, 2400);
+  }
+
+  function copyMilestoneReportForAi(pid) {
+    const proj = projects.find(p => p.id === pid);
+    if (!proj) return;
+    const stats = getProjectExecutionStats(pid);
+    const taskLines = Object.entries(stats.taskPerf)
+      .map(([name, v]) => {
+        const r = v.total > 0 ? Math.round((v.done / v.total) * 100) : 0;
+        return `- ${name}：完成率 ${r}% (${v.done}/${v.total} 天)`;
+      })
+      .join('\n');
+
+    const recentNotes = stats.projNotes.slice(-12).map(n => `- ${n}`).join('\n');
+    const recentRefs = stats.projRefs.slice(-8).map(r => `- ${r}`).join('\n');
+
+    let tierPrompt = '';
+    if (stats.avgRate >= 80) {
+      tierPrompt = '我已高標完成這階段挑戰！請根據以上執行數據與筆記，幫我保留已穩固的核心習慣，並將適合進階的項目升級難度或替換新目標，規劃下一階段的新清單。';
+    } else if (stats.avgRate >= 50) {
+      tierPrompt = '我已完成這階段探索，請根據各項目的達成率差異與筆記卡關原因，幫我保留表現穩定的項目、微調或拆小卡關的項目，規劃下一階段優化清單。';
+    } else {
+      tierPrompt = '這階段完成率偏低，代表原本目標門檻過高。請根據以上數據與筆記，幫我大幅降低執行門檻、刪減負擔過重的項目，設計一套輕鬆無痛重新出發的新清單。';
+    }
+
+    let report = `🎯 【階段目標結算與下一階段規劃報告】\n`;
+    report += `• 專案名稱：${proj.name}\n`;
+    report += `• 設定週期：${proj.targetDays || stats.activeDays} 天（實際執行 ${stats.activeDays} 天）\n`;
+    report += `• 期間平均達成率：${stats.avgRate}%（累計完成 ${stats.totalDone}/${stats.totalTasks} 項）\n\n`;
+    if (taskLines) report += `【各項任務執行表現】\n${taskLines}\n\n`;
+    if (recentNotes) report += `【期間執行筆記重點】\n${recentNotes}\n\n`;
+    if (recentRefs) report += `【期間每日小結】\n${recentRefs}\n\n`;
+    report += `【給 AI 的規劃指令】\n${tierPrompt}\n`;
+    report += `請直接輸出純文字新清單，依照一日從早到晚（晨間→白天→晚間）的執行流程順序排列。第一行請固定輸出建議執行週期（如：[週期:21天]），第二行起每行一項任務，每項控制在 12 字以內（只寫核心行動與量化數字），不要加任何編號、符號、標題或額外說明文字。`;
+
+    navigator.clipboard.writeText(report).then(() => {
+      closeAllModals();
+      alert('📋 階段結算報告已複製！直接貼給 AI 討論並產生下一階段新清單吧！');
+    });
   }
   
   function copyPeriodSummary(key) {
