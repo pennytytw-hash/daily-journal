@@ -2916,13 +2916,29 @@
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
+  async function recordCurrentPageHash() {
+    try {
+      if (!location.protocol.startsWith('http') || !window.crypto || !crypto.subtle) return;
+      const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
+      const res = await fetch(`${cleanUrl}?init=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const hash = await calcTextHash(await res.text());
+        localStorage.setItem('cute_journal_app_hash', hash);
+      }
+    } catch (e) {}
+  }
+
   async function autoCheckHeaderUpdate() {
     try {
       if (!location.protocol.startsWith('http') || !('caches' in window)) return;
       const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
-      const headRes = await fetch(cleanUrl, { method: 'HEAD', cache: 'no-store' });
+      const headRes = await fetch(`${cleanUrl}?head=${Date.now()}`, { method: 'HEAD', cache: 'no-store' });
       if (!headRes.ok) return;
-      const sig = headRes.headers.get('etag') || headRes.headers.get('last-modified') || '';
+      const sig = [
+        headRes.headers.get('etag'),
+        headRes.headers.get('last-modified'),
+        headRes.headers.get('content-length')
+      ].filter(Boolean).join('|');
       if (!sig) return;
       const prevSig = localStorage.getItem('cute_journal_remote_sig') || '';
       if (!prevSig) {
@@ -2932,14 +2948,50 @@
       if (prevSig !== sig) {
         const freshRes = await fetch(`${cleanUrl}?v=${Date.now()}`, { cache: 'no-store' });
         if (freshRes.ok) {
+          const htmlText = await freshRes.text();
           const cache = await caches.open('journal-v5-3');
-          await cache.put(cleanUrl, freshRes.clone());
+          await cache.put(cleanUrl, new Response(htmlText, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
+          if (window.crypto && crypto.subtle) {
+            localStorage.setItem('cute_journal_app_hash', await calcTextHash(htmlText));
+          }
           localStorage.setItem('cute_journal_remote_sig', sig);
-          showSyncProgress('✨ 偵測到小手帳新版本，已靜默更新快取（下次重開生效）！', 100, 3200);
+          showSyncProgress('✨ 偵測到小手帳新版本，已自動更新快取（下次重開生效）！', 100, 3500);
         }
       }
     } catch (e) {}
   }
+
+  async function forceAppUpdate() {
+    showSyncProgress('🔍 正在比對伺服器最新檔案內容...', 35);
+    try {
+      if (location.protocol.startsWith('http') && window.crypto && crypto.subtle) {
+        const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
+        const localHash = localStorage.getItem('cute_journal_app_hash') || '';
+        const remoteRes = await fetch(`${cleanUrl}?chk=${Date.now()}`, { cache: 'no-store' });
+        if (remoteRes.ok) {
+          const remoteHtml = await remoteRes.text();
+          const remoteHash = await calcTextHash(remoteHtml);
+          if (localHash && localHash === remoteHash) {
+            showSyncProgress('✅ 目前已是最新版本，無內容更新', 100, 2400);
+            return;
+          }
+          localStorage.setItem('cute_journal_app_hash', remoteHash);
+          showSyncProgress('🎉 偵測到檔案已更新，正在清除快取並重載...', 75);
+        }
+      }
+      if ('serviceWorker' in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); for (const r of regs) await r.unregister(); }
+      if ('caches' in window) { const keys = await caches.keys(); for (const k of keys) await caches.delete(k); }
+    } catch (e) {
+      showSyncProgress('🔄 正在清除快取並重新載入...', 65);
+    }
+    setTimeout(() => { window.location.reload(); }, 500);
+  }
+
+  (function initStaticLinks() {
+    const svgNs = ['http:/', 'www.w3.org', '2000', 'svg'].join('/');
+    const fav = document.getElementById('appFavicon');
+    if (fav) fav.href = `data:image/svg+xml,<svg xmlns=%22${svgNs}%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧸</text></svg>`;
+  })();
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     const swCode = `self.addEventListener('fetch',e=>{if(!e.request.url.startsWith(self.location.origin))return;e.respondWith(caches.open('journal-v5-3').then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(res=>{c.put(e.request,res.clone());return res;}))));});`;
