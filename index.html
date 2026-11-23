@@ -1184,6 +1184,8 @@
     if (needSave) saveAll(false);
   }
 
+  let lastUpdateCheckTs = Date.now();
+
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       flushPendingEdits();
@@ -1198,6 +1200,10 @@
           currentQuote = "";
         }
         render();
+      }
+      if (Date.now() - lastUpdateCheckTs > 5 * 60 * 1000) {
+        lastUpdateCheckTs = Date.now();
+        autoCheckHeaderUpdate();
       }
     }
   });
@@ -2943,6 +2949,7 @@
 
   async function autoCheckHeaderUpdate() {
     try {
+      lastUpdateCheckTs = Date.now();
       if (!location.protocol.startsWith('http') || !('caches' in window)) return;
       const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
       const headRes = await fetch(`${cleanUrl}?head=${Date.now()}`, { method: 'HEAD', cache: 'no-store' });
