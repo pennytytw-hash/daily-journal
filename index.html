@@ -2965,12 +2965,18 @@
         if (freshRes.ok) {
           const htmlText = await freshRes.text();
           const cache = await caches.open('journal-v5-3');
-          await cache.put(cleanUrl, new Response(htmlText, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
+          const respObj = () => new Response(htmlText, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+          await cache.put(cleanUrl, respObj());
+          await cache.put(new URL('./', cleanUrl).href, respObj());
           if (window.crypto && crypto.subtle) {
             localStorage.setItem('cute_journal_app_hash', await calcTextHash(htmlText));
           }
           localStorage.setItem('cute_journal_remote_sig', sig);
-          showSyncProgress('✨ 偵測到小手帳新版本，已自動更新快取（下次重開生效）！', 100, 3500);
+          showSyncProgress('🎉 發現小手帳新版本，正在為您自動更新...', 100, 0);
+          setTimeout(() => {
+            flushPendingEdits();
+            window.location.reload();
+          }, 900);
         }
       }
     } catch (e) {}
