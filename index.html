@@ -2845,17 +2845,18 @@
     const stats = getProjectExecutionStats(proj.id);
     if (stats.activeDays < proj.targetDays) return false;
 
-    const todayStr = getLogicalToday();
-    const todayAllNonSkipped = (allRecords[todayStr] || []).filter(t => t.projectId === proj.id && !isTaskSkipped(t, todayStr));
-    const todayAllDone = todayAllNonSkipped.length > 0 && todayAllNonSkipped.every(t => t.completed);
+    const checkDayAllDone = (dStr) => {
+      const raw = allRecords[dStr];
+      if (!Array.isArray(raw) || raw.length === 0) return true;
+      const list = raw.filter(t => (!t.projectId || t.projectId === proj.id) && !isTaskSkipped(t, dStr));
+      if (list.length === 0) return false;
+      return list.every(t => t.completed);
+    };
 
-    const allProjDates = Object.keys(allRecords).filter(dStr => {
-      const list = allRecords[dStr] || [];
-      const pList = list.filter(t => t.projectId === proj.id && isDailyCountedTask(t, dStr));
-      return pList.some(t => t.completed);
-    }).sort();
-    const lastActiveDate = allProjDates.length > 0 ? allProjDates[allProjDates.length - 1] : '';
-    return !(lastActiveDate === todayStr && !todayAllDone);
+    const todayStr = getLogicalToday();
+    if (allRecords[todayStr] && !checkDayAllDone(todayStr)) return false;
+    if (currentDate && allRecords[currentDate] && !checkDayAllDone(currentDate)) return false;
+    return true;
   }
 
   function checkMilestoneCompletion() {
