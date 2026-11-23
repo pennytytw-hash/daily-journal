@@ -62,6 +62,17 @@
     color: #d96b27; font-size: 0.8rem; font-weight: 700; padding: 3px 10px;
     border-radius: 20px;
   }
+  .streak-fire-icon { display: inline-block; line-height: 1; vertical-align: -1px; transition: transform 0.3s ease; margin-right: 2px; }
+  .streak-badge.tier-1 { background: #f6efe9; border-color: #e6d6c8; color: #7a6558; }
+  .streak-badge.tier-1 .streak-fire-icon { font-size: 0.98em; }
+  .streak-badge.tier-2 { background: #fff3e6; border-color: #f3cba5; color: #9c5621; }
+  .streak-badge.tier-2 .streak-fire-icon { font-size: 1.08em; }
+  .streak-badge.tier-3 { background: linear-gradient(135deg, #ffe9d6, #ffd9bd); border-color: #eba675; color: #a84616; }
+  .streak-badge.tier-3 .streak-fire-icon { font-size: 1.18em; }
+  .streak-badge.tier-4 { background: linear-gradient(135deg, #ffe2dc, #ffc8bd); border-color: #e58a7b; color: #9e3226; }
+  .streak-badge.tier-4 .streak-fire-icon { font-size: 1.28em; }
+  .streak-badge.tier-5 { background: linear-gradient(135deg, #fff2cc, #ffe0a3); border-color: #dfb053; color: #85530e; box-shadow: 0 2px 8px rgba(223, 176, 83, 0.25); }
+  .streak-badge.tier-5 .streak-fire-icon { font-size: 1.38em; }
   .vision-banner {
     background: linear-gradient(135deg, #fff9e6, #fff2eb);
     border: 1.5px dashed #f2c97d; color: #7a5828; font-size: 0.82rem;
@@ -1973,7 +1984,10 @@
     const stInfo = calcStreakInfo();
     const shieldStr = stInfo.shields > 0 ? `｜🛡️×${stInfo.shields}` : '';
     const rescuedStr = stInfo.usedYesterday ? ' (🛡️已護航)' : '';
-    document.getElementById('streakBadge').textContent = `🔥 連續達標 (≥80%)：${stInfo.streak} 天${shieldStr}${rescuedStr}`;
+    const streakEl = document.getElementById('streakBadge');
+    const streakTier = stInfo.streak >= 30 ? 'tier-5' : (stInfo.streak >= 14 ? 'tier-4' : (stInfo.streak >= 7 ? 'tier-3' : (stInfo.streak >= 3 ? 'tier-2' : 'tier-1')));
+    streakEl.className = `streak-badge ${streakTier}`;
+    streakEl.innerHTML = `<span class="streak-fire-icon">🔥</span>連續達標：${stInfo.streak} 天${shieldStr}${rescuedStr}`;
 
     const visionEl = document.getElementById('visionBannerDisplay');
     if (visionText) { visionEl.style.display = 'block'; visionEl.textContent = `🌈 願景初心：${visionText}`; }
@@ -2845,18 +2859,22 @@
     const stats = getProjectExecutionStats(proj.id);
     if (stats.activeDays < proj.targetDays) return false;
 
-    const todayStr = getLogicalToday();
-    const todayTasks = (allRecords[todayStr] || []).filter(t => t.projectId === proj.id && isDailyCountedTask(t, todayStr));
-    const todayDone = todayTasks.filter(t => t.completed).length;
-    const todayRate = todayTasks.length > 0 ? Math.round((todayDone / todayTasks.length) * 100) : 0;
+    if (stats.activeDays === proj.targetDays) {
+      const todayStr = getLogicalToday();
+      const todayTasks = (allRecords[todayStr] || []).filter(t => t.projectId === proj.id && isDailyCountedTask(t, todayStr));
+      const todayDone = todayTasks.filter(t => t.completed).length;
+      const todayRate = todayTasks.length > 0 ? Math.round((todayDone / todayTasks.length) * 100) : 0;
 
-    const allProjDates = Object.keys(allRecords).filter(dStr => {
-      const list = allRecords[dStr] || [];
-      const pList = list.filter(t => t.projectId === proj.id && isDailyCountedTask(t, dStr));
-      return pList.some(t => t.completed);
-    }).sort();
-    const lastActiveDate = allProjDates.length > 0 ? allProjDates[allProjDates.length - 1] : '';
-    return !(lastActiveDate === todayStr && todayRate < 100);
+      const allProjDates = Object.keys(allRecords).filter(dStr => {
+        const list = allRecords[dStr] || [];
+        const pList = list.filter(t => t.projectId === proj.id && isDailyCountedTask(t, dStr));
+        return pList.some(t => t.completed);
+      }).sort();
+      const lastActiveDate = allProjDates.length > 0 ? allProjDates[allProjDates.length - 1] : '';
+      if (lastActiveDate === todayStr && todayRate < 100) return false;
+    }
+
+    return true;
   }
 
   function checkMilestoneCompletion() {
