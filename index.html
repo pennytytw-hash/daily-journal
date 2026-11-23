@@ -378,6 +378,18 @@
   .ach-badge-icon { font-size: 1.35rem; line-height: 1.2; }
   .ach-badge-name { font-size: 0.76rem; font-weight: 800; color: var(--text-brown); margin-top: 2px; }
   .ach-badge-desc { font-size: 0.66rem; color: var(--text-light); margin-top: 2px; line-height: 1.25; }
+  .btn-share-perfect {
+    position: absolute; right: 12px; bottom: 10px; z-index: 25;
+    background: linear-gradient(135deg, #fce181, #f7c59f); color: #5c4b43;
+    border: 1.5px solid #e0a958; border-radius: 12px; padding: 4px 10px;
+    font-size: 0.75rem; font-weight: 800; cursor: pointer;
+    box-shadow: 0 3px 8px rgba(217, 107, 39, 0.2);
+  }
+  .share-card-preview {
+    width: 100%; max-width: 340px; border-radius: 16px;
+    border: 2px solid #eedcd0; display: block; margin: 10px auto;
+    box-shadow: 0 6px 18px rgba(92, 75, 67, 0.14);
+  }
 </style>
 </head>
 <body>
@@ -539,7 +551,7 @@
     <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;flex-direction:column;gap:8px;font-size:0.75rem;color:var(--text-light);">
       <button class="btn btn-mint btn-sm" style="width:100%;font-size:0.8rem;padding:7px 10px;" onclick="openGuideModal()">📖 操作手冊（快速上手指南）</button>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span>版本：v5.2｜<span id="storageUsageText">空間計算中...</span></span>
+        <span>版本：v5.3｜<span id="storageUsageText">空間計算中...</span></span>
         <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="archiveOldDetails()">🗜️ 壓縮前年以前明細</button>
       </div>
       <button class="btn btn-outline btn-sm" style="width:100%;font-size:0.72rem;padding:5px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
@@ -607,10 +619,23 @@
       <h4>🌴 休假規則與 📊 統計覆盤</h4>
       <ul style="margin:4px 0 0;padding-left:18px;">
         <li><b>智慧休假：</b>自動同步台灣政府行事曆，首頁日期旁亦可手動切換「🌴 設為休假」；標記 <b>🏖️ 假日休</b> 的任務在休假日免計。</li>
-        <li><b>統計與紀錄查詢：</b>點進「📊 統計」可檢視月曆與成長曲線，切換至「📝 紀錄查詢」則能依時間、任務或結語回顧歷史筆記與每日小結。</li>
+        <li><b>統計與紀錄查詢：</b>點進「📊 統計」可檢視月曆、成長曲線與生成專屬分享圖卡，切換至「📝 紀錄查詢」則能依時間、任務或結語回顧歷史筆記與每日小結。</li>
         <li><b>一鍵給 AI 覆盤：</b>點擊「📋 複製給AI」會自動整理當日進度、能量狀態與筆記，直接貼給 AI 就能獲得專屬建議。</li>
         <li><b>跨裝置與備份：</b>所有資料皆存於本機瀏覽器，建議定期至設定匯出備份檔或使用同步代碼跨裝置轉移。</li>
       </ul>
+    </div>
+  </div>
+</div>
+<div class="modal" id="shareCardModal" onclick="if(event.target===this) closeAllModals()">
+  <div class="modal-box" style="text-align:center;">
+    <div class="modal-header-sticky">
+      <h3 style="margin:0;">📸 專屬成就紀念圖卡</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeAllModals()">✕ 關閉</button>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-light);margin:8px 0 4px;">已自動隱藏私人筆記內容，長按圖片或點擊下方按鈕即可保存分享！</p>
+    <img id="shareCardImg" class="share-card-preview" alt="成就紀念圖卡">
+    <div style="display:flex;justify-content:center;gap:8px;margin-top:10px;">
+      <button class="btn btn-mint btn-sm" onclick="downloadShareCard()">💾 下載紀念圖片</button>
     </div>
   </div>
 </div>
@@ -1152,6 +1177,42 @@
     clearTimeout(reflectionSaveTimer);
     reflectionSaveTimer = setTimeout(() => saveAll(false), 350);
   }
+  let lastKnownLogicalToday = getLogicalToday();
+
+  function flushPendingEdits() {
+    let needSave = false;
+    if (noteSaveTimer) {
+      clearTimeout(noteSaveTimer);
+      noteSaveTimer = null;
+      needSave = true;
+    }
+    if (reflectionSaveTimer) {
+      clearTimeout(reflectionSaveTimer);
+      reflectionSaveTimer = null;
+      needSave = true;
+    }
+    if (needSave) saveAll(false);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      flushPendingEdits();
+    } else if (document.visibilityState === 'visible') {
+      const freshToday = getLogicalToday();
+      if (freshToday !== lastKnownLogicalToday) {
+        const wasOnPrevToday = currentDate === lastKnownLogicalToday;
+        lastKnownLogicalToday = freshToday;
+        if (wasOnPrevToday) {
+          currentDate = freshToday;
+          if (datePicker) datePicker.value = freshToday;
+          currentQuote = "";
+        }
+        render();
+      }
+    }
+  });
+
+  window.addEventListener('pagehide', flushPendingEdits);
 
   function getTimeCapsuleFlashback() {
     const pastNotes = [];
@@ -1385,8 +1446,8 @@
     }
     saveAll(); renderProjManageList();
   }
-    function calcStreak() {
-    let streak = 0;
+  function calcStreakInfo() {
+    const todayStr = getLogicalToday();
     const evalDay = (dStr) => {
       const list = allRecords[dStr];
       if (!list || list.length === 0) return 'fail';
@@ -1394,15 +1455,45 @@
       if (active.length === 0) return 'freeze';
       return (active.filter(t => t.completed).length / active.length) >= 0.8 ? 'pass' : 'fail';
     };
-    if (evalDay(getLogicalToday(0)) === 'pass') streak++;
+
+    const allDates = Object.keys(allRecords).filter(d => d < todayStr).sort();
+    let shields = 0, run = 0, usedShieldDates = new Set();
+    if (allDates.length > 0) {
+      let curD = new Date(allDates.at(0) + 'T00:00:00');
+      const endD = new Date(getLogicalToday(1) + 'T00:00:00');
+      while (curD <= endD) {
+        const dStr = curD.toLocaleDateString('en-CA');
+        const st = evalDay(dStr);
+        if (st === 'pass') {
+          run++;
+          if (run % 7 === 0 && shields < 2) shields++;
+        } else if (st === 'fail') {
+          if (run > 0 && shields > 0) {
+            shields--;
+            usedShieldDates.add(dStr);
+          } else {
+            run = 0;
+          }
+        }
+        curD.setDate(curD.getDate() + 1);
+      }
+    }
+
+    let streak = 0;
+    if (evalDay(todayStr) === 'pass') streak++;
     let offset = 1;
     while (offset < 3650) {
-      const st = evalDay(getLogicalToday(offset));
+      const dStr = getLogicalToday(offset);
+      const st = evalDay(dStr);
       if (st === 'pass') { streak++; offset++; }
-      else if (st === 'freeze') { offset++; }
+      else if (st === 'freeze' || usedShieldDates.has(dStr)) { offset++; }
       else break;
     }
-    return streak;
+    return { streak, shields, usedYesterday: usedShieldDates.has(getLogicalToday(1)) };
+  }
+
+  function calcStreak() {
+    return calcStreakInfo().streak;
   }
 
   function changeQuoteStyle() {
@@ -1468,6 +1559,7 @@
     document.getElementById('historyModal').classList.remove('active');
     document.getElementById('syncPasteModal')?.classList.remove('active');
     document.getElementById('guideModal')?.classList.remove('active');
+    document.getElementById('shareCardModal')?.classList.remove('active');
     document.documentElement.classList.remove('modal-open-lock');
     document.body.classList.remove('modal-open-lock');
     if (modalHistoryPushed) {
@@ -1664,7 +1756,10 @@
   function render() {
     document.getElementById('activeProjName').textContent = getActiveProject().name;
     document.getElementById('templateCountText').textContent = `目前專案固定清單：${fixedTemplate.length} 項`;
-    document.getElementById('streakBadge').textContent = `🔥 連續達標 (≥80%)：${calcStreak()} 天`;
+    const stInfo = calcStreakInfo();
+    const shieldStr = stInfo.shields > 0 ? `｜🛡️×${stInfo.shields}` : '';
+    const rescuedStr = stInfo.usedYesterday ? ' (🛡️已護航)' : '';
+    document.getElementById('streakBadge').textContent = `🔥 連續達標 (≥80%)：${stInfo.streak} 天${shieldStr}${rescuedStr}`;
 
     const visionEl = document.getElementById('visionBannerDisplay');
     if (visionText) { visionEl.style.display = 'block'; visionEl.textContent = `🌈 願景初心：${visionText}`; }
@@ -1778,7 +1873,13 @@
         const alignTop = Math.max(0, Math.round(noteRect.top - listRect.top));
         bigStamp.style.setProperty('top', `${alignTop}px`, 'important');
       }
+      const shareBtn = document.createElement('button');
+      shareBtn.className = 'btn-share-perfect';
+      shareBtn.textContent = '📸 分享圖卡';
+      shareBtn.onclick = () => generateShareCard('daily');
+      listEl.appendChild(shareBtn);
     }
+
     document.getElementById('progressText').textContent = isFreezeDay ? '🌴 休假凍結中' : `${pct}% (${done}/${activeTasks.length})`;
     document.getElementById('progressBar').style.width = isFreezeDay ? '100%' : `${pct}%`;
     const refBox = document.getElementById('dailyReflectionBox');
@@ -2088,8 +2189,8 @@
     let insightMsg = "🌱 持續累積打卡幾天後，這裡會自動為你診斷執行節奏與盲點喔！";
     const validDows = dowStats.map((s, i) => ({ name: '週' + dowNames[i], rate: s.total > 0 ? Math.round((s.done / s.total) * 100) : -1, total: s.total })).filter(x => x.total > 0);
     if (validDows.length >= 2) {
-      const bestDow = [...validDows].sort((a, b) => b.rate - a.rate)[0];
-      const worstDow = [...validDows].sort((a, b) => a.rate - b.rate)[0];
+      const bestDow = [...validDows].sort((a, b) => b.rate - a.rate).at(0);
+      const worstDow = [...validDows].sort((a, b) => a.rate - b.rate).at(0);
       const fixRate = fixT > 0 ? Math.round((fixD / fixT) * 100) : 100;
       const tmpRate = tmpT > 0 ? Math.round((tmpD / tmpT) * 100) : 100;
       let extraTip = "";
@@ -2099,6 +2200,27 @@
       insightMsg = bestDow.name === worstDow.name
         ? `💡 <b>數據診斷：</b>目前在<b>${bestDow.name}</b>表現最亮眼（${bestDow.rate}%），${extraTip}`
         : `💡 <b>數據診斷：</b>你在<b>${bestDow.name}</b>執行力最強（${bestDow.rate}%），<b>${worstDow.name}</b>較易卡關（${worstDow.rate}%）。${extraTip}`;
+    }
+
+    const moodBuckets = { high: { t: 0, d: 0, days: 0 }, mid: { t: 0, d: 0, days: 0 }, low: { t: 0, d: 0, days: 0 } };
+    Object.entries(dayMap).forEach(([dStr, info]) => {
+      const mk = dailyMoods[dStr];
+      if (mk && moodBuckets[mk] && info && info.total > 0) {
+        moodBuckets[mk].t += info.total;
+        moodBuckets[mk].d += info.done;
+        moodBuckets[mk].days++;
+      }
+    });
+    const moodParts = [
+      { key: 'high', label: '☀️ 滿血' },
+      { key: 'mid', label: '⛅ 平穩' },
+      { key: 'low', label: '🌧️ 低電量' }
+    ].filter(m => moodBuckets[m.key].days > 0).map(m => {
+      const b = moodBuckets[m.key];
+      return `${m.label} <b>${Math.round((b.d / b.t) * 100)}%</b> (${b.days}天)`;
+    });
+    if (moodParts.length > 0) {
+      insightMsg += `<div style="margin-top:5px;padding-top:5px;border-top:1px dashed #e6cf8b;">⚡ <b>能量狀態表現：</b>${moodParts.join(' ｜ ')}</div>`;
     }
 
     let html = `<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;margin-bottom:6px;">
@@ -2243,7 +2365,10 @@
 
     const badgesList = [...unlockedCards, ...nextGoalCards];
 
-    html += `<div class="panel-box"><b>🏅 成就貼紙收集牆（已解鎖 ${unlockedCards.length}/${totalAllTiers} 枚）</b>
+    html += `<div class="panel-box"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+      <b>🏅 成就貼紙收集牆（已解鎖 ${unlockedCards.length}/${totalAllTiers} 枚）</b>
+      <button class="btn btn-yellow btn-sm" style="padding:3px 8px;font-size:0.74rem;" onclick="generateShareCard('milestone')">📸 分享圖卡</button>
+    </div>
       <div class="badge-wall-grid">${badgesList.map(b => `
         <div class="ach-badge-card ${b.ok ? 'unlocked' : ''}">
           <div class="ach-badge-icon">${b.icon}</div>
@@ -2279,6 +2404,115 @@
     currentQuote = "";
     closeAllModals();
     render();
+  }
+  let lastShareCardDataUrl = '';
+
+  function generateShareCard(mode = 'daily') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 720;
+    canvas.height = 720;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#fdf8f2';
+    ctx.fillRect(0, 0, 720, 720);
+    ctx.fillStyle = '#e6d7c8';
+    for (let x = 24; x < 720; x += 28) {
+      for (let y = 24; y < 720; y += 28) {
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.fillStyle = '#fffdf9';
+    ctx.strokeStyle = '#f2e6dc';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.roundRect(44, 48, 632, 624, 36);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(244, 162, 158, 0.65)';
+    ctx.fillRect(275, 32, 170, 34);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#5c4b43';
+    ctx.font = 'bold 34px "PingFang TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('🧸 每日目標小手帳', 360, 125);
+
+    const projName = selectedStatsProj === 'ALL' ? getActiveProject().name : (projects.find(p => p.id === selectedStatsProj)?.name || getActiveProject().name);
+    ctx.fillStyle = '#3d7a56';
+    ctx.font = 'bold 23px "PingFang TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText(`🎯 ${projName.slice(0, 20)}`, 360, 172);
+
+    const stInfo = calcStreakInfo();
+    const records = getFilteredRecords();
+    const dayMap = getMergedStatsDays(records);
+    const validDays = Object.values(dayMap).filter(x => x && x.total > 0);
+    const totalDone = validDays.reduce((s, x) => s + x.done, 0);
+    const perfectDays = validDays.filter(x => x.done === x.total).length;
+
+    ctx.strokeStyle = '#f7d47c';
+    ctx.lineWidth = 5;
+    ctx.fillStyle = '#fffbeb';
+    ctx.beginPath();
+    ctx.arc(360, 330, 118, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    if (mode === 'daily') {
+      const activeTasks = getTasks().filter(t => isDailyCountedTask(t, currentDate));
+      const doneCnt = activeTasks.filter(t => t.completed).length;
+      const pct = activeTasks.length === 0 ? 100 : Math.round((doneCnt / activeTasks.length) * 100);
+      ctx.font = '68px sans-serif';
+      ctx.fillText('🏆', 360, 312);
+      ctx.fillStyle = '#c84b28';
+      ctx.font = '900 44px sans-serif';
+      ctx.fillText(`${pct}%`, 360, 368);
+      ctx.fillStyle = '#d96b27';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('ALL CLEAR!', 360, 404);
+
+      ctx.fillStyle = '#5c4b43';
+      ctx.font = 'bold 25px "PingFang TC", "Microsoft JhengHei", sans-serif';
+      ctx.fillText(`📅 ${currentDate}｜完成 ${doneCnt}/${activeTasks.length} 項目標`, 360, 505);
+    } else {
+      const bestSt = calcBestStreak(records);
+      ctx.font = '64px sans-serif';
+      ctx.fillText('👑', 360, 308);
+      ctx.fillStyle = '#c84b28';
+      ctx.font = '900 38px sans-serif';
+      ctx.fillText(`最高連勝 ${bestSt} 天`, 360, 364);
+      ctx.fillStyle = '#d96b27';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText(`累計 ${validDays.length} 天｜滿分 ${perfectDays} 次`, 360, 404);
+
+      ctx.fillStyle = '#5c4b43';
+      ctx.font = 'bold 25px "PingFang TC", "Microsoft JhengHei", sans-serif';
+      ctx.fillText(`✅ 累計達成 ${totalDone} 項小目標`, 360, 505);
+    }
+
+    ctx.fillStyle = '#d96b27';
+    ctx.font = 'bold 23px "PingFang TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText(`🔥 目前連續達標：${stInfo.streak} 天`, 360, 552);
+
+    ctx.fillStyle = '#9c8980';
+    ctx.font = '19px "PingFang TC", "Microsoft JhengHei", sans-serif';
+    ctx.fillText('✨ 每天進步一點點，把理想變成日常 ✨', 360, 622);
+
+    lastShareCardDataUrl = canvas.toDataURL('image/png');
+    document.getElementById('shareCardImg').src = lastShareCardDataUrl;
+    document.getElementById('historyModal')?.classList.remove('active');
+    document.getElementById('shareCardModal').classList.add('active');
+    pushModalState();
+  }
+
+  function downloadShareCard() {
+    if (!lastShareCardDataUrl) return;
+    const a = document.createElement('a');
+    a.href = lastShareCardDataUrl;
+    a.download = `每日目標小手帳_成就卡_${currentDate}.png`;
+    a.click();
   }
   
   function copyPeriodSummary(key) {
@@ -2682,52 +2916,33 @@
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  async function recordCurrentPageHash() {
+  async function autoCheckHeaderUpdate() {
     try {
-      if (!location.protocol.startsWith('http') || !window.crypto || !crypto.subtle) return;
+      if (!location.protocol.startsWith('http') || !('caches' in window)) return;
       const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
-      const res = await fetch(`${cleanUrl}?init=${Date.now()}`, { cache: 'no-store' });
-      if (res.ok) {
-        const hash = await calcTextHash(await res.text());
-        localStorage.setItem('cute_journal_app_hash', hash);
+      const headRes = await fetch(cleanUrl, { method: 'HEAD', cache: 'no-store' });
+      if (!headRes.ok) return;
+      const sig = headRes.headers.get('etag') || headRes.headers.get('last-modified') || '';
+      if (!sig) return;
+      const prevSig = localStorage.getItem('cute_journal_remote_sig') || '';
+      if (!prevSig) {
+        localStorage.setItem('cute_journal_remote_sig', sig);
+        return;
+      }
+      if (prevSig !== sig) {
+        const freshRes = await fetch(`${cleanUrl}?v=${Date.now()}`, { cache: 'no-store' });
+        if (freshRes.ok) {
+          const cache = await caches.open('journal-v5-3');
+          await cache.put(cleanUrl, freshRes.clone());
+          localStorage.setItem('cute_journal_remote_sig', sig);
+          showSyncProgress('✨ 偵測到小手帳新版本，已靜默更新快取（下次重開生效）！', 100, 3200);
+        }
       }
     } catch (e) {}
   }
 
-  async function forceAppUpdate() {
-    showSyncProgress('🔍 正在比對伺服器最新檔案內容...', 35);
-    try {
-      if (location.protocol.startsWith('http') && window.crypto && crypto.subtle) {
-        const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
-        const localHash = localStorage.getItem('cute_journal_app_hash') || '';
-        const remoteRes = await fetch(`${cleanUrl}?chk=${Date.now()}`, { cache: 'no-store' });
-        if (remoteRes.ok) {
-          const remoteHtml = await remoteRes.text();
-          const remoteHash = await calcTextHash(remoteHtml);
-          if (localHash && localHash === remoteHash) {
-            showSyncProgress('✅ 目前已是最新版本，無內容更新', 100, 2400);
-            return;
-          }
-          localStorage.setItem('cute_journal_app_hash', remoteHash);
-          showSyncProgress('🎉 偵測到檔案已更新，正在清除快取並重載...', 75);
-        }
-      }
-      if ('serviceWorker' in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); for (const r of regs) await r.unregister(); }
-      if ('caches' in window) { const keys = await caches.keys(); for (const k of keys) await caches.delete(k); }
-    } catch (e) {
-      showSyncProgress('🔄 正在清除快取並重新載入...', 65);
-    }
-    setTimeout(() => { window.location.reload(); }, 500);
-  }
-
-  (function initStaticLinks() {
-    const svgNs = ['http:/', 'www.w3.org', '2000', 'svg'].join('/');
-    const fav = document.getElementById('appFavicon');
-    if (fav) fav.href = `data:image/svg+xml,<svg xmlns=%22${svgNs}%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧸</text></svg>`;
-  })();
-
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch',e=>{if(!e.request.url.startsWith(self.location.origin))return;e.respondWith(caches.open('journal-v5-2').then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(res=>{c.put(e.request,res.clone());return res;}))));});`;
+    const swCode = `self.addEventListener('fetch',e=>{if(!e.request.url.startsWith(self.location.origin))return;e.respondWith(caches.open('journal-v5-3').then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(res=>{c.put(e.request,res.clone());return res;}))));});`;
     const swUrl = URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }));
     navigator.serviceWorker.register(swUrl).finally(() => URL.revokeObjectURL(swUrl)).catch(() => {});
   }
@@ -2737,6 +2952,7 @@
   render();
   syncGovCalendar(false);
   recordCurrentPageHash();
+  autoCheckHeaderUpdate();
   window.addEventListener('scroll', () => {
     const btnTop = document.getElementById('btnBackTop');
     if (btnTop) btnTop.classList.toggle('visible', window.scrollY > 220);
