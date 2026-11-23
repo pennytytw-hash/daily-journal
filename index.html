@@ -484,12 +484,9 @@
     </div>
     <div class="setting-section">
       <h4>⭐ 建立新目標專案（由 AI 匯入並覆蓋舊清單）</h4>
-      <div class="prompt-guide">
-        💡 <b>向 AI 索取清單指令：</b>匯入後將自動建立為<b>新的目標專案</b>（舊專案紀錄會完整歸檔保留），並取代今日與未來的固定清單：
-        <div class="prompt-box">
-          <span id="promptCmd">請將我們剛剛討論的目標整理成純文字清單，每行一項任務，不要加任何編號、符號、標題或額外說明文字。</span>
-          <button class="btn btn-mint btn-sm" style="flex-shrink:0;" onclick="copyPrompt()">複製指令</button>
-        </div>
+      <div class="prompt-guide" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <span>💡 <b>匯入新專案：</b>會自動歸檔舊專案紀錄，並覆蓋今日與未來固定清單。</span>
+        <button class="btn btn-mint btn-sm" style="flex-shrink:0;" onclick="copyPrompt()">📋 複製 AI 指令</button>
       </div>
       <input type="text" id="newProjNameInput" class="proj-name-input" placeholder="輸入新目標專案名稱（選填，例如：多益衝刺計畫）">
       <textarea id="aiPasteArea" placeholder="將 AI 回覆的清單貼在這裡（每行一項）..."></textarea>
@@ -1342,8 +1339,9 @@
   }
 
   function copyPrompt() {
-    navigator.clipboard.writeText(document.getElementById('promptCmd').textContent)
-      .then(() => alert('已複製指令！直接貼到 AI 對話框即可。'));
+    const cmd = '請將我們剛剛討論的目標整理成純文字清單，每行一項任務。每項請極度精鍊（控制在 12 字以內，只寫核心行動與量化數字，如「喝水 8 杯」、「背單字 20 個」），不要加任何編號、符號、標題、括號補充或額外說明文字。';
+    navigator.clipboard.writeText(cmd)
+      .then(() => alert('已複製精鍊版指令！直接貼到 AI 對話框即可。'));
   }
 
   function importAiList() {
