@@ -2735,6 +2735,7 @@
     saveAll(false);
 
     const rate = stats.avgRate;
+    const extDays = Math.max(7, Math.round((proj.targetDays / 2) / 7) * 7);
     let tierTitle = '', tierBadge = '', tierMsg = '', aiBtnText = '';
     if (rate >= 80) {
       tierTitle = '🏆 高標制霸！階段週期圓滿達成';
@@ -2762,7 +2763,6 @@
       <div style="display:flex;flex-direction:column;gap:8px;">
         <button class="btn btn-mint" style="width:100%;" onclick="copyMilestoneReportForAi('${proj.id}')">${aiBtnText}</button>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          const extDays = Math.max(7, Math.round((proj.targetDays / 2) / 7) * 7);
           <button class="btn btn-yellow btn-sm" onclick="extendProjectCycle('${proj.id}', ${extDays})">🔄 延長本專案 ${extDays} 天</button>
           <button class="btn btn-outline btn-sm" onclick="convertProjectToLongTerm('${proj.id}')">♾️ 轉為長期維持</button>
         </div>
