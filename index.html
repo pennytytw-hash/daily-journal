@@ -44,6 +44,13 @@
     border: 1.5px solid #cce3d4; color: #3d7a56; font-size: 0.8rem; font-weight: 700;
     padding: 3px 10px; border-radius: 20px;
   }
+  .active-proj-bar.milestone-ready {
+    background: linear-gradient(135deg, #fff7d6, #fce181);
+    border-color: #e0a958;
+    color: #6e4e11;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(234, 184, 77, 0.28);
+  }
   .streak-badge {
     display: inline-block; background: #fff0e6; border: 1.5px solid #f7c59f;
     color: #d96b27; font-size: 0.8rem; font-weight: 700; padding: 3px 10px;
@@ -400,7 +407,7 @@
   <header>
     <h1>🧸 每日目標小手帳</h1>
     <div class="meta-badges-row">
-      <span class="active-proj-bar">🎯 <span id="activeProjName">初始目標專案</span></span>
+      <span class="active-proj-bar" id="activeProjBar">🎯 <span id="activeProjName">初始目標專案</span></span>
       <span id="streakBadge" class="streak-badge">🔥 連續達標 0 天</span>
     </div>
     <div id="visionBannerDisplay" class="vision-banner" style="display:none;"></div>
@@ -1518,7 +1525,6 @@
           ${isAct ? '<b>🎯 ' : ''}${p.name.replace(/</g, '&lt;')}${isAct ? '</b>' : ''}${cycleBadge}
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0;">
-          ${isReached ? `<button class="btn btn-yellow btn-sm" onclick="openMilestoneModalForProject('${p.id}')" title="開啟階段結算與 AI 規劃報告">🎉 結算</button>` : ''}
           <button class="btn btn-outline btn-sm" onclick="editProjectCycleById('${p.id}')" title="設定階段週期天數">⏳</button>
           ${!isAct ? `<button class="btn btn-mint btn-sm" onclick="switchActiveProject('${p.id}')">切換</button>` : ''}
           <button class="btn btn-outline btn-sm" onclick="renameProjectById('${p.id}')">✏️</button>
@@ -1901,6 +1907,13 @@
     const actStats = actProj ? getProjectExecutionStats(actProj.id) : { activeDays: 0 };
     const dayTag = (actProj && actProj.targetDays > 0) ? ` (Day ${actStats.activeDays}/${actProj.targetDays})` : '';
     document.getElementById('activeProjName').textContent = `${actProj.name}${dayTag}`;
+    const projBarEl = document.getElementById('activeProjBar');
+    if (projBarEl) {
+      const ready = isProjectMilestoneReady(actProj);
+      projBarEl.classList.toggle('milestone-ready', ready);
+      projBarEl.title = ready ? '🎉 階段週期已達成！點擊開啟結算與規劃' : '';
+      projBarEl.onclick = ready ? () => openMilestoneModalForProject(actProj.id) : null;
+    }
     document.getElementById('templateCountText').textContent = `目前專案固定清單：${fixedTemplate.length} 項`;
     const stInfo = calcStreakInfo();
     const shieldStr = stInfo.shields > 0 ? `｜🛡️×${stInfo.shields}` : '';
@@ -2754,6 +2767,25 @@
     pushModalState();
   }
 
+  function isProjectMilestoneReady(proj) {
+    if (!proj || !proj.targetDays || proj.targetDays <= 0) return false;
+    const stats = getProjectExecutionStats(proj.id);
+    if (stats.activeDays < proj.targetDays) return false;
+
+    const todayStr = getLogicalToday();
+    const todayTasks = (allRecords[todayStr] || []).filter(t => t.projectId === proj.id && isDailyCountedTask(t, todayStr));
+    const todayDone = todayTasks.filter(t => t.completed).length;
+    const todayRate = todayTasks.length > 0 ? Math.round((todayDone / todayTasks.length) * 100) : 0;
+
+    const allProjDates = Object.keys(allRecords).filter(dStr => {
+      const list = allRecords[dStr] || [];
+      const pList = list.filter(t => t.projectId === proj.id && isDailyCountedTask(t, dStr));
+      return pList.some(t => t.completed);
+    }).sort();
+    const lastActiveDate = allProjDates.length > 0 ? allProjDates[allProjDates.length - 1] : '';
+    return !(lastActiveDate === todayStr && todayRate < 100);
+  }
+
   function checkMilestoneCompletion() {
     if (milestoneCheckLock) return;
     const proj = getActiveProject();
@@ -2767,19 +2799,7 @@
 
     if (proj.milestonePrompted) return;
     if (document.querySelector('.modal.active')) return;
-
-    const todayStr = getLogicalToday();
-    const todayTasks = (allRecords[todayStr] || []).filter(t => t.projectId === proj.id && isDailyCountedTask(t, todayStr));
-    const todayDone = todayTasks.filter(t => t.completed).length;
-    const todayRate = todayTasks.length > 0 ? Math.round((todayDone / todayTasks.length) * 100) : 0;
-
-    const allProjDates = Object.keys(allRecords).filter(dStr => {
-      const list = allRecords[dStr] || [];
-      const pList = list.filter(t => t.projectId === proj.id && isDailyCountedTask(t, dStr));
-      return pList.some(t => t.completed);
-    }).sort();
-    const lastActiveDate = allProjDates.length > 0 ? allProjDates[allProjDates.length - 1] : '';
-    if (lastActiveDate === todayStr && todayRate < 100) return;
+    if (!isProjectMilestoneReady(proj)) return;
 
     milestoneCheckLock = true;
     proj.milestonePrompted = true;
@@ -3265,7 +3285,7 @@
       lastUpdateCheckTs = Date.now();
       if (!location.protocol.startsWith('http') || !('caches' in window)) return;
       const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
-      const headRes = await fetch(`${cleanUrl}?head=${Date.now()}`, { method: 'HEAD', cache: 'no-store' });
+      const headRes = await fetch(cleanUrl, { method: 'HEAD', cache: 'no-store' });
       if (!headRes.ok) return;
       const sig = [
         headRes.headers.get('etag'),
@@ -3282,14 +3302,20 @@
         const freshRes = await fetch(`${cleanUrl}?v=${Date.now()}`, { cache: 'no-store' });
         if (freshRes.ok) {
           const htmlText = await freshRes.text();
+          let isSameContent = false;
+          if (window.crypto && crypto.subtle) {
+            const newHash = await calcTextHash(htmlText);
+            const curHash = localStorage.getItem('cute_journal_app_hash') || '';
+            if (curHash && curHash === newHash) isSameContent = true;
+            localStorage.setItem('cute_journal_app_hash', newHash);
+          }
+          localStorage.setItem('cute_journal_remote_sig', sig);
+          if (isSameContent) return;
+
           const cache = await caches.open('journal-v5-3');
           const respObj = () => new Response(htmlText, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
           await cache.put(cleanUrl, respObj());
           await cache.put(new URL('./', cleanUrl).href, respObj());
-          if (window.crypto && crypto.subtle) {
-            localStorage.setItem('cute_journal_app_hash', await calcTextHash(htmlText));
-          }
-          localStorage.setItem('cute_journal_remote_sig', sig);
           showSyncProgress('🎉 發現小手帳新版本，正在為您自動更新...', 100, 0);
           setTimeout(() => {
             flushPendingEdits();
@@ -3315,6 +3341,7 @@
             return;
           }
           localStorage.setItem('cute_journal_app_hash', remoteHash);
+          localStorage.removeItem('cute_journal_remote_sig');
           showSyncProgress('🎉 偵測到檔案已更新，正在清除快取並重載...', 75);
         }
       }
