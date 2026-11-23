@@ -378,13 +378,6 @@
   .ach-badge-icon { font-size: 1.35rem; line-height: 1.2; }
   .ach-badge-name { font-size: 0.76rem; font-weight: 800; color: var(--text-brown); margin-top: 2px; }
   .ach-badge-desc { font-size: 0.66rem; color: var(--text-light); margin-top: 2px; line-height: 1.25; }
-  .btn-share-perfect {
-    position: absolute; right: 12px; bottom: 10px; z-index: 25;
-    background: linear-gradient(135deg, #fce181, #f7c59f); color: #5c4b43;
-    border: 1.5px solid #e0a958; border-radius: 12px; padding: 4px 10px;
-    font-size: 0.75rem; font-weight: 800; cursor: pointer;
-    box-shadow: 0 3px 8px rgba(217, 107, 39, 0.2);
-  }
   .share-card-preview {
     width: 100%; max-width: 340px; border-radius: 16px;
     border: 2px solid #eedcd0; display: block; margin: 10px auto;
@@ -1873,13 +1866,7 @@
         const alignTop = Math.max(0, Math.round(noteRect.top - listRect.top));
         bigStamp.style.setProperty('top', `${alignTop}px`, 'important');
       }
-      const shareBtn = document.createElement('button');
-      shareBtn.className = 'btn-share-perfect';
-      shareBtn.textContent = '📸 分享圖卡';
-      shareBtn.onclick = () => generateShareCard('daily');
-      listEl.appendChild(shareBtn);
     }
-
     document.getElementById('progressText').textContent = isFreezeDay ? '🌴 休假凍結中' : `${pct}% (${done}/${activeTasks.length})`;
     document.getElementById('progressBar').style.width = isFreezeDay ? '100%' : `${pct}%`;
     const refBox = document.getElementById('dailyReflectionBox');
@@ -2211,16 +2198,28 @@
         moodBuckets[mk].days++;
       }
     });
-    const moodParts = [
-      { key: 'high', label: '☀️ 滿血' },
-      { key: 'mid', label: '⛅ 平穩' },
-      { key: 'low', label: '🌧️ 低電量' }
-    ].filter(m => moodBuckets[m.key].days > 0).map(m => {
-      const b = moodBuckets[m.key];
-      return `${m.label} <b>${Math.round((b.d / b.t) * 100)}%</b> (${b.days}天)`;
-    });
-    if (moodParts.length > 0) {
-      insightMsg += `<div style="margin-top:5px;padding-top:5px;border-top:1px dashed #e6cf8b;">⚡ <b>能量狀態表現：</b>${moodParts.join(' ｜ ')}</div>`;
+    const moodRate = k => moodBuckets[k].t > 0 ? Math.round((moodBuckets[k].d / moodBuckets[k].t) * 100) : -1;
+    const hRate = moodRate('high'), mRate = moodRate('mid'), lRate = moodRate('low');
+    const totalMoodDays = moodBuckets.high.days + moodBuckets.mid.days + moodBuckets.low.days;
+
+    if (totalMoodDays > 0) {
+      let moodStory = '';
+      if (hRate >= 0 && lRate >= 0) {
+        moodStory = lRate >= 60
+          ? `統計顯示你在 <b>☀️ 滿血</b> 日的平均達成率為 <b>${hRate}%</b>，而在 <b>🌧️ 低電量</b> 日仍維持了 <b>${lRate}%</b> 的穩定輸出！`
+          : `統計顯示你在 <b>☀️ 滿血</b> 日衝出了 <b>${hRate}%</b> 的高達成率，<b>🌧️ 低電量</b> 日（${lRate}%）記得放慢腳步溫柔對待自己喔～`;
+      } else if (lRate >= 0) {
+        moodStory = lRate >= 60
+          ? `即使在 <b>🌧️ 低電量</b> 日，你依然維持了 <b>${lRate}%</b> 的穩定輸出，韌性超強！`
+          : `在 <b>🌧️ 低電量</b> 日（${lRate}%）有啟動就已經很棒了，適度休息也是前進的一部分！`;
+      } else if (hRate >= 0 && mRate >= 0) {
+        moodStory = `統計顯示你在 <b>☀️ 滿血</b> 日的平均達成率高達 <b>${hRate}%</b>，<b>⛅ 平穩</b> 日也有 <b>${mRate}%</b> 的穩健節奏！`;
+      } else if (hRate >= 0) {
+        moodStory = `統計顯示你在 <b>☀️ 滿血</b> 日的平均達成率高達 <b>${hRate}%</b>，狀態好時執行力超驚人！`;
+      } else if (mRate >= 0) {
+        moodStory = `統計顯示你在 <b>⛅ 平穩</b> 日的平均達成率為 <b>${mRate}%</b>，不疾不徐的節奏最長久！`;
+      }
+      insightMsg += `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #e6cf8b;">⚡ <b>能量洞察：</b>${moodStory}</div>`;
     }
 
     let html = `<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;margin-bottom:6px;">
@@ -2251,7 +2250,23 @@
       const r = s.total === 0 ? 0 : Math.round((s.done / s.total) * 100);
       return `<div><div class="dow-bar-wrap"><div class="dow-bar-fill" style="height:${r}%"></div></div><div style="font-size:0.7rem;margin-top:3px;">週${dowNames[idx]}<br><b>${r}%</b></div></div>`;
     }).join('');
-    html += `<div class="panel-box" style="margin-top:4px;"><div class="cal-header"><button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button><b onclick="resetCalMonthToToday()" style="cursor:pointer;" title="點擊回到本月">🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b><button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button></div><div class="cal-grid">${calCells}</div><div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div></div>`;
+
+    const moodCardsHtml = [
+      { key: 'high', icon: '☀️', label: '滿血', bg: '#fff9e6', bd: '#f5d782' },
+      { key: 'mid',  icon: '⛅', label: '平穩', bg: '#f3f9f5', bd: '#c5dfd0' },
+      { key: 'low',  icon: '🌧️', label: '低電量', bg: '#eef7fb', bd: '#b6d8e8' }
+    ].map(m => {
+      const b = moodBuckets[m.key];
+      const sharePct = totalMoodDays > 0 ? Math.round((b.days / totalMoodDays) * 100) : 0;
+      const avgPct = b.t > 0 ? `${Math.round((b.d / b.t) * 100)}%` : '—';
+      return `<div style="background:${m.bg};border:1.5px solid ${m.bd};border-radius:11px;padding:7px 4px;text-align:center;${b.days === 0 ? 'opacity:0.55;' : ''}">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--text-brown);">${m.icon} ${m.label}</div>
+        <div style="font-size:0.96rem;font-weight:900;color:var(--primary-pink-dark);margin:2px 0;">${b.days} 天 <span style="font-size:0.7rem;font-weight:700;color:var(--text-light);">(${sharePct}%)</span></div>
+        <div style="font-size:0.7rem;color:var(--text-light);">平均達成 <b>${avgPct}</b></div>
+      </div>`;
+    }).join('');
+
+    html += `<div class="panel-box" style="margin-top:4px;"><div class="cal-header"><button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button><b onclick="resetCalMonthToToday()" style="cursor:pointer;" title="點擊回到本月">🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b><button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button></div><div class="cal-grid">${calCells}</div><div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div><div style="margin-top:12px;padding-top:10px;border-top:1px dashed #d5e6dc;"><div style="display:flex;justify-content:space-between;align-items:center;"><b>⚡ 能量狀態累計分布</b><span style="font-size:0.72rem;color:var(--text-light);">已記錄 ${totalMoodDays} 天</span></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:7px;">${moodCardsHtml}</div></div></div>`;
     const habits = Object.entries(habitMap).filter(([, v]) => v.total >= 2).map(([name, v]) => {
       const isWeekdayHabit = v.skipDays > v.total * 0.5;
       const weightedDone = v.done * (isWeekdayHabit ? 1.4 : 1);
