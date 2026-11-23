@@ -1961,7 +1961,7 @@
     let dayTag = '';
     if (actProj && actProj.targetDays > 0) {
       dayTag = actStats.activeDays > actProj.targetDays
-        ? ` (已達標 ${actProj.targetDays}天 +${actStats.activeDays - actProj.targetDays})`
+        ? ` (${actProj.targetDays}/${actProj.targetDays}+${actStats.activeDays - actProj.targetDays})`
         : ` (Day ${actStats.activeDays}/${actProj.targetDays})`;
     }
     document.getElementById('activeProjName').textContent = `${actProj.name}${dayTag}${hasPendingNext ? ' ✓' : ''}`;
