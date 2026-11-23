@@ -812,8 +812,6 @@
     localStorage.setItem('cute_journal_v5_weekly_targets', JSON.stringify(weeklyTargets));
     localStorage.setItem('cute_journal_v5_daily_mood', JSON.stringify(dailyMoods));
     localStorage.setItem('cute_journal_v5_daily_reflection', JSON.stringify(dailyReflections));
-    updateStorageUsageDisplay();
-    updateStorageUsageDisplay();
     if (shouldRender) render();
     if (document.getElementById('manageModal')?.classList.contains('active')) renderManageTaskList();
   }
@@ -921,10 +919,16 @@
 
     const govDates = getCachedGovHolidays();
     const lastCachedStr = govDates.length > 0 ? govDates[govDates.length - 1] : '';
+    const lastGovSyncTs = Number(localStorage.getItem('cute_journal_gov_last_sync') || 0);
+    if (!isManual && Date.now() - lastGovSyncTs < 24 * 3600 * 1000) {
+      updateLastHolidayDisplay();
+      return;
+    }
     if (!isManual && lastCachedStr) {
       const diffDays = (new Date(lastCachedStr + 'T00:00:00') - new Date(getLogicalToday() + 'T00:00:00')) / 86400000;
       if (diffDays >= 365) { updateLastHolidayDisplay(); return; }
     }
+    if (!isManual) localStorage.setItem('cute_journal_gov_last_sync', String(Date.now()));
     if (isManual) showSyncProgress('🔄 正在連線 TaiwanCalendar 資料庫...', 45);
     const curYear = new Date().getFullYear();
     let updated = false, lastErr = '';
@@ -2331,8 +2335,18 @@
   }
   function renderStatsDashboard() {
     const records = getFilteredRecords();
-    const base = new Date(currentDate + 'T00:00:00');
-    if (!calViewYear) { calViewYear = base.getFullYear(); calViewMonth = base.getMonth(); }
+    const dayMap = getMergedStatsDays(records);
+    const validStatDates = Object.keys(dayMap).filter(d => dayMap[d] && dayMap[d].total > 0).sort();
+    const fallbackRecDates = Object.keys(records).sort();
+    const baseDateStr = validStatDates.length > 0
+      ? validStatDates[validStatDates.length - 1]
+      : (fallbackRecDates.length > 0 ? fallbackRecDates[fallbackRecDates.length - 1] : currentDate);
+    const base = new Date(baseDateStr + 'T00:00:00');
+    if (!calViewYear) {
+      const todayObj = new Date(currentDate + 'T00:00:00');
+      calViewYear = todayObj.getFullYear();
+      calViewMonth = todayObj.getMonth();
+    }
     const year = base.getFullYear(), month = base.getMonth(), quarter = Math.floor(month / 3);
     const dayOfWeek = base.getDay() === 0 ? 7 : base.getDay();
     const weekStart = new Date(base); weekStart.setDate(base.getDate() - dayOfWeek + 1);
@@ -2352,7 +2366,6 @@
     const habitMap = {}, dowStats = Array.from({ length: 7 }, () => ({ total: 0, done: 0 }));
     let fixT = 0, fixD = 0, tmpT = 0, tmpD = 0;
 
-    const dayMap = getMergedStatsDays(records);
     Object.keys(dayMap).sort().forEach(dateStr => {
       const info = dayMap[dateStr];
       if (!info || info.total === 0) return;
@@ -2640,7 +2653,9 @@
 
     document.getElementById('overviewView').innerHTML = html;
 
-    let trendsHtml = `<div class="stat-grid" style="margin-top:6px;">` + Object.entries(periods).map(([key, p]) => {
+    let trendsHtml = `<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;color:var(--text-light);margin-top:4px;">
+      <span>📅 四維度統計基準：<b>${baseDateStr}</b>（專案最後任務日）</span>
+    </div><div class="stat-grid" style="margin-top:6px;">` + Object.entries(periods).map(([key, p]) => {
       const rate = p.total === 0 ? 0 : Math.round((p.done / p.total) * 100);
       let badge = '';
       if (p.prevT > 0 && p.total > 0) {
@@ -3324,16 +3339,15 @@
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  async function recordCurrentPageHash() {
-    try {
-      if (!location.protocol.startsWith('http') || !window.crypto || !crypto.subtle) return;
-      const cleanUrl = window.location.href.replace(/#.*$/, '').replace(/\?.*$/, '');
-      const res = await fetch(`${cleanUrl}?init=${Date.now()}`, { cache: 'no-store' });
-      if (res.ok) {
-        const hash = await calcTextHash(await res.text());
-        localStorage.setItem('cute_journal_app_hash', hash);
-      }
-    } catch (e) {}
+  async function clearSwAndCaches() {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) await r.unregister();
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      for (const k of keys) await caches.delete(k);
+    }
   }
 
   async function autoCheckHeaderUpdate() {
@@ -3349,40 +3363,33 @@
         headRes.headers.get('content-length')
       ].filter(Boolean).join('|');
       if (!sig) return;
+
       const prevSig = localStorage.getItem('cute_journal_remote_sig') || '';
       if (!prevSig) {
         localStorage.setItem('cute_journal_remote_sig', sig);
         return;
       }
-      if (prevSig !== sig) {
-        const freshRes = await fetch(`${cleanUrl}?v=${Date.now()}`, { cache: 'no-store' });
-        if (freshRes.ok) {
-          const htmlText = await freshRes.text();
-          let isSameContent = false;
-          if (window.crypto && crypto.subtle) {
-            const newHash = await calcTextHash(htmlText);
-            const curHash = localStorage.getItem('cute_journal_app_hash') || '';
-            if (curHash && curHash === newHash) isSameContent = true;
-            localStorage.setItem('cute_journal_app_hash', newHash);
-          }
-          localStorage.setItem('cute_journal_remote_sig', sig);
-          if (isSameContent) return;
+      if (prevSig === sig) return;
 
-          showSyncProgress('🎉 發現小手帳新版本，正在為您自動更新...', 100, 0);
-          if ('serviceWorker' in navigator) {
-            const regs = await navigator.serviceWorker.getRegistrations();
-            for (const r of regs) await r.unregister();
-          }
-          if ('caches' in window) {
-            const keys = await caches.keys();
-            for (const k of keys) await caches.delete(k);
-          }
-          setTimeout(() => {
-            flushPendingEdits();
-            window.location.reload();
-          }, 800);
-        }
+      const freshRes = await fetch(`${cleanUrl}?v=${Date.now()}`, { cache: 'no-store' });
+      if (!freshRes.ok) return;
+      const htmlText = await freshRes.text();
+      let isSameContent = false;
+      if (window.crypto && crypto.subtle) {
+        const newHash = await calcTextHash(htmlText);
+        const curHash = localStorage.getItem('cute_journal_app_hash') || '';
+        if (curHash && curHash === newHash) isSameContent = true;
+        localStorage.setItem('cute_journal_app_hash', newHash);
       }
+      localStorage.setItem('cute_journal_remote_sig', sig);
+      if (isSameContent) return;
+
+      showSyncProgress('🎉 發現小手帳新版本，正在為您自動更新...', 100, 0);
+      await clearSwAndCaches();
+      setTimeout(() => {
+        flushPendingEdits();
+        window.location.reload();
+      }, 800);
     } catch (e) {}
   }
 
@@ -3405,8 +3412,7 @@
           showSyncProgress('🎉 偵測到檔案已更新，正在清除快取並重載...', 75);
         }
       }
-      if ('serviceWorker' in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); for (const r of regs) await r.unregister(); }
-      if ('caches' in window) { const keys = await caches.keys(); for (const k of keys) await caches.delete(k); }
+      await clearSwAndCaches();
     } catch (e) {
       showSyncProgress('🔄 正在清除快取並重新載入...', 65);
     }
@@ -3429,7 +3435,6 @@
   checkUrlSync();
   render();
   syncGovCalendar(false);
-  recordCurrentPageHash();
   autoCheckHeaderUpdate();
   window.addEventListener('scroll', () => {
     const btnTop = document.getElementById('btnBackTop');
