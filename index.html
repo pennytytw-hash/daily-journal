@@ -2072,8 +2072,13 @@
       tmpT += (totCnt - info.fixT); tmpD += (doneCnt - info.fixD);
       if (!info.archived && Array.isArray(info.list)) {
         info.list.forEach(t => {
-          if (!habitMap[t.text]) habitMap[t.text] = { total: 0, done: 0 };
-          habitMap[t.text].total++; if (t.completed) habitMap[t.text].done++;
+          if (!habitMap[t.text]) habitMap[t.text] = { total: 0, done: 0, skipDays: 0, lastDone: '' };
+          habitMap[t.text].total++;
+          if (t.skipWeekend) habitMap[t.text].skipDays++;
+          if (t.completed) {
+            habitMap[t.text].done++;
+            if (dateStr > habitMap[t.text].lastDone) habitMap[t.text].lastDone = dateStr;
+          }
         });
       }
     });
@@ -2125,9 +2130,13 @@
       return `<div><div class="dow-bar-wrap"><div class="dow-bar-fill" style="height:${r}%"></div></div><div style="font-size:0.7rem;margin-top:3px;">週${dowNames[idx]}<br><b>${r}%</b></div></div>`;
     }).join('');
     html += `<div class="panel-box" style="margin-top:4px;"><div class="cal-header"><button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button><b onclick="resetCalMonthToToday()" style="cursor:pointer;" title="點擊回到本月">🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b><button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button></div><div class="cal-grid">${calCells}</div><div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div></div>`;
-    const habits = Object.entries(habitMap).filter(([, v]) => v.total >= 2).map(([name, v]) => ({ name, rate: Math.round((v.done / v.total) * 100), done: v.done, total: v.total }));
+    const habits = Object.entries(habitMap).filter(([, v]) => v.total >= 2).map(([name, v]) => {
+      const isWeekdayHabit = v.skipDays > v.total * 0.5;
+      const weightedDone = v.done * (isWeekdayHabit ? 1.4 : 1);
+      return { name, rate: Math.round((v.done / v.total) * 100), done: v.done, total: v.total, weightedDone, lastDone: v.lastDone };
+    });
     if (habits.length > 0) {
-      const top3 = [...habits].sort((a, b) => b.rate - a.rate || b.done - a.done).slice(0, 3);
+      const top3 = [...habits].sort((a, b) => b.rate - a.rate || b.weightedDone - a.weightedDone || b.lastDone.localeCompare(a.lastDone)).slice(0, 3);
       const low2 = [...habits].filter(h => h.rate < 80).sort((a, b) => a.rate - b.rate).slice(0, 2);
       html += `<div class="panel-box"><b>🏆 習慣執行力排行（累計 ≥ 2 天）</b><div style="margin-top:5px;">` +
         top3.map((h, i) => `<div>🌟 Top${i + 1}：${h.name.replace(/</g,'&lt;')} — <b>${h.rate}%</b> (${h.done}/${h.total})</div>`).join('') +
