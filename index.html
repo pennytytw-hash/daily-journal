@@ -1509,14 +1509,16 @@
     box.innerHTML = projects.map(p => {
       const isAct = p.id === activeProjectId;
       const stats = getProjectExecutionStats(p.id);
+      const isReached = p.targetDays > 0 && stats.activeDays >= p.targetDays;
       const cycleBadge = p.targetDays > 0
-        ? `<span style="font-size:0.72rem;color:#d96b27;background:#fff0e6;padding:1px 6px;border-radius:8px;margin-left:4px;">⏳ ${stats.activeDays}/${p.targetDays}天</span>`
+        ? `<span style="font-size:0.72rem;color:${isReached ? '#3d7a56' : '#d96b27'};background:${isReached ? '#eef7f1' : '#fff0e6'};padding:1px 6px;border-radius:8px;margin-left:4px;">${isReached ? '✅' : '⏳'} ${stats.activeDays}/${p.targetDays}天</span>`
         : `<span style="font-size:0.72rem;color:#6c7a72;background:#eef3f0;padding:1px 6px;border-radius:8px;margin-left:4px;">♾️ 長期</span>`;
       return `<div class="proj-manage-row">
         <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
           ${isAct ? '<b>🎯 ' : ''}${p.name.replace(/</g, '&lt;')}${isAct ? '</b>' : ''}${cycleBadge}
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0;">
+          ${isReached ? `<button class="btn btn-yellow btn-sm" onclick="openMilestoneModalForProject('${p.id}')" title="開啟階段結算與 AI 規劃報告">🎉 結算</button>` : ''}
           <button class="btn btn-outline btn-sm" onclick="editProjectCycleById('${p.id}')" title="設定階段週期天數">⏳</button>
           ${!isAct ? `<button class="btn btn-mint btn-sm" onclick="switchActiveProject('${p.id}')">切換</button>` : ''}
           <button class="btn btn-outline btn-sm" onclick="renameProjectById('${p.id}')">✏️</button>
@@ -2707,6 +2709,51 @@
   }
   let milestoneCheckLock = false;
 
+  function openMilestoneModalForProject(pid) {
+    const proj = projects.find(p => p.id === pid);
+    if (!proj) return;
+    const stats = getProjectExecutionStats(proj.id);
+    const targetDays = proj.targetDays || stats.activeDays;
+    const rate = stats.avgRate;
+    const extDays = Math.max(7, Math.round((targetDays / 2) / 7) * 7);
+
+    let tierTitle = '', tierBadge = '', tierMsg = '', aiBtnText = '';
+    if (rate >= 80) {
+      tierTitle = '🏆 高標制霸！階段週期圓滿達成';
+      tierBadge = 'background:#eef7f1;color:#3d7a56;border:1px solid #cce3d4;';
+      tierMsg = `太強了！你已經紮實完成為期 <b>${targetDays} 天</b>（實際執行 ${stats.activeDays} 天）的「<b>${proj.name.replace(/</g, '&lt;')}</b>」挑戰，平均達成率高達 <b>${rate}%</b>！這些習慣已經穩穩內化，準備好升級下一階段了嗎？`;
+      aiBtnText = '🚀 複製進階報告給 AI（規劃下一階段）';
+    } else if (rate >= 50) {
+      tierTitle = '🌟 穩健前行！階段探索達成';
+      tierBadge = 'background:#fff9e6;color:#8a6214;border:1px solid #f2c97d;';
+      tierMsg = `恭喜完成 <b>${targetDays} 天</b>（實際執行 ${stats.activeDays} 天）的「<b>${proj.name.replace(/</g, '&lt;')}</b>」階段挑戰！平均達成率為 <b>${rate}%</b>，已經建立起不錯的基礎節奏，現在正是微調配速或優化難度的最佳時機！`;
+      aiBtnText = '🔧 複製微調報告給 AI（優化下一階段）';
+    } else {
+      tierTitle = '🌱 階段檢視！減壓重整再出發';
+      tierBadge = 'background:#eef7fb;color:#2d6f8a;border:1px solid #b6d8e8;';
+      tierMsg = `這 <b>${stats.activeDays} 天</b>的「<b>${proj.name.replace(/</g, '&lt;')}</b>」辛苦了！目前平均達成率為 <b>${rate}%</b>，這通常代表一開始把目標設得太硬，不代表你不夠努力。我們一起把門檻調成輕鬆無痛的版本吧！`;
+      aiBtnText = '🌱 複製報告給 AI（降低難度重新出發）';
+    }
+
+    document.getElementById('manageModal')?.classList.remove('active');
+    document.getElementById('milestoneModalTitle').textContent = tierTitle;
+    document.getElementById('milestoneModalBody').innerHTML = `
+      <div style="${tierBadge}padding:8px 12px;border-radius:12px;font-weight:700;margin-bottom:10px;">
+        🎯 專案：${proj.name.replace(/</g, '&lt;')}｜平均達成率：${rate}%（${stats.totalDone}/${stats.totalTasks} 項）
+      </div>
+      <p style="margin:0 0 12px;color:var(--text-brown);">${tierMsg}</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-mint" style="width:100%;" onclick="copyMilestoneReportForAi('${proj.id}')">${aiBtnText}</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="btn btn-yellow btn-sm" onclick="extendProjectCycle('${proj.id}', ${extDays})">🔄 延長本專案 ${extDays} 天</button>
+          <button class="btn btn-outline btn-sm" onclick="convertProjectToLongTerm('${proj.id}')">♾️ 轉為長期維持</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('milestoneModal').classList.add('active');
+    pushModalState();
+  }
+
   function checkMilestoneCompletion() {
     if (milestoneCheckLock) return;
     const proj = getActiveProject();
@@ -2726,55 +2773,18 @@
     const todayDone = todayTasks.filter(t => t.completed).length;
     const todayRate = todayTasks.length > 0 ? Math.round((todayDone / todayTasks.length) * 100) : 0;
 
-    // 判斷是否為剛達成第 N 天的「今天」：若是今天，需等達標 (>=80%) 才即時彈出；若是隔日開啟則直接彈出
     const allProjDates = Object.keys(allRecords).filter(dStr => {
       const list = allRecords[dStr] || [];
       const pList = list.filter(t => t.projectId === proj.id && isDailyCountedTask(t, dStr));
       return pList.some(t => t.completed);
     }).sort();
     const lastActiveDate = allProjDates.length > 0 ? allProjDates[allProjDates.length - 1] : '';
-    if (lastActiveDate === todayStr && todayRate < 80) return;
+    if (lastActiveDate === todayStr && todayRate < 100) return;
 
     milestoneCheckLock = true;
     proj.milestonePrompted = true;
     saveAll(false);
-
-    const rate = stats.avgRate;
-    const extDays = Math.max(7, Math.round((proj.targetDays / 2) / 7) * 7);
-    let tierTitle = '', tierBadge = '', tierMsg = '', aiBtnText = '';
-    if (rate >= 80) {
-      tierTitle = '🏆 高標制霸！階段週期圓滿達成';
-      tierBadge = 'background:#eef7f1;color:#3d7a56;border:1px solid #cce3d4;';
-      tierMsg = `太強了！你已經紮實完成為期 <b>${proj.targetDays} 天</b>（實際執行 ${stats.activeDays} 天）的「<b>${proj.name.replace(/</g, '&lt;')}</b>」挑戰，平均達成率高達 <b>${rate}%</b>！這些習慣已經穩穩內化，準備好升級下一階段了嗎？`;
-      aiBtnText = '🚀 複製進階報告給 AI（規劃下一階段）';
-    } else if (rate >= 50) {
-      tierTitle = '🌟 穩健前行！階段探索達成';
-      tierBadge = 'background:#fff9e6;color:#8a6214;border:1px solid #f2c97d;';
-      tierMsg = `恭喜完成 <b>${proj.targetDays} 天</b>（實際執行 ${stats.activeDays} 天）的「<b>${proj.name.replace(/</g, '&lt;')}</b>」階段挑戰！平均達成率為 <b>${rate}%</b>，已經建立起不錯的基礎節奏，現在正是微調配速或優化難度的最佳時機！`;
-      aiBtnText = '🔧 複製微調報告給 AI（優化下一階段）';
-    } else {
-      tierTitle = '🌱 階段檢視！減壓重整再出發';
-      tierBadge = 'background:#eef7fb;color:#2d6f8a;border:1px solid #b6d8e8;';
-      tierMsg = `這 <b>${stats.activeDays} 天</b>的「<b>${proj.name.replace(/</g, '&lt;')}</b>」辛苦了！目前平均達成率為 <b>${rate}%</b>，這通常代表一開始把目標設得太硬，不代表你不夠努力。我們一起把門檻調成輕鬆無痛的版本吧！`;
-      aiBtnText = '🌱 複製報告給 AI（降低難度重新出發）';
-    }
-
-    document.getElementById('milestoneModalTitle').textContent = tierTitle;
-    document.getElementById('milestoneModalBody').innerHTML = `
-      <div style="${tierBadge}padding:8px 12px;border-radius:12px;font-weight:700;margin-bottom:10px;">
-        🎯 專案：${proj.name.replace(/</g, '&lt;')}｜平均達成率：${rate}%（${stats.totalDone}/${stats.totalTasks} 項）
-      </div>
-      <p style="margin:0 0 12px;color:var(--text-brown);">${tierMsg}</p>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <button class="btn btn-mint" style="width:100%;" onclick="copyMilestoneReportForAi('${proj.id}')">${aiBtnText}</button>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <button class="btn btn-yellow btn-sm" onclick="extendProjectCycle('${proj.id}', ${extDays})">🔄 延長本專案 ${extDays} 天</button>
-          <button class="btn btn-outline btn-sm" onclick="convertProjectToLongTerm('${proj.id}')">♾️ 轉為長期維持</button>
-        </div>
-      </div>
-    `;
-    document.getElementById('milestoneModal').classList.add('active');
-    pushModalState();
+    openMilestoneModalForProject(proj.id);
     setTimeout(() => { milestoneCheckLock = false; }, 500);
   }
 
