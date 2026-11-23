@@ -1920,6 +1920,7 @@
 
   function getMergedStatsDays(records) {
     const dayMap = {};
+    const todayStr = getLogicalToday();
     Object.entries(archivedStats).forEach(([dStr, arr]) => {
       if (!Array.isArray(arr)) return;
       const filtered = selectedStatsProj === 'ALL' ? arr : arr.filter(x => x.p === selectedStatsProj);
@@ -1932,11 +1933,13 @@
       dayMap[dStr] = { total: t, done: c, fixT: f, fixD: fd, isHol: h, archived: true };
     });
     Object.entries(records).forEach(([dStr, rawList]) => {
-      const list = rawList.filter(t => !isTaskSkipped(t, dStr));
+      const list = rawList.filter(t => isDailyCountedTask(t, dStr));
+      const doneCount = list.filter(t => t.completed).length;
+      if (dStr === todayStr && (list.length === 0 || (doneCount / list.length) < 0.8)) return;
       const fix = list.filter(t => t.isFixed);
       dayMap[dStr] = {
         total: list.length,
-        done: list.filter(t => t.completed).length,
+        done: doneCount,
         fixT: fix.length,
         fixD: fix.filter(t => t.completed).length,
         isHol: isHolidayDate(dStr),
