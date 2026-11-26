@@ -166,7 +166,16 @@
   .btn-weekend.active { background: #e3f4f8; border-color: #9ecce0; color: #2d6f8a; font-weight: 700; opacity: 1; }
   .btn-del { background: none; border: none; color: #cbbab0; font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
   .task-note-row { padding-left: 29px; width: 100%; }
-  .task-note-input { width: 100%; border: 1px solid #efe4da; background: #fcf9f6; border-radius: 8px; padding: 5px 10px; font-size: 0.85rem; color: #7a665c; outline: none; }
+  .task-note-input {
+    width: 100%; border: 1px solid #efe4da; background: #fcf9f6; border-radius: 8px;
+    padding: 5px 10px; font-size: 0.85rem; line-height: 1.45; color: #7a665c;
+    outline: none; resize: none; display: block; font-family: inherit;
+    height: 30px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .task-note-input.is-expanded {
+    height: auto; overflow-y: hidden; white-space: pre-wrap; word-break: break-word;
+    background: #fff; border-color: var(--primary-pink);
+  }
   .counter-pill {
     display: inline-flex; align-items: center; gap: 4px;
     background: #f4ece6; border: 1.5px solid #dfd0c5; border-radius: 12px;
@@ -301,7 +310,8 @@
     .task-text { font-size: 0.96rem; padding: 1px 2px; }
     .task-meta-group { gap: 4px; margin-top: 1px; }
     .task-note-row { padding-left: 30px; margin-top: 2px; }
-    .task-note-input { padding: 6px 9px; font-size: 0.85rem; }
+    .task-note-input { padding: 6px 9px; font-size: 0.85rem; height: 32px; }
+    .task-note-input.is-expanded { height: auto; }
     .stamp-badge { right: 8px; top: 6px; font-size: 0.68rem; }
     .modal { padding: 8px; }
     .modal-box { padding: 15px 13px; max-height: 90vh; border-radius: 18px; }
@@ -1192,6 +1202,19 @@
     clearTimeout(noteSaveTimer);
     noteSaveTimer = setTimeout(() => saveAll(false), 350);
   }
+  function expandTaskNote(el) {
+    if (!el) return;
+    el.classList.add('is-expanded');
+    el.style.height = 'auto';
+    if (el.scrollHeight > 0) el.style.height = el.scrollHeight + 'px';
+  }
+
+  function collapseTaskNote(el) {
+    if (!el) return;
+    el.classList.remove('is-expanded');
+    el.style.height = '';
+    el.scrollTop = 0;
+  }
 
   const moodOptions = [
     { key: '', label: '⚡ 狀態' },
@@ -2075,7 +2098,7 @@
             ${(metaBadgesHtml || inlineCounterHtml) ? `<div class="task-meta-group">${metaBadgesHtml}${inlineCounterHtml}</div>` : ''}
           </div>
           ${secondRowCounterHtml}
-          <div class="task-note-row"><input type="text" class="task-note-input" value="${(t.note || '').replace(/"/g, '&quot;')}" placeholder="📝 記錄執行狀況或心得..." oninput="editNote(${t.id}, this.value)"></div>`;
+          <div class="task-note-row"><textarea rows="1" class="task-note-input" placeholder="📝 記錄執行狀況或心得..." onfocus="expandTaskNote(this)" oninput="expandTaskNote(this);editNote(${t.id}, this.value)" onblur="collapseTaskNote(this)">${(t.note || '').replace(/</g, '&lt;')}</textarea></div>`;
         listEl.appendChild(li);
       });
     }
