@@ -1322,7 +1322,7 @@
     const seed = currentDate.split('-').reduce((s, n) => s + Number(n), 0);
     const pick = pastNotes[seed % pastNotes.length];
     const shortNote = pick.note.length > 26 ? pick.note.slice(0, 26) + '…' : pick.note;
-    return `💭 ${pick.dStr} 滿分那天曾寫下：「${shortNote}」`;
+    return `💭 ${pick.dStr} 的你曾寫下：「${shortNote}」`;
   }
   function restoreSameAsYesterday() {
     if (currentDate > getLogicalToday()) {
@@ -2181,16 +2181,13 @@
     const refBox = document.getElementById('dailyReflectionBox');
     const refInput = document.getElementById('dailyReflectionInput');
     if (refBox && refInput) {
-      refBox.style.display = isFuture ? 'none' : 'flex';
+      const hasReflection = Boolean(dailyReflections[currentDate] && String(dailyReflections[currentDate]).trim());
+      refBox.style.display = (!isFuture && (tasks.length > 0 || hasReflection)) ? 'flex' : 'none';
       if (document.activeElement !== refInput) {
         refInput.value = dailyReflections[currentDate] || '';
         autoResizeTa(refInput);
       }
     }
-    updateQuote(false);
-    renderWeeklyReviewBanner();
-    checkMilestoneCompletion();
-  }
   let marqueeMsgs = [], marqueeIdx = 0, marqueeTimer = null;
 
   function updateMarqueeMessages(list) {
