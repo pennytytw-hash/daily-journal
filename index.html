@@ -173,7 +173,8 @@
     height: 30px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   }
   .task-note-input.is-expanded {
-    height: auto; overflow-y: hidden; white-space: pre-wrap; word-break: break-word;
+    height: auto; max-height: 112px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-word;
     background: #fff; border-color: var(--primary-pink);
   }
   .counter-pill {
@@ -311,7 +312,7 @@
     .task-meta-group { gap: 4px; margin-top: 1px; }
     .task-note-row { padding-left: 30px; margin-top: 2px; }
     .task-note-input { padding: 6px 9px; font-size: 0.85rem; height: 32px; }
-    .task-note-input.is-expanded { height: auto; }
+    .task-note-input.is-expanded { height: auto; max-height: 112px; }
     .stamp-badge { right: 8px; top: 6px; font-size: 0.68rem; }
     .modal { padding: 8px; }
     .modal-box { padding: 15px 13px; max-height: 90vh; border-radius: 18px; }
@@ -580,7 +581,7 @@
     <div style="margin-top:16px;padding-top:10px;border-top:1px dashed var(--border-dashed);display:flex;flex-direction:column;gap:8px;font-size:0.75rem;color:var(--text-light);">
       <button class="btn btn-mint btn-sm" style="width:100%;font-size:0.8rem;padding:7px 10px;" onclick="openGuideModal()">📖 操作手冊（快速上手指南）</button>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span>版本：v5.3｜<span id="storageUsageText">空間計算中...</span></span>
+        <span>版本：v5.3.1｜<span id="storageUsageText">空間計算中...</span></span>
         <button class="btn btn-outline btn-sm" style="font-size:0.72rem;padding:4px 8px;" onclick="archiveOldDetails()">🗜️ 壓縮前年以前明細</button>
       </div>
       <button class="btn btn-outline btn-sm" style="width:100%;font-size:0.72rem;padding:5px 8px;" onclick="forceAppUpdate()">🔄 強制檢查更新（清除快取重載）</button>
@@ -821,20 +822,32 @@
     return (num >= 2 && num <= 999) ? num : 0;
   }
 
+  let dataRevision = 1, lastSavedSnapshot = {}, projStatsCache = {}, statsDashboardCache = null;
+
+  function setStorageIfChanged(key, rawStr) {
+    if (lastSavedSnapshot[key] !== rawStr) {
+      localStorage.setItem(key, rawStr);
+      lastSavedSnapshot[key] = rawStr;
+    }
+  }
+
   function saveAll(shouldRender = true) {
-    localStorage.setItem('cute_journal_v3_records', JSON.stringify(allRecords));
-    localStorage.setItem('cute_journal_v3_template', JSON.stringify(fixedTemplate));
-    localStorage.setItem('cute_journal_v4_projects', JSON.stringify(projects));
-    localStorage.setItem('cute_journal_v4_active_proj', activeProjectId);
-    localStorage.setItem('cute_journal_v4_pending_proj', pendingNextProjectId);
-    localStorage.setItem('cute_journal_v4_weekend_skip', JSON.stringify(weekendSkipItems));
-    localStorage.setItem('cute_journal_v4_holiday_overrides', JSON.stringify(holidayOverrides));
-    localStorage.setItem('cute_journal_v4_custom_holidays', JSON.stringify(customHolidays));
-    localStorage.setItem('cute_journal_v4_archived_stats', JSON.stringify(archivedStats));
-    localStorage.setItem('cute_journal_v5_fixed_targets', JSON.stringify(fixedTargets));
-    localStorage.setItem('cute_journal_v5_weekly_targets', JSON.stringify(weeklyTargets));
-    localStorage.setItem('cute_journal_v5_daily_mood', JSON.stringify(dailyMoods));
-    localStorage.setItem('cute_journal_v5_daily_reflection', JSON.stringify(dailyReflections));
+    dataRevision++;
+    projStatsCache = {};
+    statsDashboardCache = null;
+    setStorageIfChanged('cute_journal_v3_records', JSON.stringify(allRecords));
+    setStorageIfChanged('cute_journal_v3_template', JSON.stringify(fixedTemplate));
+    setStorageIfChanged('cute_journal_v4_projects', JSON.stringify(projects));
+    setStorageIfChanged('cute_journal_v4_active_proj', String(activeProjectId));
+    setStorageIfChanged('cute_journal_v4_pending_proj', String(pendingNextProjectId));
+    setStorageIfChanged('cute_journal_v4_weekend_skip', JSON.stringify(weekendSkipItems));
+    setStorageIfChanged('cute_journal_v4_holiday_overrides', JSON.stringify(holidayOverrides));
+    setStorageIfChanged('cute_journal_v4_custom_holidays', JSON.stringify(customHolidays));
+    setStorageIfChanged('cute_journal_v4_archived_stats', JSON.stringify(archivedStats));
+    setStorageIfChanged('cute_journal_v5_fixed_targets', JSON.stringify(fixedTargets));
+    setStorageIfChanged('cute_journal_v5_weekly_targets', JSON.stringify(weeklyTargets));
+    setStorageIfChanged('cute_journal_v5_daily_mood', JSON.stringify(dailyMoods));
+    setStorageIfChanged('cute_journal_v5_daily_reflection', JSON.stringify(dailyReflections));
     if (shouldRender) render();
     if (document.getElementById('manageModal')?.classList.contains('active')) renderManageTaskList();
   }
@@ -1202,6 +1215,7 @@
     clearTimeout(noteSaveTimer);
     noteSaveTimer = setTimeout(() => saveAll(false), 350);
   }
+
   function expandTaskNote(el) {
     if (!el) return;
     el.classList.add('is-expanded');
@@ -1269,7 +1283,9 @@
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       flushPendingEdits();
+      if (marqueeTimer) { clearInterval(marqueeTimer); marqueeTimer = null; }
     } else if (document.visibilityState === 'visible') {
+      if (marqueeMsgs.length > 1) updateMarqueeMessages(marqueeMsgs);
       const freshToday = getLogicalToday();
       if (freshToday !== lastKnownLogicalToday) {
         const wasOnPrevToday = currentDate === lastKnownLogicalToday;
@@ -1503,6 +1519,8 @@
   }
 
   function getProjectExecutionStats(pid) {
+    const cacheKey = `${pid}_${dataRevision}`;
+    if (projStatsCache[cacheKey]) return projStatsCache[cacheKey];
     let activeDays = 0, sumRate = 0, totalDone = 0, totalTasks = 0;
     const taskPerf = {};
     const projNotes = [];
@@ -1546,7 +1564,9 @@
     Object.keys(allRecords).sort().forEach(dStr => checkDayList(dStr, allRecords[dStr]));
 
     const avgRate = activeDays > 0 ? Math.round(sumRate / activeDays) : 0;
-    return { activeDays, avgRate, totalDone, totalTasks, taskPerf, projNotes, projRefs };
+    const resObj = { activeDays, avgRate, totalDone, totalTasks, taskPerf, projNotes, projRefs };
+    projStatsCache[cacheKey] = resObj;
+    return resObj;
   }
 
   function editProjectCycleById(pid) {
@@ -2327,17 +2347,50 @@
   }
 
   function selectCurveDim(dim) { selectedCurveDim = dim; renderStatsDashboard(); }
+
+  function renderCalendarGridHtml(dayMap) {
+    const firstDay = new Date(calViewYear, calViewMonth, 1).getDay(), startPad = firstDay === 0 ? 6 : firstDay - 1;
+    const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+    let calCells = ['一','二','三','四','五','六','日'].map(w => `<div class="cal-dow-lbl">${w}</div>`).join('');
+    for (let i = 0; i < startPad; i++) calCells += `<div></div>`;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dStr = `${calViewYear}-${String(calViewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const info = dayMap[dStr];
+      const isHol = info ? info.isHol : isHolidayDate(dStr);
+      let bg = isHol ? '#eef7fb' : '#f2ece6';
+      let title = `${dStr}${isHol ? ' (🌴休假日)' : ''}：無紀錄`;
+      if (info && info.total > 0) {
+        const r = info.done / info.total;
+        bg = r === 1 ? '#f4a29e' : (r >= 0.8 ? '#f9cbc8' : (r > 0 ? '#fce181' : '#e2dcd5'));
+        title = `${dStr}${isHol ? ' (🌴休假日)' : ''}：達成 ${Math.round(r * 100)}%${info.archived ? ' (已壓縮統計)' : '（點擊跳轉編輯）'}`;
+      } else if (info && info.total === 0 && isHol) {
+        title = `${dStr} (🌴休假日)：全休凍結連勝`;
+      }
+      calCells += `<div class="cal-cell ${isHol ? 'is-holiday' : ''}" style="background:${bg}" title="${title}" onclick="jumpToDate('${dStr}')">${day}</div>`;
+    }
+    return calCells;
+  }
+
+  function refreshCalendarSectionOnly() {
+    if (!statsDashboardCache) { renderStatsDashboard(); return; }
+    const titleEl = document.getElementById('calMonthTitle');
+    const gridEl = document.getElementById('calGridContainer');
+    if (titleEl) titleEl.textContent = `🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆`;
+    if (gridEl) gridEl.innerHTML = renderCalendarGridHtml(statsDashboardCache.dayMap);
+  }
+
   function changeCalMonth(delta) {
     calViewMonth += delta;
     if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
     if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
-    renderStatsDashboard();
+    refreshCalendarSectionOnly();
   }
+
   function resetCalMonthToToday() {
     const today = new Date(getLogicalToday() + 'T00:00:00');
     calViewYear = today.getFullYear();
     calViewMonth = today.getMonth();
-    renderStatsDashboard();
+    refreshCalendarSectionOnly();
   }
   function buildGrowthChartHtml(seriesMap, dimLabel) {
     const entries = Object.entries(seriesMap).sort((a, b) => a.at(0).localeCompare(b.at(0)));
@@ -2497,25 +2550,8 @@
       <span>👑 歷史最高連勝 (≥80%)：<b>${bestStreak} 天</b></span><span style="color:#8c7a70;">基準：${currentDate}</span>
     </div><div style="background:#fffdf2;border:1.5px dashed #eab84d;border-radius:12px;padding:9px 12px;font-size:0.82rem;line-height:1.5;color:#6e5523;margin-bottom:8px;">${insightMsg}</div>`;
 
-    const firstDay = new Date(calViewYear, calViewMonth, 1).getDay(), startPad = firstDay === 0 ? 6 : firstDay - 1;
-    const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
-    let calCells = ['一','二','三','四','五','六','日'].map(w => `<div class="cal-dow-lbl">${w}</div>`).join('');
-    for (let i = 0; i < startPad; i++) calCells += `<div></div>`;
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dStr = `${calViewYear}-${String(calViewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const info = dayMap[dStr];
-      const isHol = info ? info.isHol : isHolidayDate(dStr);
-      let bg = isHol ? '#eef7fb' : '#f2ece6';
-      let title = `${dStr}${isHol ? ' (🌴休假日)' : ''}：無紀錄`;
-      if (info && info.total > 0) {
-        const r = info.done / info.total;
-        bg = r === 1 ? '#f4a29e' : (r >= 0.8 ? '#f9cbc8' : (r > 0 ? '#fce181' : '#e2dcd5'));
-        title = `${dStr}${isHol ? ' (🌴休假日)' : ''}：達成 ${Math.round(r * 100)}%${info.archived ? ' (已壓縮統計)' : '（點擊跳轉編輯）'}`;
-      } else if (info && info.total === 0 && isHol) {
-        title = `${dStr} (🌴休假日)：全休凍結連勝`;
-      }
-      calCells += `<div class="cal-cell ${isHol ? 'is-holiday' : ''}" style="background:${bg}" title="${title}" onclick="jumpToDate('${dStr}')">${day}</div>`;
-    }
+    statsDashboardCache = { rev: dataRevision, proj: selectedStatsProj, dayMap };
+    const calCells = renderCalendarGridHtml(dayMap);
 
     const dowBars = dowStats.map((s, idx) => {
       const r = s.total === 0 ? 0 : Math.round((s.done / s.total) * 100);
@@ -2537,7 +2573,7 @@
       </div>`;
     }).join('');
 
-    html += `<div class="panel-box" style="margin-top:4px;"><div class="cal-header"><button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button><b onclick="resetCalMonthToToday()" style="cursor:pointer;" title="點擊回到本月">🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b><button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button></div><div class="cal-grid">${calCells}</div><div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div><div style="margin-top:12px;padding-top:10px;border-top:1px dashed #d5e6dc;"><div style="display:flex;justify-content:space-between;align-items:center;"><b>⚡ 能量狀態累計分布</b><span style="font-size:0.72rem;color:var(--text-light);">已記錄 ${totalMoodDays} 天</span></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:7px;">${moodCardsHtml}</div></div></div>`;
+    html += `<div class="panel-box" style="margin-top:4px;"><div class="cal-header"><button class="btn btn-outline btn-sm" onclick="changeCalMonth(-1)">◀ 上月</button><b id="calMonthTitle" onclick="resetCalMonthToToday()" style="cursor:pointer;" title="點擊回到本月">🗓️ ${calViewYear}年 ${calViewMonth + 1}月 打卡月曆</b><button class="btn btn-outline btn-sm" onclick="changeCalMonth(1)">下月 ▶</button></div><div id="calGridContainer" class="cal-grid">${calCells}</div><div style="margin-top:12px;"><b>📊 星期一～日執行節奏分析</b></div><div class="dow-grid">${dowBars}</div><div style="margin-top:12px;padding-top:10px;border-top:1px dashed #d5e6dc;"><div style="display:flex;justify-content:space-between;align-items:center;"><b>⚡ 能量狀態累計分布</b><span style="font-size:0.72rem;color:var(--text-light);">已記錄 ${totalMoodDays} 天</span></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:7px;">${moodCardsHtml}</div></div></div>`;
     const habits = Object.entries(habitMap).filter(([, v]) => v.total >= 2).map(([name, v]) => {
       const isWeekdayHabit = v.skipDays > v.total * 0.5;
       const weightedDone = v.done * (isWeekdayHabit ? 1.4 : 1);
@@ -2722,6 +2758,15 @@
   }
   let lastShareCardDataUrl = '';
 
+  function fitCanvasText(ctx, text, maxWidth) {
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    let res = text;
+    while (res.length > 0 && ctx.measureText(res + '…').width > maxWidth) {
+      res = res.slice(0, -1);
+    }
+    return res + '…';
+  }
+
   function generateShareCard(mode = 'daily') {
     const canvas = document.createElement('canvas');
     canvas.width = 720;
@@ -2759,7 +2804,7 @@
     const projName = selectedStatsProj === 'ALL' ? getActiveProject().name : (projects.find(p => p.id === selectedStatsProj)?.name || getActiveProject().name);
     ctx.fillStyle = '#3d7a56';
     ctx.font = 'bold 23px "PingFang TC", "Microsoft JhengHei", sans-serif';
-    ctx.fillText(`🎯 ${projName.slice(0, 20)}`, 360, 172);
+    ctx.fillText(fitCanvasText(ctx, `🎯 ${projName}`, 540), 360, 172);
 
     const stInfo = calcStreakInfo();
     const records = getFilteredRecords();
@@ -3469,7 +3514,7 @@
   })();
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    const swCode = `self.addEventListener('fetch',e=>{if(!e.request.url.startsWith(self.location.origin))return;e.respondWith(caches.open('journal-v5-3').then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(res=>{c.put(e.request,res.clone());return res;}))));});`;
+    const swCode = `self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||!e.request.url.startsWith(self.location.origin)||e.request.url.includes('?'))return;e.respondWith(caches.open('journal-v5-3-1').then(c=>c.match(e.request).then(r=>{const net=fetch(e.request).then(res=>{if(res&&res.ok)c.put(e.request,res.clone());return res;}).catch(()=>r);return r||net;})));});`;
     const swUrl = URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }));
     navigator.serviceWorker.register(swUrl).finally(() => URL.revokeObjectURL(swUrl)).catch(() => {});
   }
