@@ -1310,6 +1310,8 @@
     const pastNotes = [];
     Object.entries(allRecords).forEach(([dStr, list]) => {
       if (dStr >= currentDate || !Array.isArray(list)) return;
+      const counted = list.filter(t => isDailyCountedTask(t, dStr));
+      if (counted.length === 0 || !counted.every(t => t.completed)) return;
       list.forEach(t => {
         if (t.completed && t.note && t.note.trim().length >= 2) {
           pastNotes.push({ dStr, note: t.note.trim().replace(/\s+/g, ' ') });
@@ -1320,7 +1322,7 @@
     const seed = currentDate.split('-').reduce((s, n) => s + Number(n), 0);
     const pick = pastNotes[seed % pastNotes.length];
     const shortNote = pick.note.length > 26 ? pick.note.slice(0, 26) + '…' : pick.note;
-    return `💭 ${pick.dStr} 的你曾寫下：「${shortNote}」`;
+    return `💭 ${pick.dStr} 滿分那天曾寫下：「${shortNote}」`;
   }
   function restoreSameAsYesterday() {
     if (currentDate > getLogicalToday()) {
@@ -2066,15 +2068,25 @@
     const marqueeList = [
       statusStr,
       '☆ 點擊任務左側星星可設為「今日焦點」置頂高亮',
-      '✏️ 編輯文字、次數設定、排序與假日休請點「🗂️ 管理」',
-      '📝 每項任務下方皆可隨手記錄執行狀況或心得筆記'
+      '✏️ 編輯文字、次數設定、排序與假日休請點「🗂️ 管理」'
     ];
+    const tasks = getTasks();
+    const dowNum = new Date(currentDate + 'T00:00:00').getDay();
+    if (isToday && (dowNum === 6 || dowNum === 0)) {
+      const pendingWk = tasks.filter(t => t.isWeekly && !t.completed);
+      if (pendingWk.length > 0) {
+        const firstWk = pendingWk.at(0);
+        const remain = Math.max(1, (firstWk.targetCount || 1) - (firstWk.curCount || 0));
+        marqueeList.splice(1, 0, `📆 本週彈性目標「${firstWk.text}」還差 ${remain} 次就達標囉！`);
+      }
+    }
     if (actProj && actProj.targetDays >= 14 && actStats.activeDays === Math.floor(actProj.targetDays / 2)) {
       marqueeList.splice(1, 0, `⛽ 賽程過半加油站！已完成 ${actStats.activeDays}/${actProj.targetDays} 天（平均達成率 ${actStats.avgRate}%）`);
     }
     if (flashbackStr) marqueeList.splice(1, 0, flashbackStr);
     updateMarqueeMessages(marqueeList);
-    const tasks = getTasks(), listEl = document.getElementById('taskList'); listEl.innerHTML = '';
+
+    const listEl = document.getElementById('taskList'); listEl.innerHTML = '';
     if (tasks.length === 0 && !isToday) {
       if (isFuture) {
         listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.92rem;">⏳ <b>${currentDate}</b> 尚未到來喔！<br>等該日凌晨 05:00 換日後，系統會自動帶入目前專案的每日固定清單。</li>`;
