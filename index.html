@@ -642,7 +642,7 @@
         <li><b>編輯與排序：</b>點進「🗂️ 管理」可新增臨時目標、修改文字、按住左側 <b>☰</b> 上下拖曳調整順序，或設定目標次數。</li>
         <li><b>每週彈性任務：</b>將任務切換為「📆 每週」後，同週（週一至週日）次數跨日同步累積，且不計入單日達成率壓力。</li>
         <li><b>不小心改亂了：</b>管理列表右上角點 <b>⏪ 同昨日</b>，可一鍵恢復前一日的任務清單設定。</li>
-        <li><b>AI 建立專案與週期：</b>在管理抽屜複製專用指令請 AI 生成清單，貼上即可建立新專案並自動套用建議執行天數（亦可隨時在專案列表點擊 <b>⏳</b> 修改天數，或留空作為長期維持專案）。</li>
+        <li><b>AI 建立專案與週期：</b>當首頁尚無任務時可直接點擊「💬 複製討論引導語」請 AI 提問協助釐清方向；討論完成後至「🗂️ 管理」複製專用指令生成清單並貼上建立新專案（亦可隨時在專案列表點擊 <b>⏳</b> 修改天數，或留空作為長期維持專案）。</li>
       </ul>
     </div>
     <div class="setting-section" style="line-height:1.65;font-size:0.84rem;">
@@ -1442,10 +1442,16 @@
     setTimeout(() => { layer.innerHTML = ''; }, 3400);
   }
 
+  function copyCoachPrompt() {
+    const coachCmd = '我想設定一個階段性的個人目標，但目前想法還比較模糊。請擔任我的目標引導教練，用輕鬆對話的方式，一次問我 2～3 個啟發思考的問題（例如：我最近最想改善或突破的面向、達成後希望生活有什麼改變、目前可能遇到的阻礙等），一步步陪我釐清方向並拆解成每天做得到的小行動。先不要一次給太長的計畫，等我們討論確定後我再請你整理成清單！';
+    writeClipboardSafe(coachCmd)
+      .then(() => showSyncProgress('💬 已複製 AI 討論引導語！貼給 ChatGPT 或 Gemini 即可開始對話', 100, 2800));
+  }
+
   function copyPrompt() {
     const cmd = '請將我們剛剛討論的目標整理成純文字清單，並依照一日從早到晚（晨間→白天→晚間）的執行流程順序排列。第一行請固定輸出你認為最適合的執行週期天數（格式如：[週期:21天]），第二行起每行一項任務，每項請極度精鍊（控制在 12 字以內，只寫核心行動與量化數字，如「喝水 8 杯」、「背單字 20 個」），不要加任何編號、符號、標題、括號補充或額外說明文字。';
-    navigator.clipboard.writeText(cmd)
-      .then(() => alert('已複製新版 AI 指令！包含一日流程排序與週期格式。'));
+    writeClipboardSafe(cmd)
+      .then(() => showSyncProgress('📋 已複製清單格式指令！貼給 AI 即可產生匯入清單', 100, 2600));
   }
 
   function hasExecutedTasksOnDate(dStr) {
@@ -2087,8 +2093,18 @@
     updateMarqueeMessages(marqueeList);
 
     const listEl = document.getElementById('taskList'); listEl.innerHTML = '';
-    if (tasks.length === 0 && !isToday) {
-      if (isFuture) {
+    if (tasks.length === 0) {
+      if (isToday) {
+        listEl.innerHTML = `<li style="text-align:center;padding:26px 14px;color:var(--text-light);font-size:0.9rem;line-height:1.65;">
+          <div style="font-size:1.4rem;margin-bottom:4px;">🌱</div>
+          <b>今天還沒有設定任何目標喔！</b><br>
+          還不知道從哪裡開始？先複製引導語跟 AI 聊聊方向，<br>討論好再到「🗂️ 管理」匯入每日清單吧！
+          <div style="margin-top:12px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-mint btn-sm" onclick="copyCoachPrompt()">💬 複製討論引導語</button>
+            <button class="btn btn-outline btn-sm" onclick="openManageModal()">🗂️ 前往管理匯入</button>
+          </div>
+        </li>`;
+      } else if (isFuture) {
         listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.92rem;">⏳ <b>${currentDate}</b> 尚未到來喔！<br>等該日凌晨 05:00 換日後，系統會自動帶入目前專案的每日固定清單。</li>`;
       } else if (archivedStats[currentDate]) {
         listEl.innerHTML = `<li style="text-align:center;padding:24px 12px;color:var(--text-light);font-size:0.92rem;">🗜️ <b>${currentDate}</b> 的逐項明細已壓縮歸檔，統計數據仍完整保留於儀表板中。</li>`;
